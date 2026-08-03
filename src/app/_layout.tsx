@@ -1,18 +1,31 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useColorScheme } from 'react-native';
-
-import { AnimatedSplashOverlay } from '@/components/animated-icon';
-import AppTabs from '@/components/app-tabs';
+﻿import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { useColorScheme, View } from "react-native";
+import { Stack } from "expo-router";
 
 SplashScreen.preventAutoHideAsync();
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+export default function RootLayout() {
+  const dark = useColorScheme() === "dark";
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <AnimatedSplashOverlay />
-      <AppTabs />
-    </ThemeProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <ThemeProvider value={dark ? DarkTheme : DefaultTheme}>
+        <AnimatedSplashOverlay />
+        <View style={{ flex: 1, backgroundColor: dark ? "#1c1d22" : "#fff" }}>
+          <Stack
+            screenOptions={{
+              headerBackButtonDisplayMode: "minimal",
+              headerShadowVisible: false,
+              headerTintColor: dark ? "#fff" : "#17181c",
+              contentStyle: { backgroundColor: dark ? "#1c1d22" : "#fff" },
+            }}
+          >
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
+        </View>
+      </ThemeProvider>
+    </GestureHandlerRootView>
   );
 }

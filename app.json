@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "tapconnect",
-    "slug": "tapconnect",
+    "name": "SellMoh",
+    "slug": "sell-moh",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "tapconnect",
+    "scheme": "sellmoh",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
@@ -26,13 +26,27 @@
     "plugins": [
       "expo-router",
       [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
+          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
+          "recordAudioAndroid": true,
+          "barcodeScannerEnabled": true
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "expo-image",
+      "expo-status-bar",
+      "expo-web-browser",
+      "@react-native-vector-icons/ant-design",
+      "@react-native-vector-icons/lucide"
     ],
     "experiments": {
       "typedRoutes": true,
