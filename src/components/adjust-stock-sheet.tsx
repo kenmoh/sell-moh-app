@@ -1,14 +1,14 @@
-import { AppBottomSheet } from "@/components/bottom-sheet";
+import AppBottomSheet from "@/components/bottom-sheet";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
 import {
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  useColorScheme,
-  View,
+    Pressable,
+    StyleSheet,
+    Text,
+    TextInput,
+    useColorScheme,
+    View,
 } from "react-native";
 
 type Props = {
@@ -87,7 +87,9 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
 
       {/* Reason Chips */}
       <View>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Reason</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>
+          Reason
+        </Text>
         <View style={styles.chipRow}>
           {reasons.map((r) => {
             const isSelected = selectedReason === r;
@@ -97,8 +99,12 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
                 style={[
                   styles.chip,
                   {
-                    backgroundColor: isSelected ? "#2563eb" : colors.backgroundElement,
-                    borderColor: isSelected ? "#2563eb" : colors.backgroundElement,
+                    backgroundColor: isSelected
+                      ? "#2563eb"
+                      : colors.backgroundElement,
+                    borderColor: isSelected
+                      ? "#2563eb"
+                      : colors.backgroundElement,
                   },
                 ]}
                 onPress={() => setSelectedReason(isSelected ? "" : r)}
@@ -119,7 +125,9 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
 
       {/* Optional Note */}
       <View>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>Note (optional)</Text>
+        <Text style={[styles.label, { color: colors.textSecondary }]}>
+          Note (optional)
+        </Text>
         <TextInput
           style={[
             styles.noteInput,
@@ -139,7 +147,10 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
 
       {/* Confirm */}
       <Pressable
-        style={[styles.confirmButton, { opacity: parseInt(quantity || "0", 10) > 0 ? 1 : 0.5 }]}
+        style={[
+          styles.confirmButton,
+          { opacity: parseInt(quantity || "0", 10) > 0 ? 1 : 0.5 },
+        ]}
         disabled={parseInt(quantity || "0", 10) === 0}
         onPress={handleConfirm}
       >

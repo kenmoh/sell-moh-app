@@ -1,10 +1,12 @@
+import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Host, Switch } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useLocalSearchParams } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
+  Dimensions,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,6 +15,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const BTN_WIDTH = Dimensions.get("screen").width * 0.9;
 
 const AddProduct = () => {
   const insets = useSafeAreaInsets();
@@ -34,35 +38,56 @@ const AddProduct = () => {
   const [category, setCategory] = useState(params.category ?? "");
   const [price, setPrice] = useState(params.price ?? "");
   const [stockQty, setStockQty] = useState(params.stockQty ?? "");
-  const [lowStockAlert, setLowStockAlert] = useState(params.lowStockAlert ?? "");
+  const [lowStockAlert, setLowStockAlert] = useState(
+    params.lowStockAlert ?? "",
+  );
   const [trackInventory, setTrackInventory] = useState(true);
   const [description, setDescription] = useState(params.description ?? "");
+  const [sheetVisible, setSheetVisible] = useState(false);
+  const [sheetView, setSheetView] = useState<"list" | "add">("list");
+
+  const openCategorySheet = () => {
+    setSheetView("list");
+    setSheetVisible(true);
+  };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <View style={styles.headerLeft}>
-          <Lucide name="chevron-left" size={24} color={colors.text} />
-        </View>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {isEditing ? "Edit Product" : "Add Product"}
-        </Text>
-        <Pressable onPress={() => {}}>
-          <Text style={styles.saveLink}>Save</Text>
-        </Pressable>
-      </View>
-
+    <>
+      <Stack.Screen
+        options={{
+          title: "Add Product",
+          headerShown: true,
+          headerShadowVisible: false,
+          headerRight: () => (
+            <Pressable
+              onPress={openCategorySheet}
+              style={[
+                {
+                  flexDirection: "row",
+                  gap: 5,
+                  justifyContent: "center",
+                  alignItems: "center",
+                },
+              ]}
+            >
+              <Lucide name="tags" size={16} color={colors.text} />
+              <Text style={{ color: colors.textSecondary }}>Add Category</Text>
+            </Pressable>
+          ),
+        }}
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 20,
+          marginTop: 20,
+
           gap: 20,
+          backgroundColor: colors.background,
         }}
       >
         {/* Photo Upload */}
-        <View>
+        {/* <View>
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
             PRODUCT INFO
           </Text>
@@ -80,7 +105,7 @@ const AddProduct = () => {
               Add Photo
             </Text>
           </Pressable>
-        </View>
+        </View> */}
 
         {/* Product Name */}
         <AppTextInput
@@ -167,15 +192,11 @@ const AddProduct = () => {
           </Text>
           <View style={styles.textAreaWrapper}>
             <AppTextInput
-              leftIcon="list"
               placeholder="Product description"
               value={description}
               onChangeText={setDescription}
               multiline
             />
-            <Pressable style={styles.expandButton}>
-              <Lucide name="maximize-2" size={14} color="#3b82f6" />
-            </Pressable>
           </View>
         </View>
 
@@ -187,7 +208,12 @@ const AddProduct = () => {
           </Text>
         </Pressable>
       </ScrollView>
-    </View>
+
+      {/* Add Category Bottom Sheet */}
+      <AppBottomSheet visible={sheetVisible} onVisibleChange={setSheetVisible}>
+        <Text>Kenmoh</Text>
+      </AppBottomSheet>
+    </>
   );
 };
 
@@ -247,8 +273,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "#3b82f6",
-    borderRadius: 14,
-    paddingVertical: 16,
+    borderRadius: 50,
+    paddingVertical: 15,
     gap: 8,
     marginTop: 4,
   },

@@ -4,12 +4,12 @@ import { Lucide } from "@react-native-vector-icons/lucide";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Text,
+    useColorScheme,
+    View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -24,10 +24,28 @@ const salesData = [
 const maxSales = Math.max(...salesData.map((d) => d.units));
 
 const stockHistory = [
-  { date: "Dec 10, 2024", action: "Restock", qty: +50, balance: 48, note: "Supplier delivery" },
+  {
+    date: "Dec 10, 2024",
+    action: "Restock",
+    qty: +50,
+    balance: 48,
+    note: "Supplier delivery",
+  },
   { date: "Dec 3, 2024", action: "Sale", qty: -12, balance: 58, note: "" },
-  { date: "Nov 28, 2024", action: "Adjustment", qty: -3, balance: 70, note: "Damaged units" },
-  { date: "Nov 20, 2024", action: "Restock", qty: +25, balance: 73, note: "Weekly restock" },
+  {
+    date: "Nov 28, 2024",
+    action: "Adjustment",
+    qty: -3,
+    balance: 70,
+    note: "Damaged units",
+  },
+  {
+    date: "Nov 20, 2024",
+    action: "Restock",
+    qty: +25,
+    balance: 73,
+    note: "Weekly restock",
+  },
 ];
 
 const ProductDetails = () => {
@@ -43,17 +61,6 @@ const ProductDetails = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <View style={styles.headerLeft}>
-          <Lucide name="chevron-left" size={24} color={colors.text} />
-        </View>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Product Details
-        </Text>
-        <Lucide name="ellipsis-vertical" size={22} color={colors.text} />
-      </View>
-
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -74,17 +81,32 @@ const ProductDetails = () => {
           </Text>
           <Text style={styles.productPrice}>₦500</Text>
           <View style={styles.tagRow}>
-            <View style={[styles.tag, { backgroundColor: "rgba(22, 163, 74, 0.1)" }]}>
+            <View
+              style={[
+                styles.tag,
+                { backgroundColor: "rgba(22, 163, 74, 0.1)" },
+              ]}
+            >
               <Text style={[styles.tagText, { color: "#16a34a" }]}>
                 {stock} In Stock
               </Text>
             </View>
-            <View style={[styles.tag, { backgroundColor: colors.backgroundElement }]}>
+            <View
+              style={[
+                styles.tag,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
               <Text style={[styles.tagText, { color: colors.textSecondary }]}>
                 Beverages
               </Text>
             </View>
-            <View style={[styles.tag, { backgroundColor: colors.backgroundElement }]}>
+            <View
+              style={[
+                styles.tag,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
               <Text style={[styles.tagText, { color: colors.textSecondary }]}>
                 Each
               </Text>
@@ -95,7 +117,10 @@ const ProductDetails = () => {
         {/* Action Buttons */}
         <View style={styles.actionRow}>
           <Pressable
-            style={[styles.actionButton, { borderColor: colors.backgroundElement }]}
+            style={[
+              styles.actionButton,
+              { borderColor: colors.backgroundElement },
+            ]}
             onPress={() =>
               router.push({
                 pathname: "/(tabs)/(more)/add-product",
@@ -116,7 +141,10 @@ const ProductDetails = () => {
             <Text style={styles.actionButtonText}>Edit Product</Text>
           </Pressable>
           <Pressable
-            style={[styles.actionButton, { borderColor: colors.backgroundElement }]}
+            style={[
+              styles.actionButton,
+              { borderColor: colors.backgroundElement },
+            ]}
             onPress={() => setAdjustVisible(true)}
           >
             <Lucide name="package-plus" size={16} color="#3b82f6" />
@@ -127,10 +155,17 @@ const ProductDetails = () => {
         <View style={{ paddingHorizontal: 20, gap: 24 }}>
           {/* Stock Overview */}
           <View>
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.textSecondary }]}
+            >
               STOCK OVERVIEW
             </Text>
-            <View style={[styles.stockBarBg, { backgroundColor: colors.backgroundElement }]}>
+            <View
+              style={[
+                styles.stockBarBg,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
               <View
                 style={[
                   styles.stockBarFill,
@@ -142,7 +177,9 @@ const ProductDetails = () => {
               <Text style={[styles.stockLabel, { color: colors.text }]}>
                 Current: {stock}
               </Text>
-              <Text style={[styles.stockLabel, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.stockLabel, { color: colors.textSecondary }]}
+              >
                 Alert: 10
               </Text>
             </View>
@@ -150,10 +187,14 @@ const ProductDetails = () => {
 
           {/* Details */}
           <View>
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.textSecondary }]}
+            >
               DETAILS
             </Text>
-            <View style={[styles.detailsCard, { backgroundColor: colors.card }]}>
+            <View
+              style={[styles.detailsCard, { backgroundColor: colors.card }]}
+            >
               {[
                 { label: "Category", value: "Beverages" },
                 { label: "Unit", value: "Each" },
@@ -171,7 +212,12 @@ const ProductDetails = () => {
                     },
                   ]}
                 >
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.detailLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     {row.label}
                   </Text>
                   <Text style={[styles.detailValue, { color: colors.text }]}>
@@ -184,7 +230,9 @@ const ProductDetails = () => {
 
           {/* Sales History */}
           <View>
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.textSecondary }]}
+            >
               SALES HISTORY
             </Text>
             <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
@@ -194,7 +242,12 @@ const ProductDetails = () => {
                   const isLast = i === salesData.length - 1;
                   return (
                     <View key={i} style={styles.barWrapper}>
-                      <Text style={[styles.barValue, { color: colors.textSecondary }]}>
+                      <Text
+                        style={[
+                          styles.barValue,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
                         {d.units}
                       </Text>
                       <View
@@ -206,7 +259,12 @@ const ProductDetails = () => {
                           },
                         ]}
                       />
-                      <Text style={[styles.barLabel, { color: colors.textSecondary }]}>
+                      <Text
+                        style={[
+                          styles.barLabel,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
                         {d.day}
                       </Text>
                     </View>
@@ -215,7 +273,9 @@ const ProductDetails = () => {
               </View>
               <View style={styles.chartCaption}>
                 <Lucide name="trending-up" size={14} color="#16a34a" />
-                <Text style={[styles.captionText, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.captionText, { color: colors.textSecondary }]}
+                >
                   Last 7 days: 28 units sold
                 </Text>
               </View>
@@ -224,10 +284,14 @@ const ProductDetails = () => {
 
           {/* Stock History */}
           <View>
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.textSecondary }]}
+            >
               STOCK HISTORY
             </Text>
-            <View style={[styles.historyCard, { backgroundColor: colors.card }]}>
+            <View
+              style={[styles.historyCard, { backgroundColor: colors.card }]}
+            >
               {stockHistory.map((entry, i) => {
                 const isPositive = entry.qty > 0;
                 return (
@@ -242,14 +306,26 @@ const ProductDetails = () => {
                     ]}
                   >
                     <View style={styles.historyLeft}>
-                      <Text style={[styles.historyDate, { color: colors.textSecondary }]}>
+                      <Text
+                        style={[
+                          styles.historyDate,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
                         {entry.date}
                       </Text>
-                      <Text style={[styles.historyAction, { color: colors.text }]}>
+                      <Text
+                        style={[styles.historyAction, { color: colors.text }]}
+                      >
                         {entry.action}
                       </Text>
                       {entry.note ? (
-                        <Text style={[styles.historyNote, { color: colors.textSecondary }]}>
+                        <Text
+                          style={[
+                            styles.historyNote,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
                           {entry.note}
                         </Text>
                       ) : null}
@@ -264,7 +340,12 @@ const ProductDetails = () => {
                         {isPositive ? "+" : ""}
                         {entry.qty}
                       </Text>
-                      <Text style={[styles.historyBalance, { color: colors.textSecondary }]}>
+                      <Text
+                        style={[
+                          styles.historyBalance,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
                         Bal: {entry.balance}
                       </Text>
                     </View>
@@ -316,7 +397,12 @@ const styles = StyleSheet.create({
   avatarText: { fontSize: 28, fontWeight: "700", color: "#3b82f6" },
   productName: { fontSize: 20, fontWeight: "700" },
   productSku: { fontSize: 13 },
-  productPrice: { fontSize: 28, fontWeight: "800", color: "#3b82f6", marginTop: 2 },
+  productPrice: {
+    fontSize: 28,
+    fontWeight: "800",
+    color: "#3b82f6",
+    marginTop: 2,
+  },
   tagRow: { flexDirection: "row", gap: 8, marginTop: 8 },
   tag: { borderRadius: 100, paddingHorizontal: 12, paddingVertical: 5 },
   tagText: { fontSize: 12, fontWeight: "600" },

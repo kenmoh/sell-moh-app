@@ -17,9 +17,8 @@ const MoreLayout = () => {
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="store-profile" options={{ headerShown: false }} />
-        <Stack.Screen name="products" options={{ headerShown: false }} />
-        <Stack.Screen name="add-product" options={{ headerShown: false }} />
-        <Stack.Screen name="product-details" options={{ headerShown: false }} />
+        <Stack.Screen name="document" options={{ headerShown: false }} />
+        <Stack.Screen name="accounting" options={{ headerShown: false }} />
         <Stack.Screen name="discounts" options={{ headerShown: false }} />
         <Stack.Screen name="staff-roles" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />

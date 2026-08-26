@@ -1,15 +1,22 @@
 import CartSheet from "@/components/cart-sheet";
-import useCartStore from "@/hooks/use-cart-store";
 import { Colors } from "@/constants/theme";
+import useCartStore from "@/hooks/use-cart-store";
+import BottomSheet from "@expo/ui/community/bottom-sheet";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useRef, useState } from "react";
+import {
+  Dimensions,
+  Pressable,
+  StyleSheet,
+  Text,
+  useColorScheme,
+} from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
-  useSharedValue,
   useAnimatedStyle,
+  useSharedValue,
   withSpring,
 } from "react-native-reanimated";
-import { Dimensions, Pressable, StyleSheet, Text, useColorScheme } from "react-native";
-import { useState } from "react";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const FAB_SIZE = 56;
@@ -18,6 +25,9 @@ const MARGIN = 16;
 const DraggableCart = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
+  const sheetRef = useRef<BottomSheet>(null);
+
+  const openSheet = () => sheetRef.current?.present();
 
   const [sheetVisible, setSheetVisible] = useState(false);
 
@@ -52,8 +62,6 @@ const DraggableCart = () => {
       { translateY: translateY.value },
     ],
   }));
-
-  if (totalItems === 0) return null;
 
   return (
     <>

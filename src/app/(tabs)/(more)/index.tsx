@@ -31,22 +31,39 @@ const more = () => {
           leadingIcon="users"
           onPress={() => router.push("/(tabs)/(more)/staff-roles")}
         />
-        <LinkItem
+        {/* <LinkItem
           label="Product & Categories"
           leadingIcon="tags"
           onPress={() => router.push("/(tabs)/(more)/products")}
-        />
+        /> */}
         <LinkItem
           label="Discounts & Coupons"
           leadingIcon="percent"
           onPress={() => router.push("/(tabs)/(more)/discounts")}
         />
       </MoreCard>
-      <MoreCard label="Payments">
+
+      {/* <MoreCard label="AI">
+        <LinkItem
+          label="Chat"
+          leadingIcon={"message-circle"}
+          onPress={() => router.push("/(tabs)/(more)/ai")}
+        />
+      </MoreCard> */}
+      <MoreCard label="Payments & Accounting">
+        <LinkItem
+          label="Accounting"
+          leadingIcon={"table"}
+          onPress={() => router.push("/(tabs)/(more)/accounting")}
+        />
         <LinkItem label="Payment Methods" leadingIcon={"credit-card"} />
         <LinkItem label="Tax Settings" leadingIcon={"coins"} />
-        <LinkItem label="Product & Categories" leadingIcon={"tags"} />
-        <LinkItem label="Discounts & Coupons" leadingIcon={"printer"} />
+        <LinkItem
+          label="Documments"
+          docType="Receipt | Invoce | Quote"
+          leadingIcon={"printer"}
+          onPress={() => router.push("/(tabs)/(more)/document")}
+        />
       </MoreCard>
       <MoreCard label="Account">
         <LinkItem

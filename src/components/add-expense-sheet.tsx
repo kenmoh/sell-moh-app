@@ -1,4 +1,4 @@
-import { AppBottomSheet } from "@/components/bottom-sheet";
+import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -12,12 +12,48 @@ type Props = {
 };
 
 const categories = [
-  { id: "utility", label: "Utility Bills", icon: "zap", color: "#f59e0b", bg: "rgba(245,158,11,0.1)" },
-  { id: "rent", label: "Rent", icon: "home", color: "#3b82f6", bg: "rgba(59,130,246,0.1)" },
-  { id: "supplies", label: "Supplies", icon: "package", color: "#16a34a", bg: "rgba(22,163,74,0.1)" },
-  { id: "salaries", label: "Salaries", icon: "users", color: "#a855f7", bg: "rgba(168,85,247,0.1)" },
-  { id: "maintenance", label: "Maintenance", icon: "wrench", color: "#ef4444", bg: "rgba(239,68,68,0.1)" },
-  { id: "misc", label: "Miscellaneous", icon: "more-horizontal", color: "#6b7280", bg: "rgba(107,114,128,0.1)" },
+  {
+    id: "utility",
+    label: "Utility Bills",
+    icon: "zap",
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.1)",
+  },
+  {
+    id: "rent",
+    label: "Rent",
+    icon: "home",
+    color: "#3b82f6",
+    bg: "rgba(59,130,246,0.1)",
+  },
+  {
+    id: "supplies",
+    label: "Supplies",
+    icon: "package",
+    color: "#16a34a",
+    bg: "rgba(22,163,74,0.1)",
+  },
+  {
+    id: "salaries",
+    label: "Salaries",
+    icon: "users",
+    color: "#a855f7",
+    bg: "rgba(168,85,247,0.1)",
+  },
+  {
+    id: "maintenance",
+    label: "Maintenance",
+    icon: "wrench",
+    color: "#ef4444",
+    bg: "rgba(239,68,68,0.1)",
+  },
+  {
+    id: "misc",
+    label: "Miscellaneous",
+    icon: "more-horizontal",
+    color: "#6b7280",
+    bg: "rgba(107,114,128,0.1)",
+  },
 ];
 
 const AddExpenseSheet = ({ visible, onVisibleChange, onAdd }: Props) => {
@@ -44,7 +80,9 @@ const AddExpenseSheet = ({ visible, onVisibleChange, onAdd }: Props) => {
       </Text>
 
       {/* Category Chips */}
-      <Text style={[styles.label, { color: colors.textSecondary }]}>Category</Text>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>
+        Category
+      </Text>
       <Pressable style={styles.chipRow}>
         {categories.map((cat) => {
           const isSelected = selectedCategory === cat.id;
@@ -79,7 +117,9 @@ const AddExpenseSheet = ({ visible, onVisibleChange, onAdd }: Props) => {
       </Pressable>
 
       {/* Amount */}
-      <Text style={[styles.label, { color: colors.textSecondary }]}>Amount</Text>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>
+        Amount
+      </Text>
       <AppTextInput
         leftIcon="banknote"
         placeholder="0.00"
@@ -89,7 +129,9 @@ const AddExpenseSheet = ({ visible, onVisibleChange, onAdd }: Props) => {
       />
 
       {/* Note */}
-      <Text style={[styles.label, { color: colors.textSecondary }]}>Note (optional)</Text>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>
+        Note (optional)
+      </Text>
       <AppTextInput
         leftIcon="file-text"
         placeholder="e.g. Electricity bill, Office supplies"

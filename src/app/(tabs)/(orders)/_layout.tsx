@@ -14,7 +14,7 @@ const OrderLayout = () => {
           animation: "slide_from_right",
         }}
       >
-        <Stack.Screen name="index" options={{ title: "Orders" }} />
+        <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="[id]" options={{ title: "Order Details" }} />
       </Stack>
     </View>

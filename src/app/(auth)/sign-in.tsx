@@ -1,12 +1,9 @@
+import AppView from "@/components/app-view";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
-import { Lucide } from "@react-native-vector-icons/lucide";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Platform,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -21,121 +18,46 @@ const SignIn = () => {
   const [password, setPassword] = useState("");
 
   return (
-    <SafeAreaView
-      style={[styles.safeArea, { backgroundColor: colors.background }]}
-    >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.container}
-      >
-        <View style={styles.heroSection}>
-          <View style={[styles.logoWrap, { backgroundColor: colors.card }]}>
-            <View style={styles.logoBadge}>
-              <Lucide name="store" size={24} color="#ffffff" />
-            </View>
-          </View>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Welcome back
+    <AppView>
+      <View style={{ gap: 22 }}>
+        <AppTextInput
+          label="Email"
+          placeholder="name@example.com"
+          value={email}
+          onChangeText={setEmail}
+          leftIcon="mail"
+          keyboardType="email-address"
+          autoCapitalize="none"
+          autoCorrect={false}
+        />
+
+        <AppTextInput
+          label="Password"
+          placeholder="••••••••"
+          value={password}
+          onChangeText={setPassword}
+          leftIcon="lock"
+          secureTextEntry
+          rightIcon="eye"
+        />
+
+        <TouchableOpacity activeOpacity={0.8} style={styles.forgotRow}>
+          <Text style={[styles.forgotText, { color: colors.textSecondary }]}>
+            Forgot password?
           </Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Sign in to continue managing your business.
-          </Text>
-        </View>
+        </TouchableOpacity>
 
-        <View style={[styles.formCard, { backgroundColor: colors.card }]}>
-          <AppTextInput
-            label="Email"
-            placeholder="name@example.com"
-            value={email}
-            onChangeText={setEmail}
-            leftIcon="mail"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-          />
-
-          <AppTextInput
-            label="Password"
-            placeholder="••••••••"
-            value={password}
-            onChangeText={setPassword}
-            leftIcon="lock"
-            secureTextEntry
-            rightIcon="eye"
-          />
-
-          <TouchableOpacity activeOpacity={0.8} style={styles.forgotRow}>
-            <Text style={[styles.forgotText, { color: colors.textSecondary }]}>
-              Forgot password?
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity activeOpacity={0.9} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>Sign in</Text>
-          </TouchableOpacity>
-
-          <View style={styles.dividerRow}>
-            <View
-              style={[
-                styles.dividerLine,
-                { backgroundColor: colors.backgroundElement },
-              ]}
-            />
-            <Text style={[styles.dividerText, { color: colors.textSecondary }]}>
-              or continue with
-            </Text>
-            <View
-              style={[
-                styles.dividerLine,
-                { backgroundColor: colors.backgroundElement },
-              ]}
-            />
-          </View>
-
-          <View style={styles.socialRow}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={[
-                styles.socialButton,
-                { backgroundColor: colors.backgroundElement },
-              ]}
-            >
-              <Lucide name="apple" size={18} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={[
-                styles.socialButton,
-                { backgroundColor: colors.backgroundElement },
-              ]}
-            >
-              <Lucide name="chrome" size={18} color={colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              style={[
-                styles.socialButton,
-                { backgroundColor: colors.backgroundElement },
-              ]}
-            >
-              <Lucide name="facebook" size={18} color={colors.text} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.footerRow}>
-            <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-              Don’t have an account?
-            </Text>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => router.push("/sign-up")}
-            >
-              <Text style={styles.footerLink}>Create one</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        <TouchableOpacity activeOpacity={0.9} style={styles.primaryButton}>
+          <Text style={styles.primaryButtonText}>Sign in</Text>
+        </TouchableOpacity>
+        <Text
+          style={{ color: "blue", fontSize: 22 }}
+          onPress={() => router.push({ pathname: "/(auth)/sign-up" })}
+        >
+          Register
+        </Text>
+      </View>
+    </AppView>
   );
 };
 
@@ -147,7 +69,7 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    justifyContent: "center",
+    // justifyContent: "center",
     paddingHorizontal: 20,
     paddingVertical: 24,
   },

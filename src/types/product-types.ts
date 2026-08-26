@@ -21,3 +21,5 @@ export type ProductFilter = {
   maxPrice?: number;
   category?: string;
 };
+
+

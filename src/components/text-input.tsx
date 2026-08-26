@@ -3,10 +3,10 @@ import { Lucide, LucideIconName } from "@react-native-vector-icons/lucide";
 import React from "react";
 import {
   Platform,
-  StyleSheet,
-  Text,
   TextInput as RNTextInput,
   TextInputProps as RNTextInputProps,
+  StyleSheet,
+  Text,
   useColorScheme,
   View,
 } from "react-native";
@@ -50,8 +50,8 @@ const AppTextInput = React.forwardRef<RNTextInput, AppTextInputProps>(
           style={[
             styles.container,
             {
-              backgroundColor: colors.backgroundElement,
-              borderColor: error ? "#dc2626" : "transparent",
+              backgroundColor: colors.textInput,
+              borderColor: error ? "#f14e4eff" : "transparent",
             },
             multiline && styles.multilineContainer,
           ]}
@@ -144,7 +144,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   errorText: {
-    color: "#dc2626",
+    color: "#fa5959ff",
     fontSize: 12,
     paddingHorizontal: 4,
   },

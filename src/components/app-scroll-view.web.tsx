@@ -1,10 +1,7 @@
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "@/hooks/use-color-scheme.web";
-import { Host } from "@expo/ui";
-import { LazyColumn } from "@expo/ui/jetpack-compose";
-import { LazyVStack, ScrollView } from "@expo/ui/swift-ui";
 import React from "react";
-import { Platform, StyleSheet, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const AppScrollView = ({ children }: { children: React.ReactNode }) => {
@@ -21,26 +18,13 @@ const AppScrollView = ({ children }: { children: React.ReactNode }) => {
         paddingHorizontal: 10,
       }}
     >
-      <Host
-        useViewportSizeMeasurement
-        seedColor={colors.background}
+      <ScrollView
         style={{ flex: 1 }}
+        contentContainerStyle={{ paddingVertical: 8 }}
+        showsVerticalScrollIndicator={false}
       >
-        {Platform.OS === "android" ? (
-          <LazyColumn
-            contentPadding={{
-              top: insets.top + 8,
-              bottom: insets.bottom + 24,
-            }}
-          >
-            {children}
-          </LazyColumn>
-        ) : (
-          <ScrollView showsIndicators={false}>
-            <LazyVStack spacing={8}>{children}</LazyVStack>
-          </ScrollView>
-        )}
-      </Host>
+        {children}
+      </ScrollView>
     </View>
   );
 };

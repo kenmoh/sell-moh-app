@@ -11,10 +11,11 @@ import {
 interface LinkProps {
   leadingIcon: LucideIconName;
   label: string;
+  docType?: string;
   onPress?: () => void;
 }
 
-const LinkItem = ({ leadingIcon, label, onPress }: LinkProps) => {
+const LinkItem = ({ leadingIcon, label, onPress, docType }: LinkProps) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
 
@@ -36,7 +37,14 @@ const LinkItem = ({ leadingIcon, label, onPress }: LinkProps) => {
       >
         <Lucide name={leadingIcon} color={"#aaa"} size={18} />
 
-        <Text style={{ color: colors.text }}>{label}</Text>
+        <View>
+          <Text style={{ color: colors.text }}>{label}</Text>
+          {docType && (
+            <Text style={{ color: "#aaa", fontSize: 12, fontWeight: "300" }}>
+              {docType}
+            </Text>
+          )}
+        </View>
       </View>
       <Lucide name="chevron-right" color={"#aaa"} size={20} />
     </Pressable>

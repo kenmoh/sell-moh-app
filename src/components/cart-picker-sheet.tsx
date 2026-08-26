@@ -1,8 +1,13 @@
-import { AppBottomSheet } from "@/components/bottom-sheet";
-import useCartStore from "@/hooks/use-cart-store";
+import AppBottomSheet from "@/components/bottom-sheet";
 import { Colors } from "@/constants/theme";
-import { Host } from "@expo/ui";
-import { ScrollView, StyleSheet, Text, useColorScheme, View } from "react-native";
+import useCartStore from "@/hooks/use-cart-store";
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from "react-native";
 
 interface CartPickerSheetProps {
   visible: boolean;
@@ -36,74 +41,79 @@ const CartPickerSheet = ({
     onCartSelected(newId);
   };
 
-  const getCartTotal = (cart: { items: { product: { price: number }; quantity: number }[] }) =>
-    cart.items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
+  const getCartTotal = (cart: {
+    items: { product: { price: number }; quantity: number }[];
+  }) => cart.items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
 
   const getCartCount = (cart: { items: { quantity: number }[] }) =>
     cart.items.reduce((sum, i) => sum + i.quantity, 0);
 
   return (
-    <Host style={{ flex: 1 }}>
-      <AppBottomSheet visible={visible} onVisibleChange={onVisibleChange}>
-        <Text style={[styles.title, { color: colors.text }]}>Your Carts</Text>
+    <AppBottomSheet visible={visible} onVisibleChange={onVisibleChange}>
+      <Text style={[styles.title, { color: colors.text }]}>Your Carts</Text>
 
-        <ScrollView bounces={false} showsVerticalScrollIndicator={false}>
-          {carts.map((cart) => {
-            const isActive = cart.id === activeCartId;
-            const count = getCartCount(cart);
-            const total = getCartTotal(cart);
-            return (
-              <View
-                key={cart.id}
-                style={[
-                  styles.cartRow,
-                  {
-                    backgroundColor: isActive
-                      ? colors.backgroundElement
-                      : "transparent",
-                    borderColor: isActive ? colors.textSecondary : colors.backgroundElement,
-                  },
-                ]}
-              >
-                <Text
-                  style={[styles.cartName, { color: colors.text }]}
-                  onPress={() => handleSelect(cart.id)}
-                >
-                  {cart.name}
-                </Text>
-                <View style={styles.cartMeta}>
-                  <Text style={[styles.cartCount, { color: colors.textSecondary }]}>
-                    {count} {count === 1 ? "item" : "items"}
-                  </Text>
-                  <Text style={[styles.cartTotal, { color: colors.text }]}>
-                    NGN {total.toLocaleString()}
-                  </Text>
-                </View>
-                {carts.length > 1 && (
-                  <Text
-                    style={styles.deleteButton}
-                    onPress={() => deleteCart(cart.id)}
-                  >
-                    ✕
-                  </Text>
-                )}
-              </View>
-            );
-          })}
-        </ScrollView>
-
-        <View
-          style={[styles.createButton, { backgroundColor: colors.backgroundElement }]}
-        >
-          <Text
-            style={[styles.createButtonText, { color: colors.text }]}
-            onPress={handleCreate}
+      {carts.map((cart) => {
+        const isActive = cart.id === activeCartId;
+        const count = getCartCount(cart);
+        const total = getCartTotal(cart);
+        return (
+          <Pressable
+            key={cart.id}
+            onPress={() => handleSelect(cart.id)}
+            style={[
+              styles.cartRow,
+              {
+                backgroundColor: isActive
+                  ? colors.backgroundElement
+                  : "transparent",
+                borderColor: isActive
+                  ? colors.textSecondary
+                  : colors.backgroundElement,
+              },
+            ]}
           >
-            + Create New Cart
-          </Text>
-        </View>
-      </AppBottomSheet>
-    </Host>
+            <Text style={[styles.cartName, { color: colors.text }]}>
+              {cart.name}
+            </Text>
+            <View style={styles.cartMeta}>
+              <Text
+                style={[styles.cartCount, { color: colors.textSecondary }]}
+              >
+                {count} {count === 1 ? "item" : "items"}
+              </Text>
+              <Text style={[styles.cartTotal, { color: colors.text }]}>
+                NGN {total.toLocaleString()}
+              </Text>
+            </View>
+            {carts.length > 1 && (
+              <Pressable
+                hitSlop={8}
+                onPress={() => deleteCart(cart.id)}
+                style={styles.deleteButton}
+              >
+                <Text style={[styles.deleteButtonText, { color: "#cf222e" }]}>
+                  ✕
+                </Text>
+              </Pressable>
+            )}
+          </Pressable>
+        );
+      })}
+
+      <View
+        style={[
+          styles.createButton,
+          { backgroundColor: colors.backgroundElement },
+        ]}
+      >
+        <Text
+          style={[styles.createButtonText, { color: colors.text }]}
+          onPress={handleCreate}
+        >
+          + Create New Cart
+        </Text>
+      </View>
+    </AppBottomSheet>
   );
 };
 
@@ -125,7 +135,8 @@ const styles = StyleSheet.create({
   cartMeta: { alignItems: "flex-end", gap: 2 },
   cartCount: { fontSize: 12 },
   cartTotal: { fontSize: 13, fontWeight: "700" },
-  deleteButton: { padding: 4, color: "#cf222e", fontSize: 16 },
+  deleteButton: { padding: 4 },
+  deleteButtonText: { fontSize: 16 },
   createButton: {
     borderRadius: 100,
     paddingVertical: 12,

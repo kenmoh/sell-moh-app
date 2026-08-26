@@ -1,7 +1,6 @@
-﻿import { AppBottomSheet } from "@/components/bottom-sheet";
-import CartPickerSheet from "@/components/cart-picker-sheet";
-import useCartStore from "@/hooks/use-cart-store";
+import AppBottomSheet from "@/components/bottom-sheet";
 import { Colors, Spacing } from "@/constants/theme";
+import useCartStore from "@/hooks/use-cart-store";
 import { Product } from "@/types/product-types";
 import { Button, Column, Text as NativeText } from "@expo/ui";
 import { CameraView, useCameraPermissions } from "expo-camera";
@@ -115,130 +114,136 @@ export default function ScanScreen() {
           barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
           onBarcodeScanned={handleBarcodeScanned}
         />
-        <View style={styles.cameraShade} />
-        <View style={styles.content}>
-          <View style={styles.header}>
-            <View>
-              <Text style={styles.eyebrow}>QUICK SALE</Text>
-              <Text style={styles.title}>Scan product</Text>
+        <>
+          <View style={styles.cameraShade} />
+          <View style={styles.content}>
+            <View style={styles.header}>
+              <View>
+                <Text style={styles.eyebrow}>QUICK SALE</Text>
+                <Text style={styles.title}>Scan product</Text>
+              </View>
+              <View style={styles.qrBadge}>
+                <Text style={styles.qrBadgeText}>QR</Text>
+              </View>
             </View>
-            <View style={styles.qrBadge}>
-              <Text style={styles.qrBadgeText}>QR</Text>
+            <View style={styles.scannerArea}>
+              <View style={styles.scanFrame}>
+                <View style={[styles.corner, styles.topLeft]} />
+                <View style={[styles.corner, styles.topRight]} />
+                <View style={[styles.corner, styles.bottomLeft]} />
+                <View style={[styles.corner, styles.bottomRight]} />
+                {isLookingUp && (
+                  <View style={styles.lookupOverlay}>
+                    <ActivityIndicator color="#ffffff" />
+                    <Text style={styles.lookupText}>Finding product…</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={styles.scanHint}>
+                Point your camera at a product QR code
+              </Text>
+            </View>
+            <View style={styles.footer}>
+              <View style={styles.tipDot} />
+              <Text style={styles.footerText}>
+                Make sure the code is inside the frame
+              </Text>
             </View>
           </View>
-          <View style={styles.scannerArea}>
-            <View style={styles.scanFrame}>
-              <View style={[styles.corner, styles.topLeft]} />
-              <View style={[styles.corner, styles.topRight]} />
-              <View style={[styles.corner, styles.bottomLeft]} />
-              <View style={[styles.corner, styles.bottomRight]} />
-              {isLookingUp && (
-                <View style={styles.lookupOverlay}>
-                  <ActivityIndicator color="#ffffff" />
-                  <Text style={styles.lookupText}>Finding product…</Text>
-                </View>
-              )}
-            </View>
-            <Text style={styles.scanHint}>
-              Point your camera at a product QR code
-            </Text>
-          </View>
-          <View style={styles.footer}>
-            <View style={styles.tipDot} />
-            <Text style={styles.footerText}>
-              Make sure the code is inside the frame
-            </Text>
-          </View>
-        </View>
 
-        <AppBottomSheet
-          visible={Boolean(product)}
-          onVisibleChange={(isVisible) => {
-            if (!isVisible) resetScanner();
-          }}
-        >
-          {product && (
-            <Column spacing={14} style={styles.sheetContent}>
-              <NativeText textStyle={styles.sheetEyebrow}>
-                PRODUCT FOUND
-              </NativeText>
-              <NativeText textStyle={styles.sheetTitle}>
-                {product.name}
-              </NativeText>
-              <NativeText textStyle={styles.sheetDescription}>
-                {product.description}
-              </NativeText>
-              <View style={styles.productMeta}>
-                <View>
-                  <Text
-                    style={[styles.metaLabel, { color: colors.textSecondary }]}
-                  >
-                    PRICE
-                  </Text>
-                  <Text style={[styles.price, { color: colors.text }]}>
-                    ₦{product.price.toLocaleString()}
-                  </Text>
+          <AppBottomSheet
+            visible={Boolean(product)}
+            onVisibleChange={(isVisible) => {
+              if (!isVisible) resetScanner();
+            }}
+          >
+            {product && (
+              <Column spacing={14} style={{ paddingLeft: 3, paddingRight: 15 }}>
+                <NativeText textStyle={styles.sheetTitle}>
+                  {product.name}
+                </NativeText>
+                <NativeText textStyle={styles.sheetDescription}>
+                  {product.description}
+                </NativeText>
+                <View style={styles.productMeta}>
+                  <View>
+                    <Text
+                      style={[
+                        styles.metaLabel,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      PRICE
+                    </Text>
+                    <Text style={[styles.price, { color: colors.text }]}>
+                      ₦{product.price.toLocaleString()}
+                    </Text>
+                  </View>
+                  <View style={styles.stockPill}>
+                    <Text style={styles.metaLabel}>
+                      {product.in_stock} in stock
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.stockPill}>
-                  <Text style={styles.metaLabel}>
-                    {product.in_stock} in stock
+                <View style={styles.quantityRow}>
+                  <Text style={[styles.quantityLabel, { color: colors.text }]}>
+                    Quantity
                   </Text>
+                  <View style={styles.quantityControl}>
+                    <Pressable
+                      accessibilityLabel="Decrease quantity"
+                      disabled={quantity === 1}
+                      onPress={() =>
+                        setQuantity((current) => Math.max(1, current - 1))
+                      }
+                      style={[
+                        styles.quantityButton,
+                        quantity === 1 && styles.quantityButtonDisabled,
+                        { backgroundColor: "#B0C4DE" },
+                      ]}
+                    >
+                      <Text style={styles.quantityButtonText}>−</Text>
+                    </Pressable>
+                    <Text
+                      style={[styles.quantityValue, { color: colors.text }]}
+                    >
+                      {quantity}
+                    </Text>
+                    <Pressable
+                      accessibilityLabel="Increase quantity"
+                      disabled={quantity === product.in_stock}
+                      onPress={() =>
+                        setQuantity((current) =>
+                          Math.min(product.in_stock, current + 1),
+                        )
+                      }
+                      style={[
+                        styles.quantityButton,
+                        quantity === product.in_stock &&
+                          styles.quantityButtonDisabled,
+                        { backgroundColor: "#B0C4DE" },
+                      ]}
+                    >
+                      <Text style={styles.quantityButtonText}>+</Text>
+                    </Pressable>
+                  </View>
                 </View>
-              </View>
-              <View style={styles.quantityRow}>
-                <Text style={[styles.quantityLabel, { color: colors.text }]}>
-                  Quantity
-                </Text>
-                <View style={styles.quantityControl}>
-                  <Pressable
-                    accessibilityLabel="Decrease quantity"
-                    disabled={quantity === 1}
-                    onPress={() =>
-                      setQuantity((current) => Math.max(1, current - 1))
-                    }
-                    style={[
-                      styles.quantityButton,
-                      quantity === 1 && styles.quantityButtonDisabled,
-                    ]}
-                  >
-                    <Text style={styles.quantityButtonText}>−</Text>
-                  </Pressable>
-                  <Text style={[styles.quantityValue, { color: colors.text }]}>
-                    {quantity}
+                <Button
+                  label="Add to cart"
+                  onPress={() => {
+                    useCartStore.getState().addItem(product, quantity);
+                    resetScanner();
+                  }}
+                />
+                <Pressable onPress={resetScanner} style={styles.title}>
+                  <Text style={[{ color: colors.textSecondary }]}>
+                    Scan another product
                   </Text>
-                  <Pressable
-                    accessibilityLabel="Increase quantity"
-                    disabled={quantity === product.in_stock}
-                    onPress={() =>
-                      setQuantity((current) =>
-                        Math.min(product.in_stock, current + 1),
-                      )
-                    }
-                    style={[
-                      styles.quantityButton,
-                      quantity === product.in_stock &&
-                        styles.quantityButtonDisabled,
-                    ]}
-                  >
-                    <Text style={styles.quantityButtonText}>+</Text>
-                  </Pressable>
-                </View>
-              </View>
-              <Button
-                label="Add to cart"
-                onPress={() => {
-                  useCartStore.getState().addItem(product, quantity);
-                  resetScanner();
-                }}
-              />
-              <Pressable onPress={resetScanner} style={styles.title}>
-                <Text style={[{ color: colors.textSecondary }]}>
-                  Scan another product
-                </Text>
-              </Pressable>
-            </Column>
-          )}
-        </AppBottomSheet>
+                </Pressable>
+              </Column>
+            )}
+          </AppBottomSheet>
+        </>
       </View>
     </SafeAreaView>
   );
@@ -363,7 +368,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   primaryButtonText: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
-  sheetContent: { padding: Spacing.four, paddingBottom: Spacing.five },
+
   sheetEyebrow: {
     color: "#2f7df6",
     fontSize: 11,
@@ -398,11 +403,10 @@ const styles = StyleSheet.create({
     width: 34,
     height: 34,
     borderRadius: 10,
-    backgroundColor: "#e8eef9",
     alignItems: "center",
     justifyContent: "center",
   },
-  quantityButtonDisabled: { opacity: 0.45 },
+  quantityButtonDisabled: { opacity: 0.9 },
   quantityButtonText: {
     color: "#2f7df6",
     fontSize: 22,

@@ -35,7 +35,7 @@ export const SearchInput = React.forwardRef<TextInput, SearchInputProps>(
       returnKeyType = "search",
       ...restProps
     },
-    ref
+    ref,
   ) => {
     const scheme = useColorScheme();
     const colors = Colors[scheme === "unspecified" ? "light" : scheme];
@@ -71,7 +71,7 @@ export const SearchInput = React.forwardRef<TextInput, SearchInputProps>(
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={colors.textSecondary}
+          placeholderTextColor={"#aaa"}
           selectionColor="#7c3aed"
           cursorColor="#7c3aed"
           returnKeyType={returnKeyType}
@@ -100,7 +100,7 @@ export const SearchInput = React.forwardRef<TextInput, SearchInputProps>(
         )}
       </View>
     );
-  }
+  },
 );
 
 SearchInput.displayName = "SearchInput";
