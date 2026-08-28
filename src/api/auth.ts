@@ -1,6 +1,8 @@
 import {
+  CreateEmployee,
   CreateRole,
   DataMessageResponse,
+  EmployeeResponse,
   FetchTenantRoles,
   LoginRequest,
   Permissions,
@@ -14,7 +16,7 @@ const URL = "/auth";
 /**
  * Extracts a readable error message from the API response
  */
-const getErrorMessage = (res: any): string => {
+export const getErrorMessage = (res: any): string => {
   if (res.data && typeof res.data === "object" && res.data.message) {
     return res.data.message;
   }
@@ -115,3 +117,55 @@ export const fetchTenantRoles = async (): Promise<FetchTenantRoles[]> => {
 
   return res.data?.data ?? [];
 };
+
+// ____________________________________Employee Management____________________________________
+export const createEmployee = async (
+  data: CreateEmployee,
+): Promise<DataMessageResponse> => {
+  const res = await apiClient.post<DataMessageResponse>(
+    `${URL}/employees`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!;
+};
+
+export const getEmployees = async (): Promise<EmployeeResponse[]> => {
+  const res = await apiClient.get<{ data: EmployeeResponse[] }>(
+    `${URL}/employees`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? [];
+};
+
+// export const updateEmployee = async (
+//   data: UpdateEmployee,
+// ): Promise<DataMessageResponse> => {
+//   const res = await apiClient.patch<DataMessageResponse>(`${URL}/employees`, data);
+
+//   if (!res.ok) {
+//     throw new Error(getErrorMessage(res));
+//   }
+
+//   return res.data!;
+// };
+
+// export const deleteEmployee = async (
+//   data: UpdateEmployee,
+// ): Promise<DataMessageResponse> => {
+//   const res = await apiClient.delete<DataMessageResponse>(`${URL}/employees`, data);
+
+//   if (!res.ok) {
+//     throw new Error(getErrorMessage(res));
+//   }
+
+//   return res.data!;
+// };

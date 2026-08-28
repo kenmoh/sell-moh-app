@@ -1,6 +1,7 @@
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import {
   DocumentCreateRequest,
   DocumentItemLine,
@@ -9,6 +10,7 @@ import {
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -20,7 +22,7 @@ import {
 type Props = {
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
-  onCreate?: (payload: DocumentCreateRequest) => void;
+  onCreate?: (payload: DocumentCreateRequest) => Promise<void>;
 };
 
 const DOC_TYPES: { value: DocumentType; label: string; icon: string }[] = [
@@ -43,9 +45,11 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<DocumentItemLine[]>([emptyItem()]);
+  const [isCreating, setIsCreating] = useState(false);
 
   const updateItem = (index: number, patch: Partial<DocumentItemLine>) => {
     setItems((current) =>
@@ -64,28 +68,42 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
     setCustomerName("");
     setCustomerPhone("");
     setCustomerAddress("");
-    setDueDate("");
+    setDueDate(null);
+    setShowDatePicker(false);
     setNotes("");
     setItems([emptyItem()]);
   };
 
-  const handleCreate = () => {
-    onCreate?.({
-      tenant_id: "",
-      actor_id: "",
-      doc_type: docType,
-      customer_name: customerName || undefined,
-      customer_phone: customerPhone || undefined,
-      customer_address: customerAddress || undefined,
-      due_date: dueDate || undefined,
-      notes: notes || undefined,
-      items: items.filter((i) => i.description.trim() !== ""),
-    });
-    onVisibleChange(false);
-    reset();
+  const handleCreate = async () => {
+    setIsCreating(true);
+    try {
+      await onCreate?.({
+        tenant_id: "",
+        actor_id: "",
+        doc_type: docType,
+        customer_name: customerName || undefined,
+        customer_phone: customerPhone || undefined,
+        customer_address: customerAddress || undefined,
+        due_date: dueDate ? dueDate.toISOString() : undefined,
+        notes: notes || undefined,
+        items: items.filter((i) => i.description.trim() !== ""),
+      });
+      onVisibleChange(false);
+      reset();
+    } finally {
+      setIsCreating(false);
+    }
   };
 
   const canSubmit = items.some((i) => i.description.trim() !== "");
+
+  const formatDate = (d: Date) => {
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  };
 
   return (
     <AppBottomSheet
@@ -262,12 +280,46 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
             Additional
           </Text>
           {docType === "invoice" && (
-            <AppTextInput
-              placeholder="Due date (e.g. 2026-09-30)"
-              value={dueDate}
-              onChangeText={setDueDate}
-              leftIcon="calendar"
-            />
+            <View style={styles.datePickerContainer}>
+              <Pressable
+                style={[
+                  styles.datePickerButton,
+                  {
+                    backgroundColor: colors.backgroundElement,
+                    borderColor: colors.backgroundSelected,
+                  },
+                ]}
+                onPress={() => setShowDatePicker(true)}
+              >
+                <Lucide name="calendar" size={16} color={colors.textSecondary} />
+                <Text
+                  style={[
+                    styles.datePickerText,
+                    { color: dueDate ? colors.text : colors.textSecondary },
+                  ]}
+                >
+                  {dueDate ? formatDate(dueDate) : "Select due date"}
+                </Text>
+                <Lucide
+                  name="chevron-down"
+                  size={16}
+                  color={colors.textSecondary}
+                />
+              </Pressable>
+              {showDatePicker && (
+                <DateTimePicker
+                  value={dueDate || new Date()}
+                  mode="date"
+                  display="compact"
+                  presentation="dialog"
+                  onValueChange={(_, selectedDate) => {
+                    setShowDatePicker(false);
+                    if (selectedDate) setDueDate(selectedDate);
+                  }}
+                  onDismiss={() => setShowDatePicker(false)}
+                />
+              )}
+            </View>
           )}
           <AppTextInput
             placeholder="Notes (optional)"
@@ -285,15 +337,21 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
           styles.createBtn,
           {
             backgroundColor: colors.buttonPrimary,
-            opacity: canSubmit ? 1 : 0.5,
+            opacity: canSubmit && !isCreating ? 1 : 0.5,
           },
         ]}
-        disabled={!canSubmit}
+        disabled={!canSubmit || isCreating}
         onPress={handleCreate}
       >
-        <Lucide name="plus" size={18} color="#fff" />
+        {isCreating ? (
+          <ActivityIndicator color="#fff" size="small" />
+        ) : (
+          <Lucide name="plus" size={18} color="#fff" />
+        )}
         <Text style={styles.createBtnText}>
-          Create {DOC_TYPES.find((t) => t.value === docType)?.label}
+          {isCreating
+            ? "Creating..."
+            : `Create ${DOC_TYPES.find((t) => t.value === docType)?.label}`}
         </Text>
       </Pressable>
     </AppBottomSheet>
@@ -386,6 +444,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: "rgba(220, 38, 38, 0.1)",
+  },
+  datePickerContainer: {
+    gap: 8,
+  },
+  datePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  datePickerText: {
+    flex: 1,
+    fontSize: 14,
   },
   createBtn: {
     flexDirection: "row",

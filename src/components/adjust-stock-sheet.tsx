@@ -1,8 +1,13 @@
+import { adjustProduct } from "@/api/inventory";
 import AppBottomSheet from "@/components/bottom-sheet";
+import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { AdjustProduct } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -10,10 +15,23 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { z } from "zod";
+
+const adjustSchema = z.object({
+  qty_change: z.string().min(1, "Quantity is required"),
+  unit_cost: z.string().min(1, "Unit cost is required"),
+  reason: z.string().min(1, "Select a reason"),
+  notes: z.string().optional(),
+});
+
+type AdjustField = keyof z.infer<typeof adjustSchema>;
 
 type Props = {
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
+  productId: string;
+  storeId?: string;
+  unitCost?: number;
 };
 
 const reasons = [
@@ -22,27 +40,89 @@ const reasons = [
   { label: "Correction", icon: "pencil" as const },
 ];
 
-const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
+const AdjustStockSheet = ({
+  visible,
+  onVisibleChange,
+  productId,
+  storeId = "",
+  unitCost = 0,
+}: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
+  const queryClient = useQueryClient();
+
   const [quantity, setQuantity] = useState("");
+  const [unitCostValue, setUnitCostValue] = useState(String(unitCost));
   const [selectedReason, setSelectedReason] = useState("");
   const [note, setNote] = useState("");
+  const [errors, setErrors] = useState<Partial<Record<AdjustField, string>>>(
+    {},
+  );
+
+  useEffect(() => {
+    setUnitCostValue(String(unitCost));
+  }, [unitCost]);
+
+  const { mutate: adjustMutation, isPending } = useMutation({
+    mutationFn: (data: AdjustProduct) => adjustProduct(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product", productId] });
+      onVisibleChange(false);
+      reset();
+    },
+    onError: (error) => {
+      console.error("Failed to adjust stock", error);
+    },
+  });
+
+  const reset = () => {
+    setQuantity("");
+    setUnitCostValue(String(unitCost));
+    setSelectedReason("");
+    setNote("");
+    setErrors({});
+  };
 
   const parsedQty = parseInt(quantity || "0", 10);
 
   const handleConfirm = () => {
-    onVisibleChange(false);
-    setQuantity("");
-    setSelectedReason("");
-    setNote("");
+    const result = adjustSchema.safeParse({
+      qty_change: quantity,
+      unit_cost: unitCostValue,
+      reason: selectedReason,
+      notes: note || undefined,
+    });
+
+    if (!result.success) {
+      const fieldErrors: Partial<Record<AdjustField, string>> = {};
+      result.error.issues.forEach((issue) => {
+        const field = issue.path[0] as AdjustField;
+        fieldErrors[field] = issue.message;
+      });
+      setErrors(fieldErrors);
+      return;
+    }
+
+    setErrors({});
+    adjustMutation({
+      product_id: productId,
+      reason: result.data.reason,
+      qty_change: parsedQty,
+      unit_cost: parseFloat(result.data.unit_cost) || 0,
+      notes: result.data.notes || null,
+      ...(storeId ? { store_id: storeId } : {}),
+    });
   };
 
   return (
     <AppBottomSheet
       snapPoints={["75%", "85%"]}
       visible={visible}
-      onVisibleChange={onVisibleChange}
+      onVisibleChange={(v) => {
+        if (!v) reset();
+        onVisibleChange(v);
+      }}
     >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>
@@ -98,6 +178,9 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
             <Lucide name="plus" size={16} color={colors.text} />
           </Pressable>
         </View>
+        {errors.qty_change && (
+          <Text style={styles.errorText}>{errors.qty_change}</Text>
+        )}
       </View>
 
       {/* Reason */}
@@ -141,27 +224,19 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
             );
           })}
         </View>
+        {errors.reason && (
+          <Text style={styles.errorText}>{errors.reason}</Text>
+        )}
       </View>
 
       {/* Note */}
       <View style={styles.section}>
-        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-          Note (optional)
-        </Text>
-        <TextInput
-          style={[
-            styles.noteInput,
-            {
-              color: colors.text,
-              backgroundColor: colors.backgroundElement,
-              borderColor: colors.backgroundSelected,
-            },
-          ]}
+        <AppTextInput
+          placeholder="Note (optional)"
           value={note}
           onChangeText={setNote}
-          placeholder="e.g. Supplier delivery, Damaged units"
-          placeholderTextColor={colors.textSecondary}
-          multiline
+          leftIcon="sticky-note"
+          autoCapitalize="sentences"
         />
       </View>
 
@@ -170,15 +245,23 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
         style={[
           styles.confirmButton,
           {
-            backgroundColor: parsedQty > 0 ? colors.buttonPrimary : colors.backgroundSelected,
-            opacity: parsedQty > 0 ? 1 : 0.5,
+            backgroundColor: parsedQty > 0 && !isPending
+              ? colors.buttonPrimary
+              : colors.backgroundSelected,
+            opacity: isPending ? 0.5 : 1,
           },
         ]}
-        disabled={parsedQty === 0}
+        disabled={parsedQty === 0 || isPending}
         onPress={handleConfirm}
       >
-        <Lucide name="package-plus" size={18} color="#fff" />
-        <Text style={styles.confirmText}>Add Stock</Text>
+        {isPending ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <>
+            <Lucide name="package-plus" size={18} color="#fff" />
+            <Text style={styles.confirmText}>Confirm Adjustment</Text>
+          </>
+        )}
       </Pressable>
     </AppBottomSheet>
   );
@@ -246,21 +329,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: "600",
   },
-  noteInput: {
-    borderRadius: 14,
-    borderWidth: 1,
-    padding: 14,
-    fontSize: 14,
-    minHeight: 70,
-    textAlignVertical: "top",
-    lineHeight: 20,
+  errorText: {
+    fontSize: 12,
+    color: "#DC2626",
+    marginTop: -6,
   },
   confirmButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    borderRadius: 14,
+    borderRadius: 50,
     paddingVertical: 16,
     marginTop: 4,
   },

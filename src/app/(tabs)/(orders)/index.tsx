@@ -3,7 +3,7 @@ import SearchInput from "@/components/search-input";
 import { ColorPalette, Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -93,6 +93,12 @@ const OrdersScreen = () => {
   const [activeFilter, setActiveFilter] = useState<FilterStatus>("All");
   const [search, setSearch] = useState("");
   const [orders] = useState<Order[]>(initialOrders);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const onRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    setTimeout(() => setIsRefreshing(false), 1000);
+  }, []);
 
   // Summary Metrics Calculation
   const totalRevenue = useMemo(() => {
@@ -162,7 +168,9 @@ const OrdersScreen = () => {
           item.type === "sticky_header" ? "sticky_header" : String(item.data.id)
         }
         showsVerticalScrollIndicator={false}
-        stickyHeaderIndices={[1]} // Makes category pills + search sticky on scroll
+        stickyHeaderIndices={[1]}
+        refreshing={isRefreshing}
+        onRefresh={onRefresh}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.background }}>
             {/* Header Title Section */}

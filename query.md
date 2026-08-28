@@ -1,1 +1,0 @@
-Build a TanStack Query server-state layer for a TypeScript app. Use domain-shaped query keys, colocated query functions, optimistic mutations where useful, and targeted invalidation after writes. Include loading, error, empty, background-refetch, and stale-data states. Keep server data out of global client state.

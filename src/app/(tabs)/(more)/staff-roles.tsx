@@ -1,4 +1,5 @@
 import { fetchTenantRoles } from "@/api/auth";
+import AddEmployeeSheet from "@/components/add-employee-sheet";
 import AddRoleSheet from "@/components/add-role-sheet";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -122,6 +123,7 @@ const StaffRoles = () => {
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const [search, setSearch] = useState("");
   const [roleSheetVisible, setRoleSheetVisible] = useState(false);
+  const [employeeSheetVisible, setEmployeeSheetVisible] = useState(false);
 
   const filteredStaff = staff.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()),
@@ -130,7 +132,7 @@ const StaffRoles = () => {
   const totalStaff = staff.length;
   const activeNow = staff.filter((s) => s.active).length;
   const totalRoles = roles.length;
-  const { data: rolesData, isLoading: isLoadingRoles } = useQuery({
+  const { data: rolesData, isLoading: isLoadingRoles, isRefetching, refetch } = useQuery({
     queryKey: ["roles"],
     queryFn: fetchTenantRoles,
   });
@@ -155,7 +157,10 @@ const StaffRoles = () => {
           headerShown: true,
           title: "Staff & Roles",
           headerRight: () => (
-            <Pressable style={styles.addButton}>
+            <Pressable
+              style={styles.addButton}
+              onPress={() => setEmployeeSheetVisible(true)}
+            >
               <Lucide name="plus" size={20} color="#fff" />
             </Pressable>
           ),
@@ -169,6 +174,8 @@ const StaffRoles = () => {
         }
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
+        refreshing={isRefetching}
+        onRefresh={refetch}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.background }}>
             {/* Stats Row - Scrolls away */}
@@ -358,6 +365,10 @@ const StaffRoles = () => {
       <AddRoleSheet
         visible={roleSheetVisible}
         onVisibleChange={setRoleSheetVisible}
+      />
+      <AddEmployeeSheet
+        visible={employeeSheetVisible}
+        onVisibleChange={setEmployeeSheetVisible}
       />
     </View>
   );

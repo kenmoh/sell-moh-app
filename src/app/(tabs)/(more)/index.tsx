@@ -25,7 +25,7 @@ const more = () => {
       <MoreCard label="Store">
         <LinkItem
           label="Store Profile"
-          leadingIcon="store"
+          leadingIcon="user"
           onPress={() => router.push("/(tabs)/(more)/store-profile")}
         />
         <LinkItem
@@ -33,15 +33,25 @@ const more = () => {
           leadingIcon="users"
           onPress={() => router.push("/(tabs)/(more)/staff-roles")}
         />
-        {/* <LinkItem
-          label="Product & Categories"
-          leadingIcon="tags"
-          onPress={() => router.push("/(tabs)/(more)/products")}
-        /> */}
+        <LinkItem
+          label="Stores"
+          leadingIcon="store"
+          onPress={() => router.push("/(tabs)/(more)/store")}
+        />
         <LinkItem
           label="Discounts & Coupons"
           leadingIcon="percent"
           onPress={() => router.push("/(tabs)/(more)/discounts")}
+        />
+        <LinkItem
+          label="Subscriptions"
+          leadingIcon="calendar"
+          onPress={() => router.push("/(tabs)/(more)/subscription")}
+        />
+        <LinkItem
+          label="Customers"
+          leadingIcon="users-round"
+          onPress={() => router.push("/(tabs)/(more)/customers")}
         />
       </MoreCard>
 
@@ -65,6 +75,11 @@ const more = () => {
           docType="Receipt | Invoce | Quote"
           leadingIcon={"printer"}
           onPress={() => router.push("/(tabs)/(more)/document")}
+        />
+        <LinkItem
+          label="Reports"
+          leadingIcon={"bar-chart"}
+          onPress={() => router.push("/(tabs)/(more)/report")}
         />
       </MoreCard>
       <MoreCard label="Account">

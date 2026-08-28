@@ -1,3 +1,4 @@
+import { fetchProducts, fetchTenantCategories } from "@/api/inventory";
 import Card from "@/components/card";
 import DraggableCart from "@/components/draggable-cart";
 import ExpandableFAB from "@/components/expandable-fab";
@@ -6,9 +7,11 @@ import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
 import { Product } from "@/types/product-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Pressable,
   ScrollView,
@@ -19,163 +22,113 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const mockProducts: Product[] = [
-  {
-    id: "1",
-    name: "Coca-Cola 50cl",
-    description: "Refreshing carbonated soft drink",
-    price: 500,
-    in_stock: 48,
-    category: { id: "1", name: "Beverages" },
-  },
-  {
-    id: "2",
-    name: "Indomie Chicken 70g",
-    description: "Instant noodles pack",
-    price: 350,
-    in_stock: 12,
-    category: { id: "2", name: "Food" },
-  },
-  {
-    id: "3",
-    name: "Peak Milk 400g",
-    description: "Full cream evaporated milk can",
-    price: 2700,
-    in_stock: 35,
-    category: { id: "2", name: "Food" },
-  },
-  {
-    id: "4",
-    name: "Bluetooth Earbuds Pro",
-    description: "Wireless audio noise canceling",
-    price: 12500,
-    in_stock: 0,
-    category: { id: "3", name: "Electronics" },
-  },
-  {
-    id: "5",
-    name: "Dettol Antiseptic 250ml",
-    description: "Disinfectant liquid cleaner",
-    price: 1250,
-    in_stock: 8,
-    category: { id: "4", name: "Household" },
-  },
-  {
-    id: "6",
-    name: "Golden Penny Semovita",
-    description: "Premium wheat flour 1kg",
-    price: 1800,
-    in_stock: 22,
-    category: { id: "2", name: "Food" },
-  },
-  {
-    id: "7",
-    name: "Monster Energy 500ml",
-    description: "High performance energy drink",
-    price: 900,
-    in_stock: 30,
-    category: { id: "1", name: "Beverages" },
-  },
-  {
-    id: "8",
-    name: "Fast USB-C Charger 25W",
-    description: "Quick charge wall adapter",
-    price: 7500,
-    in_stock: 15,
-    category: { id: "3", name: "Electronics" },
-  },
-  {
-    id: "9",
-    name: "Colgate Toothpaste 140g",
-    description: "Maximum cavity protection",
-    price: 950,
-    in_stock: 19,
-    category: { id: "5", name: "Personal Care" },
-  },
-  {
-    id: "10",
-    name: "Milo Cocoa Powder 500g",
-    description: "Chocolate malt beverage drink",
-    price: 3200,
-    in_stock: 25,
-    category: { id: "2", name: "Food" },
-  },
-  {
-    id: "11",
-    name: "Pringles Sour Cream 158g",
-    description: "Crispy potato chips canister",
-    price: 2100,
-    in_stock: 16,
-    category: { id: "2", name: "Food" },
-  },
-  {
-    id: "12",
-    name: "Nivea Roll-On 50ml",
-    description: "48h antiperspirant protection",
-    price: 1400,
-    in_stock: 20,
-    category: { id: "5", name: "Personal Care" },
-  },
-];
-
-const categoriesList = [
-  "All",
-  "Beverages",
-  "Food",
-  "Electronics",
-  "Household",
-  "Personal Care",
-];
+const PAGE_SIZE = 20;
+const SEARCH_MIN_LENGTH = 3;
 
 const POSScreen = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
+  const flatListRef = useRef<FlatList>(null);
 
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("");
 
   const cartTotalItems = useCartStore((s) => s.totalItems());
 
-  // Category counts
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = { All: mockProducts.length };
-    mockProducts.forEach((p) => {
-      const catName = p.category?.name ?? "General";
-      counts[catName] = (counts[catName] || 0) + 1;
-    });
-    return counts;
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(null);
+
+  const handleSearchChange = useCallback((text: string) => {
+    setSearch(text);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    if (text.length >= SEARCH_MIN_LENGTH || text.length === 0) {
+      debounceTimer.current = setTimeout(() => {
+        setDebouncedSearch(text);
+      }, 400);
+    }
   }, []);
 
-  // Filtered product catalog
-  const filteredProducts = useMemo(() => {
-    return mockProducts.filter((product) => {
-      const matchesSearch =
-        product.name.toLowerCase().includes(search.toLowerCase()) ||
-        (product.description &&
-          product.description.toLowerCase().includes(search.toLowerCase())) ||
-        (product.category?.name &&
-          product.category.name.toLowerCase().includes(search.toLowerCase()));
+  const handleSearchClear = useCallback(() => {
+    setSearch("");
+    setDebouncedSearch("");
+  }, []);
 
-      const matchesCategory =
-        activeCategory === "All" || product.category?.name === activeCategory;
+  const { data: categoriesData } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchTenantCategories,
+  });
 
-      return matchesSearch && matchesCategory;
-    });
-  }, [search, activeCategory]);
+  const categories = categoriesData ?? [];
+
+  const {
+    data: productsData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isPending,
+    isRefetching,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ["products", debouncedSearch, activeCategory],
+    queryFn: ({ pageParam = 1 }) =>
+      fetchProducts({
+        page: pageParam,
+        page_size: PAGE_SIZE,
+        search: debouncedSearch || undefined,
+        category: activeCategory || undefined,
+      }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedItems = allPages.reduce((acc, p) => acc + p.items.length, 0);
+      return loadedItems < lastPage.total ? allPages.length + 1 : undefined;
+    },
+    initialPageParam: 1,
+  });
+
+  const allProducts = useMemo(
+    () => productsData?.pages.flatMap((p) => p.items) ?? [],
+    [productsData],
+  );
+
+  const mappedProducts: Product[] = useMemo(
+    () =>
+      allProducts.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.sku ?? "",
+        price: p.selling_price,
+        in_stock: 0,
+        category: categories.find((c) => c.id === p.category_id)
+          ? { id: p.category_id!, name: categories.find((c) => c.id === p.category_id)!.name }
+          : undefined,
+      })),
+    [allProducts, categories],
+  );
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  const hasActiveFilters = debouncedSearch !== "" || activeCategory !== "";
 
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={["top", "left", "right"]}
     >
-      {/* Product Grid */}
       <FlatList
-        data={filteredProducts}
+        ref={flatListRef}
+        data={mappedProducts}
         numColumns={2}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
-        stickyHeaderIndices={[0]} // Makes search + category bar sticky
+        stickyHeaderIndices={[0]}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
+        refreshing={isRefetching}
+        onRefresh={refetch}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.background }}>
             {/* Top Branding & Header Row */}
@@ -220,19 +173,40 @@ const POSScreen = () => {
                 },
               ]}
             >
-              {/* Category Pills (Horizontal Scroll) */}
+              {/* Category Pills */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.categoriesContainer}
               >
-                {categoriesList.map((cat) => {
-                  const isActive = cat === activeCategory;
-                  const count = categoryCounts[cat] ?? 0;
+                <Pressable
+                  onPress={() => setActiveCategory("")}
+                  style={[
+                    styles.categoryPill,
+                    {
+                      backgroundColor:
+                        activeCategory === "" ? "#3b82f6" : colors.backgroundElement,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.categoryPillText,
+                      {
+                        color: activeCategory === "" ? "#ffffff" : colors.textSecondary,
+                        fontWeight: activeCategory === "" ? "700" : "600",
+                      },
+                    ]}
+                  >
+                    All
+                  </Text>
+                </Pressable>
+                {categories.map((cat) => {
+                  const isActive = cat.id === activeCategory;
                   return (
                     <Pressable
-                      key={cat}
-                      onPress={() => setActiveCategory(cat)}
+                      key={cat.id}
+                      onPress={() => setActiveCategory(isActive ? "" : cat.id)}
                       style={[
                         styles.categoryPill,
                         {
@@ -251,46 +225,21 @@ const POSScreen = () => {
                           },
                         ]}
                       >
-                        {cat}
+                        {cat.name}
                       </Text>
-                      <View
-                        style={[
-                          styles.pillBadge,
-                          {
-                            backgroundColor: isActive
-                              ? "rgba(255, 255, 255, 0.25)"
-                              : isDark
-                                ? "#2d3038"
-                                : "#e2e5eb",
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.pillBadgeText,
-                            {
-                              color: isActive
-                                ? "#ffffff"
-                                : colors.textSecondary,
-                            },
-                          ]}
-                        >
-                          {count}
-                        </Text>
-                      </View>
                     </Pressable>
                   );
                 })}
               </ScrollView>
 
-              {/* Search Bar + Barcode Scanner Trigger */}
+              {/* Search Bar */}
               <View style={styles.searchRow}>
                 <SearchInput
                   value={search}
-                  onChangeText={setSearch}
-                  placeholder="Search products or scan barcode..."
+                  onChangeText={handleSearchChange}
+                  placeholder="Search products..."
                   containerStyle={{ flex: 1 }}
-                  onClear={() => setSearch("")}
+                  onClear={handleSearchClear}
                 />
               </View>
             </View>
@@ -303,42 +252,60 @@ const POSScreen = () => {
             onPress={() => useCartStore.getState().addItem(item)}
           />
         )}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator
+              color={colors.buttonPrimary}
+              style={{ paddingVertical: 20 }}
+            />
+          ) : null
+        }
         ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View
-              style={[
-                styles.emptyIconBadge,
-                { backgroundColor: colors.backgroundElement },
-              ]}
-            >
-              <Lucide
-                name="package-search"
-                size={32}
-                color={colors.textSecondary}
-              />
+          isPending ? (
+            <View style={styles.emptyContainer}>
+              <ActivityIndicator color={colors.buttonPrimary} size="large" />
             </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No Products Found
-            </Text>
-            <Text
-              style={[styles.emptySubtitle, { color: colors.textSecondary }]}
-            >
-              {search
-                ? `No products matching "${search}"`
-                : `No items available in ${activeCategory}.`}
-            </Text>
-            {(search || activeCategory !== "All") && (
-              <Pressable
-                style={[styles.resetButton, { backgroundColor: "#3b82f6" }]}
-                onPress={() => {
-                  setSearch("");
-                  setActiveCategory("All");
-                }}
+          ) : (
+            <View style={styles.emptyContainer}>
+              <View
+                style={[
+                  styles.emptyIconBadge,
+                  { backgroundColor: colors.backgroundElement },
+                ]}
               >
-                <Text style={styles.resetButtonText}>Reset Catalog</Text>
-              </Pressable>
-            )}
-          </View>
+                <Lucide
+                  name="package-search"
+                  size={32}
+                  color={colors.textSecondary}
+                />
+              </View>
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                No Products Found
+              </Text>
+              <Text
+                style={[
+                  styles.emptySubtitle,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                {debouncedSearch
+                  ? `No products matching "${debouncedSearch}"`
+                  : "No items available."}
+              </Text>
+              {hasActiveFilters && (
+                <Pressable
+                  style={[styles.resetButton, { backgroundColor: "#3b82f6" }]}
+                  onPress={() => {
+                    setSearch("");
+                    setDebouncedSearch("");
+                    setActiveCategory("");
+                  }}
+                >
+                  <Text style={styles.resetButtonText}>Reset Catalog</Text>
+                </Pressable>
+              )}
+            </View>
+          )
         }
         contentContainerStyle={{ paddingBottom: 100 }}
       />
@@ -386,20 +353,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
   },
-  activeCartBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: "#3b82f6",
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 100,
-  },
-  activeCartBadgeText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "800",
-  },
   stickyControlsWrapper: {
     paddingTop: 4,
     paddingBottom: 10,
@@ -415,34 +368,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 6,
     borderRadius: 100,
-    paddingLeft: 14,
-    paddingRight: 10,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
   },
   categoryPillText: {
     fontSize: 13,
-  },
-  pillBadge: {
-    borderRadius: 100,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  pillBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
   },
   searchRow: {
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     gap: 8,
-  },
-  barcodeButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
   },
   columnWrapper: {
     paddingHorizontal: 11,

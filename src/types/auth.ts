@@ -27,17 +27,15 @@ interface TierChange {
   correlation_id?: string | null;
 }
 
-interface UserCreate {
-  tenant_id: string;
-  actor_id?: string | null;
+export interface CreateEmployee {
   email: string;
   full_name: string;
   phone?: string | null;
-  password_hash: string;
-  correlation_id?: string | null;
+  role: string;
+  password: string;
 }
 
-interface UserResult {
+export interface EmployeeResponse {
   user_id: string;
   tenant_id: string;
   email: string;

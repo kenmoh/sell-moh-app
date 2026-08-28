@@ -1,10 +1,15 @@
 import AddDocumentSheet from "@/components/add-document-sheet";
+import { createDocument, getDocuments } from "@/api/document";
 import { Colors } from "@/constants/theme";
-import { DocumentResponse, DocumentType } from "@/types/document-types";
+import { useSession } from "@/lib/ctx";
+import { DocumentCreateRequest, DocumentResponse, DocumentType } from "@/types/document-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -52,83 +57,6 @@ const typeConfig: Record<
   },
 };
 
-const MOCK_DOCUMENTS: DocumentResponse[] = [
-  {
-    id: "1",
-    tenant_id: "t1",
-    doc_number: "INV-001",
-    doc_type: "invoice",
-    status: "paid",
-    subtotal: 170000,
-    discount: 8500,
-    tax: 12750,
-    total: 174250,
-    item_count: 2,
-    due_date: "2026-09-15",
-  },
-  {
-    id: "2",
-    tenant_id: "t1",
-    doc_number: "QUO-003",
-    doc_type: "quote",
-    status: "sent",
-    subtotal: 45000,
-    discount: 0,
-    tax: 3375,
-    total: 48375,
-    item_count: 3,
-  },
-  {
-    id: "3",
-    tenant_id: "t1",
-    doc_number: "REC-012",
-    doc_type: "receipt",
-    status: "paid",
-    subtotal: 12500,
-    discount: 0,
-    tax: 937,
-    total: 13437,
-    item_count: 1,
-  },
-  {
-    id: "4",
-    tenant_id: "t1",
-    doc_number: "INV-002",
-    doc_type: "invoice",
-    status: "pending",
-    subtotal: 85000,
-    discount: 5000,
-    tax: 6000,
-    total: 86000,
-    item_count: 4,
-    due_date: "2026-09-30",
-  },
-  {
-    id: "5",
-    tenant_id: "t1",
-    doc_number: "INV-003",
-    doc_type: "invoice",
-    status: "voided",
-    subtotal: 25000,
-    discount: 0,
-    tax: 1875,
-    total: 26875,
-    item_count: 1,
-  },
-  {
-    id: "6",
-    tenant_id: "t1",
-    doc_number: "QUO-004",
-    doc_type: "quote",
-    status: "draft",
-    subtotal: 320000,
-    discount: 15000,
-    tax: 23250,
-    total: 330250,
-    item_count: 5,
-  },
-];
-
 const formatCurrency = (n: number) => `₦${n.toLocaleString("en-NG")}`;
 
 const DocumentListScreen = () => {
@@ -138,13 +66,47 @@ const DocumentListScreen = () => {
   const [search, setSearch] = useState("");
   const [activeType, setActiveType] = useState<DocumentType | "all">("all");
   const [showAddSheet, setShowAddSheet] = useState(false);
+  const queryClient = useQueryClient();
+  const { user } = useSession();
 
-  const filtered = MOCK_DOCUMENTS.filter((doc) => {
-    const matchesType = activeType === "all" || doc.doc_type === activeType;
-    const matchesSearch =
-      !search || doc.doc_number.toLowerCase().includes(search.toLowerCase());
-    return matchesType && matchesSearch;
+  const { data: documentsResponse, isPending, isRefetching, refetch } = useQuery({
+    queryKey: ["documents"],
+    queryFn: getDocuments,
   });
+
+  const documents: DocumentResponse[] = useMemo(() => {
+    const raw = documentsResponse?.data;
+    if (Array.isArray(raw)) return raw as DocumentResponse[];
+    return [];
+  }, [documentsResponse]);
+
+  const createMutation = useMutation({
+    mutationFn: (payload: DocumentCreateRequest) => createDocument(payload),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["documents"] });
+      Alert.alert("Success", "Document created successfully");
+    },
+    onError: (error: Error) => {
+      Alert.alert("Error", error.message || "Failed to create document");
+    },
+  });
+
+  const handleCreate = async (payload: DocumentCreateRequest) => {
+    createMutation.mutateAsync({
+      ...payload,
+      tenant_id: user?.business_id ?? "",
+      actor_id: user?.user_id ?? "",
+    });
+  };
+
+  const filtered = useMemo(() => {
+    return documents.filter((doc) => {
+      const matchesType = activeType === "all" || doc.doc_type === activeType;
+      const matchesSearch =
+        !search || doc.doc_number.toLowerCase().includes(search.toLowerCase());
+      return matchesType && matchesSearch;
+    });
+  }, [documents, activeType, search]);
 
   const renderHeader = () => (
     <Stack.Screen
@@ -311,28 +273,37 @@ const DocumentListScreen = () => {
         }
         stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
+        refreshing={isRefetching}
+        onRefresh={refetch}
         contentContainerStyle={[
           styles.list,
           { paddingBottom: insets.bottom + 20 },
         ]}
         ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Lucide name="file-x" size={48} color={colors.backgroundSelected} />
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No documents found
-            </Text>
-            <Text
-              style={[styles.emptySubtitle, { color: colors.textSecondary }]}
-            >
-              Try adjusting your filters or create a new document.
-            </Text>
-          </View>
+          isPending ? (
+            <View style={styles.emptyState}>
+              <ActivityIndicator color={colors.buttonPrimary} size="large" />
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Lucide name="file-x" size={48} color={colors.backgroundSelected} />
+              <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                No documents found
+              </Text>
+              <Text
+                style={[styles.emptySubtitle, { color: colors.textSecondary }]}
+              >
+                Try adjusting your filters or create a new document.
+              </Text>
+            </View>
+          )
         }
       />
 
       <AddDocumentSheet
         visible={showAddSheet}
         onVisibleChange={setShowAddSheet}
+        onCreate={handleCreate}
       />
     </View>
   );

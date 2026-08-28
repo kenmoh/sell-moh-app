@@ -1,14 +1,14 @@
+import { fetchProducts, fetchTenantCategories } from "@/api/inventory";
 import AdjustStockSheet from "@/components/adjust-stock-sheet";
-import InventoryCard, {
-  InventoryItem,
-  StatusType,
-} from "@/components/inventory-card";
+import InventoryCard, { InventoryItem, StatusType } from "@/components/inventory-card";
 import SearchInput from "@/components/search-input";
 import { ColorPalette, Colors, Spacing } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Pressable,
   ScrollView,
@@ -18,123 +18,26 @@ import {
   View,
 } from "react-native";
 
-// Initial Mock Data
-const initialInventory: InventoryItem[] = [
-  {
-    id: "1",
-    name: "Coca-Cola 50cl",
-    sku: "SKU-001",
-    price: 500,
-    stock: 48,
-    status: "In Stock",
-    category: "Beverages",
-  },
-  {
-    id: "2",
-    name: "Indomie Chicken 70g",
-    sku: "SKU-002",
-    price: 350,
-    stock: 12,
-    status: "Low",
-    category: "Food",
-  },
-  {
-    id: "3",
-    name: "Peak Milk 400g",
-    sku: "SKU-003",
-    price: 2700,
-    stock: 35,
-    status: "In Stock",
-    category: "Food",
-  },
-  {
-    id: "4",
-    name: "Bluetooth Earbuds Pro",
-    sku: "SKU-004",
-    price: 12500,
-    stock: 0,
-    status: "Out",
-    category: "Electronics",
-  },
-  {
-    id: "5",
-    name: "Dettol Antiseptic 250ml",
-    sku: "SKU-005",
-    price: 1250,
-    stock: 8,
-    status: "Low",
-    category: "Household",
-  },
-  {
-    id: "6",
-    name: "Golden Penny Semovita",
-    sku: "SKU-006",
-    price: 1800,
-    stock: 22,
-    status: "In Stock",
-    category: "Food",
-  },
-];
+const PAGE_SIZE = 20;
+const SEARCH_MIN_LENGTH = 3;
 
-const categories = ["All", "Beverages", "Food", "Electronics", "Household"];
-
-// ==========================================
-// SUB-COMPONENTS
-// ==========================================
-
-/**
- * Navigation Top Bar
- */
 const HeaderNav: React.FC<{
   totalCount: number;
-  filteredCount: number;
-  insetsTop: number;
   colors: ColorPalette;
-  isDark: boolean;
-}> = ({ totalCount, filteredCount, insetsTop, colors, isDark }) => (
-  <View
-    style={[
-      styles.header,
-      {
-        paddingTop: insetsTop + 8,
-        backgroundColor: colors.background,
-        borderBottomColor: isDark ? "#22252a" : "#f0f2f5",
-      },
-    ]}
-  >
-    <Pressable
-      onPress={() => router.back()}
-      hitSlop={10}
-      style={[
-        styles.headerIconBtn,
-        { backgroundColor: colors.backgroundElement },
-      ]}
-    >
-      <Lucide name="chevron-left" size={22} color={colors.text} />
-    </Pressable>
-
-    <View style={styles.headerTitleContainer}>
-      <Text style={[styles.headerTitle, { color: colors.text }]}>
-        Inventory
-      </Text>
-      <Text style={[styles.headerSub, { color: colors.textSecondary }]}>
-        {filteredCount} of {totalCount} items
-      </Text>
+  insetsTop: number;
+}> = ({ totalCount, colors, insetsTop }) => (
+  <View style={[styles.header, { paddingTop: insetsTop + 10 }]}>
+    <Text style={[styles.headerTitle, { color: colors.text }]}>Inventory</Text>
+    <View style={styles.headerRight}>
+      <View style={[styles.countBadge, { backgroundColor: colors.backgroundElement }]}>
+        <Text style={[styles.countText, { color: colors.textSecondary }]}>
+          {totalCount}
+        </Text>
+      </View>
     </View>
-
-    <Pressable
-      onPress={() => router.push("/(tabs)/(more)/add-product")}
-      style={styles.addButton}
-    >
-      <Lucide name="plus" size={16} color="#ffffff" />
-      <Text style={styles.addButtonText}>Add</Text>
-    </Pressable>
   </View>
 );
 
-/**
- * Metric Summary Cards Component (Non-sticky, scrolls away)
- */
 const InventoryStats: React.FC<{
   totalItems: number;
   lowStockCount: number;
@@ -152,100 +55,81 @@ const InventoryStats: React.FC<{
   colors,
   isDark,
 }) => (
-  <View style={styles.statsContainer}>
-    {/* Total Items */}
-    <Pressable
-      onPress={() => onToggleFilter("All")}
-      style={[
-        styles.statCard,
-        {
-          backgroundColor: colors.card,
-          borderColor:
-            statusFilter === "All" ? "#3b82f6" : isDark ? "#2b2e35" : "#edf0f5",
-        },
-      ]}
-    >
-      <View
-        style={[
-          styles.statIconBadge,
-          { backgroundColor: "rgba(59, 130, 246, 0.12)" },
-        ]}
-      >
-        <Lucide name="package" size={16} color="#3b82f6" />
-      </View>
-      <Text style={[styles.statValue, { color: colors.text }]}>
-        {totalItems}
-      </Text>
-      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-        Total Stock
-      </Text>
-    </Pressable>
-
-    {/* Low Stock Alert */}
-    <Pressable
-      onPress={() => onToggleFilter(statusFilter === "Low" ? "All" : "Low")}
-      style={[
-        styles.statCard,
-        {
-          backgroundColor: colors.card,
-          borderColor:
-            statusFilter === "Low" ? "#f59e0b" : isDark ? "#2b2e35" : "#edf0f5",
-        },
-      ]}
-    >
-      <View
-        style={[
-          styles.statIconBadge,
-          { backgroundColor: "rgba(245, 158, 11, 0.12)" },
-        ]}
-      >
-        <Lucide name="alert-triangle" size={16} color="#f59e0b" />
-      </View>
-      <Text style={[styles.statValue, { color: "#f59e0b" }]}>
-        {lowStockCount}
-      </Text>
-      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-        Low Stock
-      </Text>
-    </Pressable>
-
-    {/* Out of Stock */}
-    <Pressable
-      onPress={() => onToggleFilter(statusFilter === "Out" ? "All" : "Out")}
-      style={[
-        styles.statCard,
-        {
-          backgroundColor: colors.card,
-          borderColor:
-            statusFilter === "Out" ? "#ef4444" : isDark ? "#2b2e35" : "#edf0f5",
-        },
-      ]}
-    >
-      <View
-        style={[
-          styles.statIconBadge,
-          { backgroundColor: "rgba(239, 68, 68, 0.12)" },
-        ]}
-      >
-        <Lucide name="x-circle" size={16} color="#ef4444" />
-      </View>
-      <Text style={[styles.statValue, { color: "#ef4444" }]}>
-        {outOfStockCount}
-      </Text>
-      <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-        Out of Stock
-      </Text>
-    </Pressable>
+  <View style={styles.statsSection}>
+    <View style={styles.statsRow}>
+      {[
+        { label: "Total", value: totalItems, filter: "All" as const, icon: "layers" },
+        { label: "Low Stock", value: lowStockCount, filter: "Low" as const, icon: "alert-triangle" },
+        { label: "Out of Stock", value: outOfStockCount, filter: "Out" as const, icon: "x-circle" },
+      ].map((stat) => {
+        const isActive = statusFilter === stat.filter;
+        return (
+          <Pressable
+            key={stat.label}
+            onPress={() => onToggleFilter(stat.filter)}
+            style={[
+              styles.statCard,
+              {
+                backgroundColor: isActive
+                  ? stat.filter === "Low"
+                    ? "rgba(245,158,11,0.12)"
+                    : stat.filter === "Out"
+                      ? "rgba(239,68,68,0.12)"
+                      : "rgba(59,130,246,0.12)"
+                  : colors.card,
+                borderColor: isActive
+                  ? stat.filter === "Low"
+                    ? "#f59e0b"
+                    : stat.filter === "Out"
+                      ? "#ef4444"
+                      : "#3b82f6"
+                  : "transparent",
+                borderWidth: 1.5,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.statIcon,
+                {
+                  backgroundColor:
+                    stat.filter === "Low"
+                      ? "rgba(245,158,11,0.15)"
+                      : stat.filter === "Out"
+                        ? "rgba(239,68,68,0.15)"
+                        : "rgba(59,130,246,0.15)",
+                },
+              ]}
+            >
+              <Lucide
+                name={stat.icon as any}
+                size={14}
+                color={
+                  stat.filter === "Low"
+                    ? "#f59e0b"
+                    : stat.filter === "Out"
+                      ? "#ef4444"
+                      : "#3b82f6"
+                }
+              />
+            </View>
+            <Text style={[styles.statValue, { color: colors.text }]}>
+              {stat.value}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+              {stat.label}
+            </Text>
+          </Pressable>
+        );
+      })}
+    </View>
   </View>
 );
 
-/**
- * Category Filter Bar Component
- */
 const CategoryFilter: React.FC<{
-  categoriesList: string[];
+  categoriesList: { id: string; name: string }[];
   activeCategory: string;
-  onSelectCategory: (cat: string) => void;
+  onSelectCategory: (id: string) => void;
   colors: ColorPalette;
 }> = ({ categoriesList, activeCategory, onSelectCategory, colors }) => (
   <ScrollView
@@ -253,12 +137,33 @@ const CategoryFilter: React.FC<{
     showsHorizontalScrollIndicator={false}
     contentContainerStyle={styles.categoriesContainer}
   >
+    <Pressable
+      onPress={() => onSelectCategory("")}
+      style={[
+        styles.categoryPill,
+        {
+          backgroundColor: activeCategory === "" ? "#2563eb" : colors.backgroundElement,
+        },
+      ]}
+    >
+      <Text
+        style={[
+          styles.categoryPillText,
+          {
+            color: activeCategory === "" ? "#ffffff" : colors.textSecondary,
+            fontWeight: activeCategory === "" ? "700" : "600",
+          },
+        ]}
+      >
+        All
+      </Text>
+    </Pressable>
     {categoriesList.map((cat) => {
-      const isActive = cat === activeCategory;
+      const isActive = cat.id === activeCategory;
       return (
         <Pressable
-          key={cat}
-          onPress={() => onSelectCategory(cat)}
+          key={cat.id}
+          onPress={() => onSelectCategory(isActive ? "" : cat.id)}
           style={[
             styles.categoryPill,
             {
@@ -275,7 +180,7 @@ const CategoryFilter: React.FC<{
               },
             ]}
           >
-            {cat}
+            {cat.name}
           </Text>
         </Pressable>
       );
@@ -283,9 +188,6 @@ const CategoryFilter: React.FC<{
   </ScrollView>
 );
 
-/**
- * Empty Results Component
- */
 const EmptyInventoryState: React.FC<{
   hasActiveFilters: boolean;
   onResetFilters: () => void;
@@ -293,26 +195,18 @@ const EmptyInventoryState: React.FC<{
 }> = ({ hasActiveFilters, onResetFilters, colors }) => (
   <View style={styles.emptyState}>
     <View
-      style={[
-        styles.emptyIconCircle,
-        { backgroundColor: colors.backgroundElement },
-      ]}
+      style={[styles.emptyIconCircle, { backgroundColor: colors.backgroundElement }]}
     >
       <Lucide name="package-search" size={36} color={colors.textSecondary} />
     </View>
-    <Text style={[styles.emptyTitle, { color: colors.text }]}>
-      No items found
-    </Text>
+    <Text style={[styles.emptyTitle, { color: colors.text }]}>No items found</Text>
     <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-      Try adjusting your search terms or category filters to locate products.
+      Try adjusting your search or category filters.
     </Text>
     {hasActiveFilters && (
       <Pressable
         onPress={onResetFilters}
-        style={[
-          styles.resetFilterButton,
-          { backgroundColor: colors.backgroundElement },
-        ]}
+        style={[styles.resetFilterButton, { backgroundColor: colors.backgroundElement }]}
       >
         <Text style={[styles.resetFilterText, { color: colors.text }]}>
           Reset all filters
@@ -322,10 +216,6 @@ const EmptyInventoryState: React.FC<{
   </View>
 );
 
-// ==========================================
-// MAIN SCREEN COMPONENT
-// ==========================================
-
 type ListItemType =
   | { type: "sticky_header" }
   | { type: "inventory_item"; data: InventoryItem };
@@ -334,52 +224,103 @@ const InventoryScreen = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
+  const flatListRef = useRef<FlatList>(null);
 
   const [search, setSearch] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusType | "All">("All");
   const [adjustSheetVisible, setAdjustSheetVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
 
-  // Metrics
-  const totalItems = initialInventory.length;
-  const lowStockCount = initialInventory.filter(
-    (i) => i.status === "Low",
-  ).length;
-  const outOfStockCount = initialInventory.filter(
-    (i) => i.status === "Out",
-  ).length;
+  const debounceTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
-  const filteredItems = useMemo(() => {
-    return initialInventory.filter((item) => {
-      const matchesSearch =
-        item.name.toLowerCase().includes(search.toLowerCase()) ||
-        item.sku.toLowerCase().includes(search.toLowerCase());
+  const handleSearchChange = useCallback((text: string) => {
+    setSearch(text);
+    if (debounceTimer.current) clearTimeout(debounceTimer.current);
+    if (text.length >= SEARCH_MIN_LENGTH || text.length === 0) {
+      debounceTimer.current = setTimeout(() => {
+        setDebouncedSearch(text);
+      }, 400);
+    }
+  }, []);
 
-      const matchesCategory =
-        activeCategory === "All" || item.category === activeCategory;
+  const handleSearchClear = useCallback(() => {
+    setSearch("");
+    setDebouncedSearch("");
+  }, []);
 
-      const matchesStatus =
-        statusFilter === "All" || item.status === statusFilter;
+  const { data: categoriesData } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchTenantCategories,
+  });
 
-      return matchesSearch && matchesCategory && matchesStatus;
-    });
-  }, [search, activeCategory, statusFilter]);
+  const categories = categoriesData ?? [];
 
-  // Construct flat list data where index 0 is the sticky section (Categories + Search)
+  const {
+    data: productsData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+    isPending,
+    isRefetching,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ["products", debouncedSearch, activeCategory],
+    queryFn: ({ pageParam = 1 }) =>
+      fetchProducts({
+        page: pageParam,
+        page_size: PAGE_SIZE,
+        search: debouncedSearch || undefined,
+        category: activeCategory || undefined,
+      }),
+    getNextPageParam: (lastPage, allPages) => {
+      const loadedItems = allPages.reduce((acc, p) => acc + p.items.length, 0);
+      return loadedItems < lastPage.total ? allPages.length + 1 : undefined;
+    },
+    initialPageParam: 1,
+  });
+
+  const allProducts = useMemo(
+    () => productsData?.pages.flatMap((p) => p.items) ?? [],
+    [productsData],
+  );
+
+  const totalFromServer = productsData?.pages?.[0]?.total ?? 0;
+
+  const mappedProducts: InventoryItem[] = useMemo(
+    () =>
+      allProducts.map((p) => ({
+        id: p.id,
+        name: p.name,
+        sku: p.sku ?? "N/A",
+        price: p.selling_price,
+        stock: 0,
+        status: "In Stock" as StatusType,
+        category: categories.find((c) => c.id === p.category_id)?.name ?? "Uncategorized",
+      })),
+    [allProducts, categories],
+  );
+
+  const filteredByStatus = useMemo(() => {
+    if (statusFilter === "All") return mappedProducts;
+    return mappedProducts.filter((item) => item.status === statusFilter);
+  }, [mappedProducts, statusFilter]);
+
+  const totalItems = totalFromServer;
+  const lowStockCount = mappedProducts.filter((i) => i.status === "Low").length;
+  const outOfStockCount = mappedProducts.filter((i) => i.status === "Out").length;
+
   const flatListData: ListItemType[] = useMemo(() => {
     const items: ListItemType[] = [{ type: "sticky_header" }];
-    filteredItems.forEach((item) => {
+    filteredByStatus.forEach((item) => {
       items.push({ type: "inventory_item", data: item });
     });
     return items;
-  }, [filteredItems]);
+  }, [filteredByStatus]);
 
   const handleCardPress = (item: InventoryItem) => {
-    router.push({
-      pathname: "/(tabs)/(inventory)/[id]",
-      params: { id: item.id },
-    });
+    router.push({ pathname: "/(tabs)/(inventory)/[id]", params: { id: item.id } });
   };
 
   const handleQuickAdjust = (item: InventoryItem) => {
@@ -389,28 +330,37 @@ const InventoryScreen = () => {
 
   const handleResetFilters = () => {
     setSearch("");
-    setActiveCategory("All");
+    setDebouncedSearch("");
+    setActiveCategory("");
     setStatusFilter("All");
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
   };
 
   const hasActiveFilters =
-    search !== "" || activeCategory !== "All" || statusFilter !== "All";
+    debouncedSearch !== "" || activeCategory !== "" || statusFilter !== "All";
+
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: colors.background }]}
-      // edges={["top", "left", "right"]}
-    >
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
+        ref={flatListRef}
         data={flatListData}
         keyExtractor={(item, index) =>
           item.type === "sticky_header" ? "sticky_header" : item.data.id
         }
         showsVerticalScrollIndicator={false}
-        stickyHeaderIndices={[1]} // Index 0 (Category Pills + Search) sticks on scroll!
+        stickyHeaderIndices={[1]}
+        onEndReached={handleEndReached}
+        onEndReachedThreshold={0.5}
+        refreshing={isRefetching}
+        onRefresh={refetch}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.background }}>
-            {/* Summary Stat Cards - Scrolls away */}
             <InventoryStats
               totalItems={totalItems}
               lowStockCount={lowStockCount}
@@ -434,21 +384,18 @@ const InventoryScreen = () => {
                   },
                 ]}
               >
-                {/* 1. Category Pills at the top of sticky block */}
                 <CategoryFilter
                   categoriesList={categories}
                   activeCategory={activeCategory}
                   onSelectCategory={setActiveCategory}
                   colors={colors}
                 />
-
-                {/* 2. Search Bar placed directly BELOW category pills */}
                 <View style={styles.searchSection}>
                   <SearchInput
                     value={search}
-                    onChangeText={setSearch}
+                    onChangeText={handleSearchChange}
                     placeholder="Search by product name or SKU..."
-                    onClear={() => setSearch("")}
+                    onClear={handleSearchClear}
                   />
                 </View>
               </View>
@@ -463,20 +410,37 @@ const InventoryScreen = () => {
             />
           );
         }}
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator
+              color={colors.buttonPrimary}
+              style={{ paddingVertical: 20 }}
+            />
+          ) : null
+        }
         ListEmptyComponent={
-          <EmptyInventoryState
-            hasActiveFilters={hasActiveFilters}
-            onResetFilters={handleResetFilters}
-            colors={colors}
-          />
+          isPending ? (
+            <ActivityIndicator
+              color={colors.buttonPrimary}
+              style={{ paddingVertical: 60 }}
+              size="large"
+            />
+          ) : (
+            <EmptyInventoryState
+              hasActiveFilters={hasActiveFilters}
+              onResetFilters={handleResetFilters}
+              colors={colors}
+            />
+          )
         }
         contentContainerStyle={{ paddingBottom: 24 }}
       />
 
-      {/* Stock Adjustment Bottom Sheet */}
       <AdjustStockSheet
         visible={adjustSheetVisible}
         onVisibleChange={setAdjustSheetVisible}
+        productId={selectedItem?.id ?? ""}
+        unitCost={selectedItem?.price ?? 0}
       />
     </View>
   );
@@ -484,114 +448,66 @@ const InventoryScreen = () => {
 
 export default InventoryScreen;
 
-// ==========================================
-// STYLES
-// ==========================================
-
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingBottom: 14,
-    borderBottomWidth: 1,
+    paddingBottom: 12,
   },
-  headerIconBtn: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitleContainer: {
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    letterSpacing: -0.3,
-  },
-  headerSub: {
-    fontSize: 11,
-    fontWeight: "500",
-    marginTop: 1,
-  },
-  addButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: "#2563eb",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+  headerTitle: { fontSize: 22, fontWeight: "800" },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  countBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 20,
   },
-  addButtonText: {
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  statsContainer: {
-    flexDirection: "row",
-    paddingHorizontal: 16,
-    gap: 10,
-    marginTop: 5,
-    marginBottom: 12,
-  },
+  countText: { fontSize: 13, fontWeight: "600" },
+  statsSection: { paddingHorizontal: 16, paddingBottom: 12 },
+  statsRow: { flexDirection: "row", gap: 8 },
   statCard: {
     flex: 1,
     borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    padding: 12,
     alignItems: "center",
-    borderWidth: StyleSheet.hairlineWidth,
+    gap: 4,
   },
-  statIconBadge: {
-    width: 30,
-    height: 30,
-    borderRadius: 8,
+  statIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 6,
   },
-  statValue: {
-    fontSize: 18,
-    fontWeight: "800",
-  },
-  statLabel: {
-    fontSize: 11,
-    fontWeight: "600",
-    marginTop: 2,
-  },
+  statValue: { fontSize: 18, fontWeight: "800" },
+  statLabel: { fontSize: 11, fontWeight: "500" },
   stickyControlsWrapper: {
-    paddingBottom: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    gap: 10,
+    paddingBottom: 10,
   },
   categoriesContainer: {
     paddingHorizontal: 16,
     gap: 8,
+    paddingTop: 4,
   },
   categoryPill: {
     borderRadius: 20,
     paddingHorizontal: 16,
     paddingVertical: 8,
   },
-  categoryPillText: {
-    fontSize: 13,
-  },
+  categoryPillText: { fontSize: 13 },
   searchSection: {
     paddingHorizontal: 16,
+    paddingTop: 8,
   },
-
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: Spacing.five,
+    paddingHorizontal: 32,
     paddingVertical: 48,
+    gap: 12,
   },
   emptyIconCircle: {
     width: 72,
@@ -599,26 +515,15 @@ const styles = StyleSheet.create({
     borderRadius: 36,
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 14,
+    marginBottom: 4,
   },
-  emptyTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-    marginBottom: 6,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    textAlign: "center",
-    lineHeight: 18,
-    marginBottom: 16,
-  },
+  emptyTitle: { fontSize: 17, fontWeight: "700" },
+  emptySubtitle: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   resetFilterButton: {
-    paddingHorizontal: 16,
+    marginTop: 8,
+    paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 20,
   },
-  resetFilterText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
+  resetFilterText: { fontSize: 14, fontWeight: "600" },
 });

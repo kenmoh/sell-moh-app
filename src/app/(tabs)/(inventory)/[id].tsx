@@ -1,9 +1,12 @@
+import { fetchTenantCategories, getProductById } from "@/api/inventory";
 import AdjustStockSheet from "@/components/adjust-stock-sheet";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useQuery } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -55,9 +58,52 @@ const ProductDetails = () => {
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const [adjustVisible, setAdjustVisible] = useState(false);
 
-  const stock = 48;
-  const maxStock = 60;
-  const stockPercent = (stock / maxStock) * 100;
+  const { data: product, isPending: isLoadingProduct } = useQuery({
+    queryKey: ["product", id],
+    queryFn: () => getProductById(id!),
+    enabled: !!id,
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ["categories"],
+    queryFn: fetchTenantCategories,
+  });
+
+  const categoryName =
+    categories?.find((c) => c.id === product?.category_id)?.name ?? "Uncategorized";
+
+  if (isLoadingProduct) {
+    return (
+      <View
+        style={[
+          styles.container,
+          styles.centered,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <ActivityIndicator color={colors.buttonPrimary} size="large" />
+      </View>
+    );
+  }
+
+  if (!product) {
+    return (
+      <View
+        style={[
+          styles.container,
+          styles.centered,
+          { backgroundColor: colors.background },
+        ]}
+      >
+        <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+          Product not found
+        </Text>
+      </View>
+    );
+  }
+
+  const initial = product.name.charAt(0).toUpperCase();
+  const priceFormatted = `₦${product.selling_price.toLocaleString()}`;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -72,29 +118,41 @@ const ProductDetails = () => {
         <View style={[styles.identityCard, { backgroundColor: colors.card }]}>
           <View style={{ flexDirection: "row" }}>
             <View style={styles.avatar}>
-              <Text style={styles.avatarText}>C</Text>
+              <Text style={styles.avatarText}>{initial}</Text>
             </View>
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={[styles.productName, { color: colors.text }]}>
-                Coca-Cola 50cl
+                {product.name}
               </Text>
               <Text
                 style={[styles.productSku, { color: colors.textSecondary }]}
               >
-                SKU-001
+                {product.sku ?? "No SKU"}
               </Text>
             </View>
           </View>
-          <Text style={styles.productPrice}>₦500</Text>
+          <Text style={styles.productPrice}>{priceFormatted}</Text>
           <View style={styles.tagRow}>
             <View
               style={[
                 styles.tag,
-                { backgroundColor: "rgba(22, 163, 74, 0.1)" },
+                {
+                  backgroundColor:
+                    product.status === "active"
+                      ? "rgba(22,163,74,0.1)"
+                      : "rgba(220,38,38,0.1)",
+                },
               ]}
             >
-              <Text style={[styles.tagText, { color: "#16a34a" }]}>
-                {stock} In Stock
+              <Text
+                style={[
+                  styles.tagText,
+                  {
+                    color: product.status === "active" ? "#16a34a" : "#dc2626",
+                  },
+                ]}
+              >
+                {product.status === "active" ? "Active" : "Inactive"}
               </Text>
             </View>
             <View
@@ -104,17 +162,7 @@ const ProductDetails = () => {
               ]}
             >
               <Text style={[styles.tagText, { color: colors.textSecondary }]}>
-                Beverages
-              </Text>
-            </View>
-            <View
-              style={[
-                styles.tag,
-                { backgroundColor: colors.backgroundElement },
-              ]}
-            >
-              <Text style={[styles.tagText, { color: colors.textSecondary }]}>
-                Each
+                {categoryName}
               </Text>
             </View>
           </View>
@@ -131,14 +179,11 @@ const ProductDetails = () => {
               router.push({
                 pathname: "/(tabs)/(inventory)/add-product",
                 params: {
-                  name: "Coca-Cola 50cl",
-                  sku: "SKU-001",
-                  category: "Beverages",
-                  price: "500",
-                  stockQty: "48",
-                  lowStockAlert: "10",
-                  description:
-                    "Refreshing Coca-Cola 50cl bottle. Best served chilled. Popular beverage in Nigerian retail.",
+                  id: product.id,
+                  name: product.name,
+                  sku: product.sku ?? "",
+                  category_id: product.category_id ?? "",
+                  selling_price: String(product.selling_price),
                 },
               })
             }
@@ -159,38 +204,6 @@ const ProductDetails = () => {
         </View>
 
         <View style={{ paddingHorizontal: 20, gap: 24 }}>
-          {/* Stock Overview */}
-          <View>
-            <Text
-              style={[styles.sectionLabel, { color: colors.textSecondary }]}
-            >
-              STOCK OVERVIEW
-            </Text>
-            <View
-              style={[
-                styles.stockBarBg,
-                { backgroundColor: colors.backgroundElement },
-              ]}
-            >
-              <View
-                style={[
-                  styles.stockBarFill,
-                  { width: `${stockPercent}%`, backgroundColor: "#16a34a" },
-                ]}
-              />
-            </View>
-            <View style={styles.stockLabels}>
-              <Text style={[styles.stockLabel, { color: colors.text }]}>
-                Current: {stock}
-              </Text>
-              <Text
-                style={[styles.stockLabel, { color: colors.textSecondary }]}
-              >
-                Alert: 10
-              </Text>
-            </View>
-          </View>
-
           {/* Details */}
           <View>
             <Text
@@ -202,11 +215,10 @@ const ProductDetails = () => {
               style={[styles.detailsCard, { backgroundColor: colors.card }]}
             >
               {[
-                { label: "Category", value: "Beverages" },
-                { label: "Unit", value: "Each" },
-                { label: "Low Stock Alert", value: "10" },
-                { label: "Last Restocked", value: "Dec 10, 2024" },
-                { label: "Created", value: "Nov 1, 2024" },
+                { label: "Product ID", value: product.public_id },
+                { label: "Category", value: categoryName },
+                { label: "Status", value: product.status === "active" ? "Active" : "Inactive" },
+                { label: "SKU", value: product.sku ?? "N/A" },
               ].map((row, i, arr) => (
                 <View
                   key={row.label}
@@ -366,6 +378,8 @@ const ProductDetails = () => {
       <AdjustStockSheet
         visible={adjustVisible}
         onVisibleChange={setAdjustVisible}
+        productId={id!}
+        unitCost={product?.selling_price ?? 0}
       />
     </View>
   );
@@ -375,20 +389,15 @@ export default ProductDetails;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
+  centered: {
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
+    justifyContent: "center",
   },
-  headerLeft: { width: 40, alignItems: "flex-start" },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
+  emptyText: { fontSize: 16, fontWeight: "500" },
   identityCard: {
     marginHorizontal: 20,
     borderRadius: 16,
     padding: 15,
-    // alignItems: "center",
     gap: 6,
   },
   avatar: {
@@ -435,14 +444,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 10,
   },
-  stockBarBg: { height: 10, borderRadius: 5, overflow: "hidden" },
-  stockBarFill: { height: "100%", borderRadius: 5 },
-  stockLabels: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 6,
-  },
-  stockLabel: { fontSize: 12, fontWeight: "500" },
   detailsCard: { borderRadius: 14, padding: 4 },
   detailRow: {
     flexDirection: "row",
