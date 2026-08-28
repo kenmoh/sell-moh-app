@@ -15,7 +15,7 @@ const TextInput = ({ placeholder }: TextInputProps) => {
       modifiers={[
         padding({ all: 10 }),
         background(colors.textInput),
-        cornerRadius(25),
+        cornerRadius(14),
       ]}
     />
   );

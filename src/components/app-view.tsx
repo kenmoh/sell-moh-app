@@ -3,7 +3,7 @@ import { Host } from "@expo/ui";
 import React from "react";
 import { StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useColorScheme } from "../hooks/use-color-scheme.web";
+import { useColorScheme } from "../hooks/use-color-scheme";
 
 const AppView = ({ children }: { children: React.ReactNode }) => {
   const insets = useSafeAreaInsets();

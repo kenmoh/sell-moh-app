@@ -1,6 +1,7 @@
 import LinkItem from "@/components/link-item";
 import MoreCard from "@/components/MoreCard";
 import { Colors } from "@/constants/theme";
+import { useSession } from "@/lib/ctx";
 import { router } from "expo-router";
 import { ScrollView, StyleSheet, useColorScheme } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -9,6 +10,7 @@ const more = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const { signOut } = useSession();
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
@@ -71,8 +73,9 @@ const more = () => {
           leadingIcon="bell"
           onPress={() => router.push("/(tabs)/(more)/notifications")}
         />
-        <LinkItem label="Security & Pin" leadingIcon={"shield"} />
+
         <LinkItem label="Help & Support" leadingIcon={"circle-question-mark"} />
+        <LinkItem label="Log Out" leadingIcon={"log-out"} onPress={signOut} />
       </MoreCard>
     </ScrollView>
   );

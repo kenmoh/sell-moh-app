@@ -23,7 +23,7 @@ const TextInput = ({
       value={value}
       modifiers={[
         fillMaxWidth(),
-        clip(Shapes.RoundedCorner(25)),
+        clip(Shapes.RoundedCorner(14)),
         background(colors.textInput),
         padding(15, 17, 17, 15),
       ]}
@@ -31,7 +31,7 @@ const TextInput = ({
       <BasicTextField.DecorationBox>
         <Box>
           <BasicTextField.Placeholder>
-            <Text color={colors.textSecondary}>{placeholder}</Text>
+            <Text color={colors.placeholder}>{placeholder}</Text>
           </BasicTextField.Placeholder>
           <BasicTextField.InnerTextField />
         </Box>

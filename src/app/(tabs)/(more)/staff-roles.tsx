@@ -1,6 +1,10 @@
+import { fetchTenantRoles } from "@/api/auth";
+import AddRoleSheet from "@/components/add-role-sheet";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Stack } from "expo-router";
+import { useMemo, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -33,17 +37,83 @@ interface Role {
 }
 
 const staff: StaffMember[] = [
-  { id: "1", name: "Amaka Okonkwo", initials: "AO", avatarColor: "#3b82f6", role: "Store Manager", roleColor: "#3b82f6", roleBg: "rgba(59,130,246,0.1)", active: true },
-  { id: "2", name: "Chidi Okafor", initials: "CO", avatarColor: "#ef4444", role: "Cashier", roleColor: "#6b7280", roleBg: "rgba(107,114,128,0.1)", active: true },
-  { id: "3", name: "Ngozi Adeyemi", initials: "NA", avatarColor: "#a855f7", role: "Cashier", roleColor: "#6b7280", roleBg: "rgba(107,114,128,0.1)", active: false },
-  { id: "4", name: "Emeka Bello", initials: "EB", avatarColor: "#f97316", role: "Supervisor", roleColor: "#d97706", roleBg: "rgba(217,119,6,0.1)", active: false },
-  { id: "5", name: "Fatima Yusuf", initials: "FY", avatarColor: "#14b8a6", role: "Cashier", roleColor: "#6b7280", roleBg: "rgba(107,114,128,0.1)", active: false },
+  {
+    id: "1",
+    name: "Amaka Okonkwo",
+    initials: "AO",
+    avatarColor: "#3b82f6",
+    role: "Store Manager",
+    roleColor: "#3b82f6",
+    roleBg: "rgba(59,130,246,0.1)",
+    active: true,
+  },
+  {
+    id: "2",
+    name: "Chidi Okafor",
+    initials: "CO",
+    avatarColor: "#ef4444",
+    role: "Cashier",
+    roleColor: "#6b7280",
+    roleBg: "rgba(107,114,128,0.1)",
+    active: true,
+  },
+  {
+    id: "3",
+    name: "Ngozi Adeyemi",
+    initials: "NA",
+    avatarColor: "#a855f7",
+    role: "Cashier",
+    roleColor: "#6b7280",
+    roleBg: "rgba(107,114,128,0.1)",
+    active: false,
+  },
+  {
+    id: "4",
+    name: "Emeka Bello",
+    initials: "EB",
+    avatarColor: "#f97316",
+    role: "Supervisor",
+    roleColor: "#d97706",
+    roleBg: "rgba(217,119,6,0.1)",
+    active: false,
+  },
+  {
+    id: "5",
+    name: "Fatima Yusuf",
+    initials: "FY",
+    avatarColor: "#14b8a6",
+    role: "Cashier",
+    roleColor: "#6b7280",
+    roleBg: "rgba(107,114,128,0.1)",
+    active: false,
+  },
 ];
 
 const roles: Role[] = [
-  { id: "1", name: "Store Manager", iconColor: "#3b82f6", iconBg: "rgba(59,130,246,0.1)", permissions: "Full access", memberCount: 1 },
-  { id: "2", name: "Supervisor", iconColor: "#f97316", iconBg: "rgba(249,115,22,0.1)", permissions: "Limited admin", memberCount: 1 },
-  { id: "3", name: "Cashier", iconColor: "#6b7280", iconBg: "rgba(107,114,128,0.1)", permissions: "POS only", memberCount: 3 },
+  {
+    id: "1",
+    name: "Store Manager",
+    iconColor: "#3b82f6",
+    iconBg: "rgba(59,130,246,0.1)",
+    permissions: "Full access",
+    memberCount: 1,
+  },
+  {
+    id: "2",
+    name: "Supervisor",
+    iconColor: "#f97316",
+    iconBg: "rgba(249,115,22,0.1)",
+    permissions: "Limited admin",
+    memberCount: 1,
+  },
+  {
+    id: "3",
+    name: "Cashier",
+    iconColor: "#6b7280",
+    iconBg: "rgba(107,114,128,0.1)",
+    permissions: "POS only",
+    memberCount: 3,
+  },
 ];
 
 const StaffRoles = () => {
@@ -51,6 +121,7 @@ const StaffRoles = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const [search, setSearch] = useState("");
+  const [roleSheetVisible, setRoleSheetVisible] = useState(false);
 
   const filteredStaff = staff.filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()),
@@ -59,32 +130,53 @@ const StaffRoles = () => {
   const totalStaff = staff.length;
   const activeNow = staff.filter((s) => s.active).length;
   const totalRoles = roles.length;
+  const { data: rolesData, isLoading: isLoadingRoles } = useQuery({
+    queryKey: ["roles"],
+    queryFn: fetchTenantRoles,
+  });
+
+  type ListItemType =
+    | { type: "sticky_header" }
+    | { type: "staff_item"; data: StaffMember };
+
+  const flatListData: ListItemType[] = useMemo(() => {
+    const items: ListItemType[] = [{ type: "sticky_header" }];
+    filteredStaff.forEach((item) => {
+      items.push({ type: "staff_item", data: item });
+    });
+    return items;
+  }, [filteredStaff]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <View style={styles.headerLeft}>
-          <Lucide name="chevron-left" size={24} color={colors.text} />
-        </View>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Staff & Roles
-        </Text>
-        <Pressable style={styles.addButton}>
-          <Lucide name="plus" size={20} color="#fff" />
-        </Pressable>
-      </View>
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: "Staff & Roles",
+          headerRight: () => (
+            <Pressable style={styles.addButton}>
+              <Lucide name="plus" size={20} color="#fff" />
+            </Pressable>
+          ),
+        }}
+      />
 
       <FlatList
-        data={filteredStaff}
-        keyExtractor={(item) => item.id}
+        data={flatListData}
+        keyExtractor={(item, index) =>
+          item.type === "sticky_header" ? "sticky_header" : item.data.id
+        }
         showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[1]}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.background }}>
-            {/* Stats Row */}
+            {/* Stats Row - Scrolls away */}
             <View style={styles.statsRow}>
               <View style={[styles.statChip, { backgroundColor: colors.card }]}>
-                <View style={[styles.statIcon, { backgroundColor: "rgba(59,130,246,0.1)" }]}>
+                <View
+                  style={[styles.statIcon, { backgroundColor: "rgba(59,130,246,0.1)" }]}
+                >
                   <Lucide name="users" size={14} color="#3b82f6" />
                 </View>
                 <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -95,7 +187,9 @@ const StaffRoles = () => {
                 </Text>
               </View>
               <View style={[styles.statChip, { backgroundColor: colors.card }]}>
-                <View style={[styles.statIcon, { backgroundColor: "rgba(22,163,74,0.1)" }]}>
+                <View
+                  style={[styles.statIcon, { backgroundColor: "rgba(22,163,74,0.1)" }]}
+                >
                   <Lucide name="clock" size={14} color="#16a34a" />
                 </View>
                 <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -106,7 +200,9 @@ const StaffRoles = () => {
                 </Text>
               </View>
               <View style={[styles.statChip, { backgroundColor: colors.card }]}>
-                <View style={[styles.statIcon, { backgroundColor: "rgba(168,85,247,0.1)" }]}>
+                <View
+                  style={[styles.statIcon, { backgroundColor: "rgba(168,85,247,0.1)" }]}
+                >
                   <Lucide name="shield" size={14} color="#a855f7" />
                 </View>
                 <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -117,76 +213,114 @@ const StaffRoles = () => {
                 </Text>
               </View>
             </View>
-
-            {/* Search */}
-            <View style={[styles.searchBar, { backgroundColor: colors.backgroundElement }]}>
-              <Lucide name="search" size={18} color={colors.textSecondary} />
-              <TextInput
-                value={search}
-                onChangeText={setSearch}
-                placeholder="Search staff..."
-                placeholderTextColor={colors.textSecondary}
-                style={[styles.searchInput, { color: colors.text }]}
-              />
-            </View>
-
-            {/* Staff Members Label */}
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-              STAFF MEMBERS
-            </Text>
           </View>
         }
-        renderItem={({ item }) => (
-          <Pressable
-            style={[styles.staffCard, { backgroundColor: colors.card }]}
-          >
-            <View
-              style={[
-                styles.avatar,
-                { backgroundColor: `${item.avatarColor}18` },
-              ]}
-            >
-              <Text style={[styles.avatarText, { color: item.avatarColor }]}>
-                {item.initials}
-              </Text>
-            </View>
-            <View style={styles.staffInfo}>
-              <Text style={[styles.staffName, { color: colors.text }]}>
-                {item.name}
-              </Text>
+        renderItem={({ item }) => {
+          if (item.type === "sticky_header") {
+            return (
               <View
                 style={[
-                  styles.rolePill,
-                  { backgroundColor: item.roleBg },
+                  styles.stickyControlsWrapper,
+                  { backgroundColor: colors.background },
                 ]}
               >
-                <Text style={[styles.roleText, { color: item.roleColor }]}>
-                  {item.role}
+                <View
+                  style={[
+                    styles.searchBar,
+                    { backgroundColor: colors.backgroundElement },
+                  ]}
+                >
+                  <Lucide name="search" size={18} color={colors.textSecondary} />
+                  <TextInput
+                    value={search}
+                    onChangeText={setSearch}
+                    placeholder="Search staff..."
+                    placeholderTextColor={colors.textSecondary}
+                    style={[styles.searchInput, { color: colors.text }]}
+                  />
+                </View>
+                <Text
+                  style={[styles.sectionLabel, { color: colors.textSecondary }]}
+                >
+                  STAFF MEMBERS
                 </Text>
               </View>
-            </View>
-            <View style={styles.staffRight}>
+            );
+          }
+
+          const { data: staffMember } = item;
+          return (
+            <Pressable
+              style={[styles.staffCard, { backgroundColor: colors.card }]}
+            >
               <View
                 style={[
-                  styles.statusDot,
-                  {
-                    backgroundColor: item.active ? "#16a34a" : "#d1d5db",
-                  },
+                  styles.avatar,
+                  { backgroundColor: `${staffMember.avatarColor}18` },
                 ]}
+              >
+                <Text style={[styles.avatarText, { color: staffMember.avatarColor }]}>
+                  {staffMember.initials}
+                </Text>
+              </View>
+              <View style={styles.staffInfo}>
+                <Text style={[styles.staffName, { color: colors.text }]}>
+                  {staffMember.name}
+                </Text>
+                <View style={[styles.rolePill, { backgroundColor: staffMember.roleBg }]}>
+                  <Text style={[styles.roleText, { color: staffMember.roleColor }]}>
+                    {staffMember.role}
+                  </Text>
+                </View>
+              </View>
+            <View style={styles.staffRight}>
+              <Lucide
+                name="chevron-right"
+                size={18}
+                color={colors.textSecondary}
               />
-              <Lucide name="chevron-right" size={18} color={colors.textSecondary} />
             </View>
           </Pressable>
-        )}
+          );
+        }}
         ListFooterComponent={
-          <View style={{ paddingHorizontal: 20, paddingTop: 24, gap: 10 }}>
+          <View style={{ paddingTop: 24, gap: 10 }}>
             {/* Roles Label */}
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-              ROLES
-            </Text>
+            <View
+              style={{ flexDirection: "row", justifyContent: "space-between" }}
+            >
+              <Text
+                style={[styles.sectionLabel, { color: colors.textSecondary }]}
+              >
+                ROLES
+              </Text>
+              <Pressable
+                onPress={() => setRoleSheetVisible(true)}
+                style={({ pressed }) => [
+                  {
+                    backgroundColor: pressed
+                      ? "rgba(10,14,18,0.6)"
+                      : colors.buttonPrimary,
+                    flexDirection: "row",
+                    borderRadius: 20,
+                    paddingHorizontal: 5,
+                    paddingVertical: 5,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  },
+                ]}
+              >
+                <Lucide name="plus" size={20} color="#fff" />
+                <Text
+                  style={{ color: "#fff", fontWeight: "600", fontSize: 12 }}
+                >
+                  Add Role
+                </Text>
+              </Pressable>
+            </View>
 
             {/* Roles */}
-            {roles.map((role) => (
+            {rolesData?.map((role) => (
               <Pressable
                 key={role.id}
                 style={[styles.roleCard, { backgroundColor: colors.card }]}
@@ -194,24 +328,23 @@ const StaffRoles = () => {
                 <View
                   style={[
                     styles.roleIcon,
-                    { backgroundColor: role.iconBg },
+                    { backgroundColor: "rgba(59,130,246,0.1)" },
                   ]}
                 >
-                  <Lucide name="shield" size={20} color={role.iconColor} />
+                  <Lucide name="shield" size={20} color="#3b82f6" />
                 </View>
                 <View style={styles.roleInfo}>
                   <Text style={[styles.roleName, { color: colors.text }]}>
-                    {role.name}
+                    {role?.name}
                   </Text>
-                  <Text style={[styles.rolePermissions, { color: colors.textSecondary }]}>
-                    {role.permissions}
+                  <Text
+                    style={[
+                      styles.rolePermissions,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {role?.description}
                   </Text>
-                </View>
-                <View style={styles.roleRight}>
-                  <Text style={[styles.memberCount, { color: colors.textSecondary }]}>
-                    {role.memberCount} {role.memberCount === 1 ? "member" : "members"}
-                  </Text>
-                  <Lucide name="chevron-right" size={18} color={colors.textSecondary} />
                 </View>
               </Pressable>
             ))}
@@ -219,8 +352,12 @@ const StaffRoles = () => {
         }
         contentContainerStyle={{
           paddingBottom: insets.bottom + 20,
-          paddingHorizontal: 20,
+          paddingHorizontal: 15,
         }}
+      />
+      <AddRoleSheet
+        visible={roleSheetVisible}
+        onVisibleChange={setRoleSheetVisible}
       />
     </View>
   );
@@ -249,7 +386,6 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
-    paddingHorizontal: 20,
     gap: 8,
     marginBottom: 12,
   },
@@ -269,15 +405,17 @@ const styles = StyleSheet.create({
   },
   statLabel: { fontSize: 11, fontWeight: "500" },
   statValue: { fontSize: 16, fontWeight: "800" },
+  stickyControlsWrapper: {
+    paddingBottom: 10,
+  },
   searchBar: {
     flexDirection: "row",
-    alignItems: "center",
-    marginHorizontal: 20,
-    borderRadius: 12,
+    borderRadius: 25,
     paddingHorizontal: 14,
     paddingVertical: 10,
     gap: 8,
     marginBottom: 12,
+    alignItems: "center",
   },
   searchInput: { flex: 1, fontSize: 14, padding: 0 },
   sectionLabel: {
@@ -313,7 +451,6 @@ const styles = StyleSheet.create({
   },
   roleText: { fontSize: 11, fontWeight: "600" },
   staffRight: { alignItems: "flex-end", gap: 6 },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
   roleCard: {
     flexDirection: "row",
     alignItems: "center",

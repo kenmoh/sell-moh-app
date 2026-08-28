@@ -3,12 +3,12 @@ import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
 import {
-    Pressable,
-    StyleSheet,
-    Text,
-    TextInput,
-    useColorScheme,
-    View,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  useColorScheme,
+  View,
 } from "react-native";
 
 type Props = {
@@ -16,7 +16,11 @@ type Props = {
   onVisibleChange: (visible: boolean) => void;
 };
 
-const reasons = ["Restock", "Return", "Correction"];
+const reasons = [
+  { label: "Restock", icon: "package-plus" as const },
+  { label: "Return", icon: "rotate-ccw" as const },
+  { label: "Correction", icon: "pencil" as const },
+];
 
 const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
   const scheme = useColorScheme();
@@ -24,6 +28,8 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
   const [quantity, setQuantity] = useState("");
   const [selectedReason, setSelectedReason] = useState("");
   const [note, setNote] = useState("");
+
+  const parsedQty = parseInt(quantity || "0", 10);
 
   const handleConfirm = () => {
     onVisibleChange(false);
@@ -33,89 +39,103 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
   };
 
   return (
-    <AppBottomSheet visible={visible} onVisibleChange={onVisibleChange}>
-      <Text style={[styles.title, { color: colors.text }]}>Adjust Stock</Text>
-      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-        Add or remove stock for this product
-      </Text>
-
-      {/* Quantity Input */}
-      <View style={styles.quantityRow}>
-        <Pressable
-          style={[
-            styles.stepButton,
-            { backgroundColor: colors.backgroundElement },
-          ]}
-          onPress={() => {
-            const current = parseInt(quantity || "0", 10);
-            if (current > 0) setQuantity(String(current - 1));
-          }}
-        >
-          <Lucide name="minus" size={16} color={colors.text} />
-        </Pressable>
-        <TextInput
-          style={[
-            styles.quantityInput,
-            {
-              color: colors.text,
-              backgroundColor: colors.backgroundElement,
-              borderColor: colors.backgroundElement,
-            },
-          ]}
-          keyboardType="number-pad"
-          value={quantity}
-          onChangeText={(t) => {
-            const filtered = t.replace(/[^0-9]/g, "");
-            setQuantity(filtered);
-          }}
-          placeholder="0"
-          placeholderTextColor={colors.textSecondary}
-        />
-        <Pressable
-          style={[
-            styles.stepButton,
-            { backgroundColor: colors.backgroundElement },
-          ]}
-          onPress={() => {
-            const current = parseInt(quantity || "0", 10);
-            setQuantity(String(current + 1));
-          }}
-        >
-          <Lucide name="plus" size={16} color={colors.text} />
-        </Pressable>
+    <AppBottomSheet
+      snapPoints={["75%", "85%"]}
+      visible={visible}
+      onVisibleChange={onVisibleChange}
+    >
+      <View style={styles.header}>
+        <Text style={[styles.title, { color: colors.text }]}>
+          Adjust Stock
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Add or remove stock for this product
+        </Text>
       </View>
 
-      {/* Reason Chips */}
-      <View>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>
+      {/* Quantity */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+          Quantity
+        </Text>
+        <View style={styles.quantityRow}>
+          <Pressable
+            style={[
+              styles.stepButton,
+              { backgroundColor: colors.backgroundElement },
+            ]}
+            onPress={() => {
+              if (parsedQty > 0) setQuantity(String(parsedQty - 1));
+            }}
+          >
+            <Lucide name="minus" size={16} color={colors.text} />
+          </Pressable>
+          <TextInput
+            style={[
+              styles.quantityInput,
+              {
+                color: colors.text,
+                backgroundColor: colors.backgroundElement,
+                borderColor: colors.backgroundElement,
+              },
+            ]}
+            keyboardType="number-pad"
+            value={quantity}
+            onChangeText={(t) => {
+              const filtered = t.replace(/[^0-9]/g, "");
+              setQuantity(filtered);
+            }}
+            placeholder="0"
+            placeholderTextColor={colors.textSecondary}
+          />
+          <Pressable
+            style={[
+              styles.stepButton,
+              { backgroundColor: colors.backgroundElement },
+            ]}
+            onPress={() => setQuantity(String(parsedQty + 1))}
+          >
+            <Lucide name="plus" size={16} color={colors.text} />
+          </Pressable>
+        </View>
+      </View>
+
+      {/* Reason */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
           Reason
         </Text>
         <View style={styles.chipRow}>
-          {reasons.map((r) => {
-            const isSelected = selectedReason === r;
+          {reasons.map(({ label, icon }) => {
+            const isSelected = selectedReason === label;
             return (
               <Pressable
-                key={r}
+                key={label}
                 style={[
                   styles.chip,
                   {
                     backgroundColor: isSelected
-                      ? "#2563eb"
+                      ? colors.buttonPrimary
                       : colors.backgroundElement,
                     borderColor: isSelected
-                      ? "#2563eb"
-                      : colors.backgroundElement,
+                      ? colors.buttonPrimary
+                      : colors.backgroundSelected,
                   },
                 ]}
-                onPress={() => setSelectedReason(isSelected ? "" : r)}
+                onPress={() => setSelectedReason(isSelected ? "" : label)}
               >
+                <Lucide
+                  name={icon}
+                  size={14}
+                  color={isSelected ? "#fff" : colors.textSecondary}
+                />
                 <Text
                   style={[
                     styles.chipText,
                     { color: isSelected ? "#fff" : colors.text },
                   ]}
                 >
-                  {r}
+                  {label}
                 </Text>
               </Pressable>
             );
@@ -123,9 +143,9 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
         </View>
       </View>
 
-      {/* Optional Note */}
-      <View>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>
+      {/* Note */}
+      <View style={styles.section}>
+        <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
           Note (optional)
         </Text>
         <TextInput
@@ -134,7 +154,7 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
             {
               color: colors.text,
               backgroundColor: colors.backgroundElement,
-              borderColor: colors.backgroundElement,
+              borderColor: colors.backgroundSelected,
             },
           ]}
           value={note}
@@ -149,12 +169,15 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
       <Pressable
         style={[
           styles.confirmButton,
-          { opacity: parseInt(quantity || "0", 10) > 0 ? 1 : 0.5 },
+          {
+            backgroundColor: parsedQty > 0 ? colors.buttonPrimary : colors.backgroundSelected,
+            opacity: parsedQty > 0 ? 1 : 0.5,
+          },
         ]}
-        disabled={parseInt(quantity || "0", 10) === 0}
+        disabled={parsedQty === 0}
         onPress={handleConfirm}
       >
-        <Lucide name="package-plus" size={16} color="#fff" />
+        <Lucide name="package-plus" size={18} color="#fff" />
         <Text style={styles.confirmText}>Add Stock</Text>
       </Pressable>
     </AppBottomSheet>
@@ -164,13 +187,31 @@ const AdjustStockSheet = ({ visible, onVisibleChange }: Props) => {
 export default AdjustStockSheet;
 
 const styles = StyleSheet.create({
-  title: { fontSize: 18, fontWeight: "700" },
-  subtitle: { fontSize: 13, marginBottom: 4 },
+  header: {
+    marginBottom: 20,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+  },
+  section: {
+    gap: 10,
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
   quantityRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 12,
-    justifyContent: "center",
   },
   stepButton: {
     width: 40,
@@ -188,32 +229,44 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
   },
-  label: { fontSize: 12, fontWeight: "600", letterSpacing: 0.8 },
-  chipRow: { flexDirection: "row", gap: 8 },
+  chipRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
   chip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingVertical: 10,
     borderRadius: 100,
     borderWidth: 1,
   },
-  chipText: { fontSize: 13, fontWeight: "600" },
+  chipText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
   noteInput: {
-    borderRadius: 10,
+    borderRadius: 14,
     borderWidth: 1,
-    padding: 12,
+    padding: 14,
     fontSize: 14,
-    minHeight: 60,
+    minHeight: 70,
     textAlignVertical: "top",
+    lineHeight: 20,
   },
   confirmButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#2563eb",
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 16,
     marginTop: 4,
   },
-  confirmText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  confirmText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
 });

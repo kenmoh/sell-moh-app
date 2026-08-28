@@ -69,7 +69,7 @@ const AppTextInput = React.forwardRef<RNTextInput, AppTextInputProps>(
             value={value}
             onChangeText={onChangeText}
             placeholder={placeholder}
-            placeholderTextColor={colors.textSecondary}
+            placeholderTextColor={"#aaa"}
             multiline={multiline}
             style={[
               styles.input,

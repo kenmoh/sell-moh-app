@@ -4,12 +4,12 @@ import { Lucide } from "@react-native-vector-icons/lucide";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Text,
-    useColorScheme,
-    View,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -70,15 +70,21 @@ const ProductDetails = () => {
       >
         {/* Product Identity Card */}
         <View style={[styles.identityCard, { backgroundColor: colors.card }]}>
-          <View style={styles.avatar}>
-            <Text style={styles.avatarText}>C</Text>
+          <View style={{ flexDirection: "row" }}>
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>C</Text>
+            </View>
+            <View>
+              <Text style={[styles.productName, { color: colors.text }]}>
+                Coca-Cola 50cl
+              </Text>
+              <Text
+                style={[styles.productSku, { color: colors.textSecondary }]}
+              >
+                SKU-001
+              </Text>
+            </View>
           </View>
-          <Text style={[styles.productName, { color: colors.text }]}>
-            Coca-Cola 50cl
-          </Text>
-          <Text style={[styles.productSku, { color: colors.textSecondary }]}>
-            SKU-001
-          </Text>
           <Text style={styles.productPrice}>₦500</Text>
           <View style={styles.tagRow}>
             <View
@@ -123,7 +129,7 @@ const ProductDetails = () => {
             ]}
             onPress={() =>
               router.push({
-                pathname: "/(tabs)/(more)/add-product",
+                pathname: "/(tabs)/(inventory)/add-product",
                 params: {
                   name: "Coca-Cola 50cl",
                   sku: "SKU-001",
@@ -381,13 +387,13 @@ const styles = StyleSheet.create({
   identityCard: {
     marginHorizontal: 20,
     borderRadius: 16,
-    padding: 24,
-    alignItems: "center",
+    padding: 15,
+    // alignItems: "center",
     gap: 6,
   },
   avatar: {
-    width: 72,
-    height: 72,
+    width: 40,
+    height: 40,
     borderRadius: 36,
     backgroundColor: "rgba(59, 130, 246, 0.1)",
     alignItems: "center",
@@ -395,10 +401,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   avatarText: { fontSize: 28, fontWeight: "700", color: "#3b82f6" },
-  productName: { fontSize: 20, fontWeight: "700" },
-  productSku: { fontSize: 13 },
+  productName: { fontSize: 16, fontWeight: "700" },
+  productSku: { fontSize: 12, color: "#aaa", textTransform: "uppercase" },
   productPrice: {
-    fontSize: 28,
+    fontSize: 22,
     fontWeight: "800",
     color: "#3b82f6",
     marginTop: 2,

@@ -103,7 +103,7 @@ export default function AppBottomSheet({
       enablePanDownToClose
       onClose={() => onVisibleChange?.(false)}
       onDismiss={() => onVisibleChange?.(false)}
-      backgroundStyle={{ backgroundColor: colors.sheet }}
+      backgroundStyle={{ backgroundColor: colors.card }}
     >
       <BottomSheetScrollView
         showsVerticalScrollIndicator={false}

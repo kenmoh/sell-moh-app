@@ -1,9 +1,13 @@
 import AppView from "@/components/app-view";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { RegisterRequest } from "@/types/auth";
 import { router } from "expo-router";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
+  KeyboardAvoidingView,
+  LayoutAnimation,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -11,469 +15,493 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { z } from "zod";
 
-type StepKey = 0 | 1 | 2;
+const animateStep = () => {
+  LayoutAnimation.configureNext(
+    LayoutAnimation.create(
+      300,
+      LayoutAnimation.Types.easeInEaseOut,
+      LayoutAnimation.Properties.opacity
+    )
+  );
+};
+
+const stepSchemas = [
+  z.object({
+    business_name: z.string().trim().min(1, "Business name is required"),
+    business_email: z.string().trim().email("Enter a valid business email"),
+  }),
+  z.object({
+    owner_name: z.string().trim().min(1, "Full name is required"),
+    owner_email: z.string().trim().email("Enter a valid email"),
+    owner_phone: z.string().trim().optional(),
+  }),
+  z
+    .object({
+      password: z.string().min(8, "Password must be at least 8 characters"),
+      confirm_password: z.string().min(1, "Confirm your password"),
+    })
+    .refine((data) => data.password === data.confirm_password, {
+      path: ["confirm_password"],
+      message: "Passwords do not match",
+    }),
+];
+
+const STEP_LABELS = ["Business", "Owner", "Security"];
+
+type RegisterField = keyof RegisterRequest;
+type FormErrors = Partial<Record<RegisterField, string>>;
 
 const SignUp = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
-  const [step, setStep] = useState<StepKey>(0);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [storeName, setStoreName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [role, setRole] = useState("");
-  const [businessType, setBusinessType] = useState("Retail");
+  const [step, setStep] = useState(0);
+  const [form, setForm] = useState<RegisterRequest>({
+    business_name: "",
+    business_email: "",
+    owner_name: "",
+    owner_email: "",
+    owner_phone: "",
+    password: "",
+    confirm_password: "",
+  });
+  const [errors, setErrors] = useState<FormErrors>({});
+  const [showPassword, setShowPassword] = useState(false);
 
-  const canContinue = useMemo(() => {
-    if (step === 0) {
-      return Boolean(
-        name &&
-        email &&
-        password &&
-        confirmPassword &&
-        password === confirmPassword,
-      );
+  const updateField = (field: RegisterField, value: string) => {
+    setForm((current) => {
+      const next = { ...current, [field]: value };
+      if (
+        field === "business_email" &&
+        current.owner_email === current.business_email
+      ) {
+        next.owner_email = value;
+      }
+      return next;
+    });
+    setErrors((current) => ({ ...current, [field]: undefined }));
+  };
+
+  const validateStep = (): boolean => {
+    const result = stepSchemas[step].safeParse(form);
+    if (!result.success) {
+      const nextErrors: FormErrors = {};
+      result.error.issues.forEach((issue) => {
+        const field = issue.path[0] as RegisterField;
+        if (!nextErrors[field]) nextErrors[field] = issue.message;
+      });
+      setErrors(nextErrors);
+      return false;
     }
-
-    if (step === 1) {
-      return Boolean(storeName && phone && role);
-    }
-
+    setErrors({});
     return true;
-  }, [confirmPassword, email, name, password, phone, role, step, storeName]);
+  };
 
-  const stepTitles = ["Account", "Business", "Review"];
-  const stepDescriptions = [
-    "Create your account details",
-    "Tell us about your store",
-    "Confirm and finish setup",
-  ];
-
-  const goNext = () => {
-    if (step < 2) {
-      setStep((prev) => (prev + 1) as StepKey);
+  const handleNext = () => {
+    if (validateStep()) {
+      animateStep();
+      setStep((s) => s + 1);
     }
   };
 
-  const goBack = () => {
-    if (step > 0) {
-      setStep((prev) => (prev - 1) as StepKey);
-    } else {
-      router.back();
-    }
+  const handleBack = () => {
+    setErrors({});
+    animateStep();
+    setStep((s) => s - 1);
   };
 
   const handleSubmit = () => {
+    if (!validateStep()) return;
     router.replace("/sign-in");
   };
 
   return (
-    <AppView>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.progressRow}>
-          {stepTitles.map((label, index) => {
-            const active = step >= index;
-            return (
-              <View key={label} style={styles.progressItem}>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <AppView>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Create Your Account
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              Set up your store and start selling in minutes.
+            </Text>
+          </View>
+
+          <View style={styles.steps}>
+            {STEP_LABELS.map((label, i) => (
+              <View key={label} style={styles.stepItem}>
                 <View
                   style={[
-                    styles.progressDot,
-                    active && styles.progressDotActive,
+                    styles.stepDot,
+                    {
+                      backgroundColor:
+                        i <= step
+                          ? colors.buttonPrimary
+                          : colors.backgroundSelected,
+                    },
                   ]}
                 >
-                  {active ? (
-                    <Text style={styles.progressDotText}>{index + 1}</Text>
-                  ) : null}
+                  <Text
+                    style={[
+                      styles.stepDotText,
+                      { color: i <= step ? "#fff" : colors.textSecondary },
+                    ]}
+                  >
+                    {i + 1}
+                  </Text>
                 </View>
                 <Text
                   style={[
-                    styles.progressLabel,
-                    { color: active ? colors.text : colors.textSecondary },
+                    styles.stepLabel,
+                    {
+                      color: i <= step ? colors.text : colors.textSecondary,
+                      fontWeight: i === step ? "600" : "400",
+                    },
                   ]}
                 >
                   {label}
                 </Text>
               </View>
-            );
-          })}
-        </View>
+            ))}
+          </View>
 
-        <View style={{ gap: 22 }}>
-          {step === 0 ? (
-            <>
-              <AppTextInput
-                label="Full name"
-                placeholder="Alex Morgan"
-                value={name}
-                onChangeText={setName}
-                leftIcon="user"
-                autoCapitalize="words"
-              />
+          <View style={styles.form}>
+            {step === 0 && (
+              <>
+                <AppTextInput
+                  label="Business Name"
+                  placeholder="My Store"
+                  value={form.business_name}
+                  onChangeText={(value) => updateField("business_name", value)}
+                  leftIcon="building"
+                  autoCapitalize="words"
+                  error={errors.business_name}
+                />
+                <AppTextInput
+                  label="Business Email"
+                  placeholder="business@example.com"
+                  value={form.business_email}
+                  onChangeText={(value) =>
+                    updateField("business_email", value)
+                  }
+                  leftIcon="mail"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  error={errors.business_email}
+                />
+              </>
+            )}
 
-              <AppTextInput
-                label="Email"
-                placeholder="name@example.com"
-                value={email}
-                onChangeText={setEmail}
-                leftIcon="mail"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+            {step === 1 && (
+              <>
+                <AppTextInput
+                  label="Full Name"
+                  placeholder="Alex Smith"
+                  value={form.owner_name}
+                  onChangeText={(value) => updateField("owner_name", value)}
+                  leftIcon="user"
+                  autoCapitalize="words"
+                  error={errors.owner_name}
+                />
+                <AppTextInput
+                  label="Email address"
+                  placeholder="example@gmail.com"
+                  value={form.owner_email}
+                  onChangeText={(value) => updateField("owner_email", value)}
+                  leftIcon="mail"
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  error={errors.owner_email}
+                />
+                <AppTextInput
+                  label="Phone (optional)"
+                  placeholder="+1234567890"
+                  value={form.owner_phone}
+                  onChangeText={(value) => updateField("owner_phone", value)}
+                  leftIcon="phone"
+                  keyboardType="phone-pad"
+                  error={errors.owner_phone}
+                />
+              </>
+            )}
 
-              <AppTextInput
-                label="Password"
-                placeholder="Create a password"
-                value={password}
-                onChangeText={setPassword}
-                leftIcon="lock"
-                secureTextEntry
-              />
+            {step === 2 && (
+              <>
+                <AppTextInput
+                  label="Password"
+                  placeholder="@Sn123hsn#"
+                  value={form.password}
+                  onChangeText={(value) => updateField("password", value)}
+                  leftIcon="lock"
+                  secureTextEntry={!showPassword}
+                  rightIcon={showPassword ? "eye-off" : "eye"}
+                  onRightIconPress={() => setShowPassword(!showPassword)}
+                  error={errors.password}
+                />
+                <AppTextInput
+                  label="Confirm Password"
+                  placeholder="@Sn123hsn#"
+                  value={form.confirm_password}
+                  onChangeText={(value) =>
+                    updateField("confirm_password", value)
+                  }
+                  leftIcon="lock"
+                  secureTextEntry={!showPassword}
+                  error={errors.confirm_password}
+                />
+              </>
+            )}
 
-              <AppTextInput
-                label="Confirm password"
-                placeholder="Repeat your password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                leftIcon="shield-check"
-                secureTextEntry
-              />
-            </>
-          ) : null}
-
-          {step === 1 ? (
-            <>
-              <AppTextInput
-                label="Store name"
-                placeholder="TapConnect Store"
-                value={storeName}
-                onChangeText={setStoreName}
-                leftIcon="store"
-              />
-
-              <AppTextInput
-                label="Phone"
-                placeholder="0800 123 456"
-                value={phone}
-                onChangeText={setPhone}
-                leftIcon="phone"
-                keyboardType="phone-pad"
-              />
-
-              <AppTextInput
-                label="Your role"
-                placeholder="Owner / Manager"
-                value={role}
-                onChangeText={setRole}
-                leftIcon="user"
-                autoCapitalize="words"
-              />
-
-              <View style={styles.optionCard}>
-                <Text style={[styles.optionLabel, { color: colors.text }]}>
-                  Business type
-                </Text>
-                <View style={styles.optionRow}>
-                  {["Retail", "Wholesale", "Food"].map((option) => {
-                    const selected = businessType === option;
-                    return (
-                      <TouchableOpacity
-                        key={option}
-                        activeOpacity={0.8}
-                        onPress={() => setBusinessType(option)}
-                        style={[
-                          styles.optionChip,
-                          selected && styles.optionChipSelected,
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.optionChipText,
-                            selected && styles.optionChipTextSelected,
-                          ]}
-                        >
-                          {option}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+            {step > 0 && (
+              <View style={styles.buttonRow}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={[
+                    styles.backButton,
+                    { borderColor: colors.backgroundSelected },
+                  ]}
+                  onPress={handleBack}
+                >
+                  <Text
+                    style={[styles.backButtonText, { color: colors.text }]}
+                  >
+                    Back
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  style={[
+                    styles.primaryButton,
+                    { backgroundColor: colors.buttonPrimary, flex: 1 },
+                  ]}
+                  onPress={step === 2 ? handleSubmit : handleNext}
+                >
+                  <Text style={styles.primaryButtonText}>
+                    {step === 2 ? "Create Account" : "Next"}
+                  </Text>
+                </TouchableOpacity>
               </View>
-            </>
-          ) : null}
+            )}
 
-          {step === 2 ? (
-            <View style={styles.reviewCard}>
-              <Text style={[styles.reviewTitle, { color: colors.text }]}>
-                You’re ready to go
-              </Text>
-              <Text
-                style={[styles.reviewText, { color: colors.textSecondary }]}
-              >
-                Review your details and create your account to start managing
-                your store.
-              </Text>
-              <View style={styles.summaryBox}>
-                <Text
-                  style={[styles.summaryLabel, { color: colors.textSecondary }]}
-                >
-                  Name
-                </Text>
-                <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {name || "—"}
-                </Text>
-                <Text
-                  style={[styles.summaryLabel, { color: colors.textSecondary }]}
-                >
-                  Email
-                </Text>
-                <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {email || "—"}
-                </Text>
-                <Text
-                  style={[styles.summaryLabel, { color: colors.textSecondary }]}
-                >
-                  Store
-                </Text>
-                <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {storeName || "—"}
-                </Text>
-              </View>
-            </View>
-          ) : null}
-
-          <View style={styles.buttonRow}>
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={goBack}
-              style={styles.secondaryButton}
-            >
-              <Text
-                style={[
-                  styles.secondaryButtonText,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                {step === 0 ? "Sign in" : "Back"}
-              </Text>
-            </TouchableOpacity>
-
-            {step < 2 ? (
+            {step === 0 && (
               <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={goNext}
-                disabled={!canContinue}
+                activeOpacity={0.8}
                 style={[
                   styles.primaryButton,
-                  !canContinue && styles.primaryButtonDisabled,
+                  { backgroundColor: colors.buttonPrimary },
                 ]}
+                onPress={handleNext}
               >
                 <Text style={styles.primaryButtonText}>Next</Text>
               </TouchableOpacity>
-            ) : (
-              <TouchableOpacity
-                activeOpacity={0.9}
-                onPress={handleSubmit}
-                style={styles.primaryButton}
-              >
-                <Text style={styles.primaryButtonText}>Create account</Text>
-              </TouchableOpacity>
             )}
           </View>
-        </View>
-      </ScrollView>
-    </AppView>
+
+          <View style={styles.dividerRow}>
+            <View
+              style={[
+                styles.dividerLine,
+                { backgroundColor: colors.backgroundSelected },
+              ]}
+            />
+            <Text
+              style={[styles.dividerText, { color: colors.textSecondary }]}
+            >
+              Or continue with
+            </Text>
+            <View
+              style={[
+                styles.dividerLine,
+                { backgroundColor: colors.backgroundSelected },
+              ]}
+            />
+          </View>
+
+          <View style={styles.socialRow}>
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[
+                styles.socialButton,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
+              <Text style={styles.socialIcon}>G</Text>
+              <Text style={[styles.socialLabel, { color: colors.text }]}>
+                Google
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.7}
+              style={[
+                styles.socialButton,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
+              <Text style={styles.socialIcon}></Text>
+              <Text style={[styles.socialLabel, { color: colors.text }]}>
+                Apple
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.footerRow}>
+            <Text
+              style={[styles.footerText, { color: colors.textSecondary }]}
+            >
+              Already have an account?{" "}
+            </Text>
+            <TouchableOpacity onPress={() => router.push("/(auth)/sign-in")}>
+              <Text
+                style={[styles.footerLink, { color: colors.buttonPrimary }]}
+              >
+                Sign In
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
+      </AppView>
+    </KeyboardAvoidingView>
   );
 };
 
 export default SignUp;
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-  },
-  container: {
-    flex: 1,
-  },
   scrollContent: {
     flexGrow: 1,
     justifyContent: "center",
-    paddingHorizontal: 20,
-    // paddingVertical: 24,
+    paddingHorizontal: 10,
+    paddingBottom: 60,
   },
-  heroSection: {
+  header: {
     alignItems: "center",
-    marginBottom: 16,
-  },
-  logoWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOpacity: 0.08,
-    shadowRadius: 14,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 4,
-  },
-  logoBadge: {
-    width: 56,
-    height: 56,
-    borderRadius: 18,
-    backgroundColor: "#4f46e5",
-    alignItems: "center",
-    justifyContent: "center",
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
     fontWeight: "700",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   subtitle: {
     fontSize: 15,
     textAlign: "center",
     lineHeight: 22,
-    maxWidth: 300,
+    maxWidth: 280,
   },
-  progressRow: {
+  steps: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 16,
-    gap: 8,
+    justifyContent: "center",
+    gap: 24,
+    marginBottom: 32,
   },
-  progressItem: {
-    flex: 1,
+  stepItem: {
     alignItems: "center",
     gap: 6,
   },
-  progressDot: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: "#e5e7eb",
+  stepDot: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
   },
-  progressDotActive: {
-    backgroundColor: "#4f46e5",
-  },
-  progressDotText: {
-    color: "#ffffff",
-    fontSize: 12,
-    fontWeight: "700",
-  },
-  progressLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  formCard: {
-    borderRadius: 24,
-    padding: 20,
-    gap: 12,
-    shadowColor: "#000",
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 10 },
-    elevation: 4,
-  },
-  optionCard: {
-    gap: 10,
-    paddingTop: 4,
-  },
-  optionLabel: {
-    fontSize: 13,
-    fontWeight: "700",
-  },
-  optionRow: {
-    flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
-  },
-  optionChip: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#f3f4f6",
-  },
-  optionChipSelected: {
-    backgroundColor: "#4f46e5",
-  },
-  optionChipText: {
-    color: "#374151",
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  optionChipTextSelected: {
-    color: "#ffffff",
-  },
-  reviewCard: {
-    gap: 8,
-  },
-  reviewTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-  },
-  reviewText: {
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  summaryBox: {
-    backgroundColor: "#f9fafb",
-    borderRadius: 14,
-    padding: 12,
-    gap: 4,
-    marginTop: 4,
-  },
-  summaryLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  summaryValue: {
+  stepDotText: {
     fontSize: 14,
     fontWeight: "700",
-    marginBottom: 6,
   },
-  buttonRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    gap: 10,
-    marginTop: 8,
+  stepLabel: {
+    fontSize: 12,
   },
-  secondaryButton: {
-    flex: 1,
-    borderRadius: 14,
-    paddingVertical: 13,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "#e5e7eb",
-  },
-  secondaryButtonText: {
-    fontSize: 15,
-    fontWeight: "600",
+  form: {
+    gap: 16,
   },
   primaryButton: {
-    flex: 1,
-    backgroundColor: "#4f46e5",
-    borderRadius: 14,
-    paddingVertical: 13,
+    borderRadius: 50,
+    paddingVertical: 16,
     alignItems: "center",
     justifyContent: "center",
-  },
-  primaryButtonDisabled: {
-    opacity: 0.5,
+    marginTop: 8,
   },
   primaryButtonText: {
     color: "#ffffff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  buttonRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  backButton: {
+    borderRadius: 50,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginVertical: 24,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  dividerText: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  socialRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  socialButton: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 50,
+  },
+  socialIcon: {
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  socialLabel: {
     fontSize: 15,
+    fontWeight: "600",
+  },
+  footerRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 24,
+  },
+  footerText: {
+    fontSize: 14,
+  },
+  footerLink: {
+    fontSize: 14,
     fontWeight: "700",
   },
 });
