@@ -1,5 +1,7 @@
 import { createProduct, fetchTenantCategories } from "@/api/inventory";
+import { fetchTenantStores } from "@/api/store";
 import AddCategorySheet from "@/components/add-category-sheet";
+import AppBottomSheet from "@/components/bottom-sheet";
 import CategoryActionsSheet from "@/components/category-actions-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
@@ -44,6 +46,7 @@ const AddProduct = () => {
     sku?: string;
     category_id?: string;
     selling_price?: string;
+    store_id?: string;
   }>();
   const isEditing = Boolean(params.id);
 
@@ -63,16 +66,25 @@ const AddProduct = () => {
 
   const [sheetVisible, setSheetVisible] = useState(false);
   const [actionsVisible, setActionsVisible] = useState(false);
+  const [storeSheetVisible, setStoreSheetVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<{
     id: string;
     name: string;
     description?: string;
   } | null>(null);
+  const [storeId, setStoreId] = useState(params.store_id ?? "");
 
   const { data: categoriesData } = useQuery({
     queryKey: ["categories"],
     queryFn: fetchTenantCategories,
   });
+
+  const { data: storesData } = useQuery({
+    queryKey: ["stores"],
+    queryFn: fetchTenantStores,
+  });
+
+  const stores = storesData ?? [];
 
   const { mutate: createProductMutation, isPending } = useMutation({
     mutationFn: createProduct,
@@ -151,6 +163,7 @@ const AddProduct = () => {
       unit: result.data.unit || null,
       tax_rate: result.data.tax_rate ? parseFloat(result.data.tax_rate) : null,
       metadata: buildMetadataObject(),
+      store_id: storeId || null,
     };
 
     createProductMutation(payload);
@@ -265,6 +278,36 @@ const AddProduct = () => {
             value={unit}
             onChangeText={setUnit}
           />
+        </View>
+
+        {/* Store */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            STORE
+          </Text>
+          <Pressable
+            style={[
+              styles.selectorButton,
+              {
+                backgroundColor: colors.backgroundElement,
+                borderColor: colors.backgroundSelected,
+              },
+            ]}
+            onPress={() => setStoreSheetVisible(true)}
+          >
+            <Lucide name="store" size={16} color={colors.textSecondary} />
+            <Text
+              style={[
+                styles.selectorText,
+                { color: storeId ? colors.text : colors.textSecondary },
+              ]}
+            >
+              {storeId
+                ? stores.find((s) => s.id === storeId)?.name ?? "Selected Store"
+                : "Select store"}
+            </Text>
+            <Lucide name="chevron-down" size={16} color={colors.textSecondary} />
+          </Pressable>
         </View>
 
         {/* Category */}
@@ -416,6 +459,57 @@ const AddProduct = () => {
         onVisibleChange={setActionsVisible}
         category={selectedCategory}
       />
+      <AppBottomSheet
+        visible={storeSheetVisible}
+        onVisibleChange={setStoreSheetVisible}
+        snapPoints={["40%", "70%"]}
+      >
+        <View style={styles.sheetHeader}>
+          <Text style={[styles.sheetTitle, { color: colors.text }]}>
+            Select Store
+          </Text>
+          <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+            Choose a store for this product
+          </Text>
+        </View>
+        {stores.length > 0 ? (
+          <View style={styles.pills}>
+            {stores.map((store) => {
+              const isActive = storeId === store.id;
+              return (
+                <Pressable
+                  key={store.id}
+                  style={[
+                    styles.pill,
+                    {
+                      backgroundColor: isActive
+                        ? colors.buttonPrimary
+                        : colors.backgroundElement,
+                    },
+                  ]}
+                  onPress={() => {
+                    setStoreId(isActive ? "" : store.id);
+                    setStoreSheetVisible(false);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.pillText,
+                      { color: isActive ? "#fff" : colors.text },
+                    ]}
+                  >
+                    {store.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No stores available
+          </Text>
+        )}
+      </AppBottomSheet>
     </>
   );
 };
@@ -484,6 +578,35 @@ const styles = StyleSheet.create({
   hintText: {
     fontSize: 11,
     fontStyle: "italic",
+  },
+  selectorButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  selectorText: {
+    flex: 1,
+    fontSize: 14,
+  },
+  sheetHeader: {
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  sheetSubtitle: {
+    fontSize: 14,
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: 20,
   },
   errorText: {
     fontSize: 12,

@@ -103,6 +103,7 @@ export interface AuthUser {
   business_id: string;
   email: string;
   full_name: string;
+  store_id: string | null;
   role: string;
   status: string;
   permissions: string[];

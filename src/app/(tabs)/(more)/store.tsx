@@ -1,11 +1,12 @@
+import AppView from "@/components/app-view";
 import React from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text } from "react-native";
 
 const store = () => {
   return (
-    <View>
+    <AppView>
       <Text>store</Text>
-    </View>
+    </AppView>
   );
 };
 

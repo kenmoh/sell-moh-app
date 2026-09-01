@@ -30,9 +30,11 @@ export const createCategory = async (
   return res.data!;
 };
 
-export const fetchTenantCategories = async (): Promise<CategoryResponse[]> => {
+export const fetchTenantCategories = async (
+  storeId: string,
+): Promise<CategoryResponse[]> => {
   const res = await apiClient.get<{ data: CategoryResponse[] }>(
-    `${INVENTORY_URL}/categories`,
+    `${INVENTORY_URL}/${storeId}/categories`,
   );
 
   if (!res.ok) {
@@ -82,6 +84,7 @@ export const deleteCategory = async (id: string) => {
 // _____________________________PRODUCT OPERATIONS_____________________________
 
 export const fetchProducts = async (
+  storeId: string,
   params: ProductQueryParams = {},
 ): Promise<PaginatedResponse<ProductResponse>> => {
   const query = new URLSearchParams();
@@ -93,7 +96,7 @@ export const fetchProducts = async (
   if (params.search) query.append("search", params.search);
 
   const qs = query.toString();
-  const url = `${INVENTORY_URL}/products${qs ? `?${qs}` : ""}`;
+  const url = `${INVENTORY_URL}/${storeId}/products${qs ? `?${qs}` : ""}`;
 
   const res = await apiClient.get<PaginatedResponse<ProductResponse>>(url);
 

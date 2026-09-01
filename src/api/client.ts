@@ -1,8 +1,9 @@
-import { create, ApiResponse, RequestsConfig } from "apisauce";
+import { ApiResponse, create } from "apisauce";
+import type { AxiosRequestConfig } from "axios";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
-export const BASE_URL = "https://1751-102-88-113-95.ngrok-free.app/api/v1";
+export const BASE_URL = "https://salesos.fastapicloud.dev/api/v1";
 
 export const apiClient = create({
   baseURL: BASE_URL,
@@ -28,7 +29,10 @@ const processQueue = (error: any, token: string | null) => {
   failedQueue = [];
 };
 
-async function getSessionData(): Promise<{ accessToken: string; refreshToken: string } | null> {
+async function getSessionData(): Promise<{
+  accessToken: string;
+  refreshToken: string;
+} | null> {
   try {
     let raw: string | null;
     if (Platform.OS === "web") {
@@ -75,7 +79,7 @@ apiClient.addAsyncRequestTransform(async (request) => {
 
 apiClient.addMonitor((response) => {
   if (response.status === 401) {
-    const originalRequest = response.config as RequestsConfig & {
+    const originalRequest = response.config as AxiosRequestConfig & {
       _retry?: boolean;
     };
 
@@ -107,10 +111,9 @@ apiClient.addMonitor((response) => {
         if (!session?.refreshToken) {
           throw new Error("No refresh token");
         }
-        return apiClient.post<{ data: { tokens: { access_token: string; refresh_token: string } } }>(
-          "/auth/refresh",
-          { refresh_token: session.refreshToken }
-        );
+        return apiClient.post<{
+          data: { tokens: { access_token: string; refresh_token: string } };
+        }>("/auth/refresh", { refresh_token: session.refreshToken });
       })
       .then(async (res) => {
         if (!res.ok || !res.data?.data?.tokens) {
@@ -141,4 +144,3 @@ apiClient.addMonitor((response) => {
 
   return response;
 });
-

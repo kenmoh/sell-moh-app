@@ -1,10 +1,13 @@
 import { fetchProducts, fetchTenantCategories } from "@/api/inventory";
+import { fetchTenantStores } from "@/api/store";
+import AppBottomSheet from "@/components/bottom-sheet";
 import Card from "@/components/card";
 import DraggableCart from "@/components/draggable-cart";
 import ExpandableFAB from "@/components/expandable-fab";
 import SearchInput from "@/components/search-input";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
+import { useSession } from "@/lib/ctx";
 import { Product } from "@/types/product-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
@@ -30,10 +33,17 @@ const POSScreen = () => {
   const isDark = scheme === "dark";
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
   const flatListRef = useRef<FlatList>(null);
+  const { user } = useSession();
+
+  const isOwner = user?.role === "owner";
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
+  const [selectedStoreId, setSelectedStoreId] = useState(user?.store_id ?? "");
+  const [storeSheetVisible, setStoreSheetVisible] = useState(false);
+
+  const activeStoreId = isOwner ? selectedStoreId : (user?.store_id ?? "");
 
   const cartTotalItems = useCartStore((s) => s.totalItems());
 
@@ -56,8 +66,19 @@ const POSScreen = () => {
 
   const { data: categoriesData } = useQuery({
     queryKey: ["categories"],
-    queryFn: fetchTenantCategories,
+    queryFn: () => fetchTenantCategories(activeStoreId),
   });
+
+
+  const { data: storesData } = useQuery({
+    queryKey: ["stores"],
+    queryFn: fetchTenantStores,
+    enabled: isOwner,
+  });
+
+  const stores = storesData ?? [];
+  const currentStoreName =
+    stores.find((s) => s.id === activeStoreId)?.name ?? "All Stores";
 
   const categories = categoriesData ?? [];
 
@@ -70,9 +91,9 @@ const POSScreen = () => {
     isRefetching,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["products", debouncedSearch, activeCategory],
+    queryKey: ["products", debouncedSearch, activeCategory, activeStoreId],
     queryFn: ({ pageParam = 1 }) =>
-      fetchProducts({
+      fetchProducts(activeStoreId, {
         page: pageParam,
         page_size: PAGE_SIZE,
         search: debouncedSearch || undefined,
@@ -99,7 +120,10 @@ const POSScreen = () => {
         price: p.selling_price,
         in_stock: 0,
         category: categories.find((c) => c.id === p.category_id)
-          ? { id: p.category_id!, name: categories.find((c) => c.id === p.category_id)!.name }
+          ? {
+              id: p.category_id!,
+              name: categories.find((c) => c.id === p.category_id)!.name,
+            }
           : undefined,
       })),
     [allProducts, categories],
@@ -137,14 +161,35 @@ const POSScreen = () => {
                 <Text style={[styles.headerTitle, { color: colors.text }]}>
                   POS Terminal
                 </Text>
-                <Text
-                  style={[
-                    styles.headerSubtitle,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Store Register #01
-                </Text>
+                {isOwner ? (
+                  <Pressable
+                    onPress={() => setStoreSheetVisible(true)}
+                    style={styles.storeSelector}
+                  >
+                    <Text
+                      style={[
+                        styles.headerSubtitle,
+                        { color: colors.buttonPrimary },
+                      ]}
+                    >
+                      {currentStoreName}
+                    </Text>
+                    <Lucide
+                      name="chevron-down"
+                      size={14}
+                      color={colors.buttonPrimary}
+                    />
+                  </Pressable>
+                ) : (
+                  <Text
+                    style={[
+                      styles.headerSubtitle,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {currentStoreName}
+                  </Text>
+                )}
               </View>
 
               <View style={styles.headerActions}>
@@ -185,7 +230,9 @@ const POSScreen = () => {
                     styles.categoryPill,
                     {
                       backgroundColor:
-                        activeCategory === "" ? "#3b82f6" : colors.backgroundElement,
+                        activeCategory === ""
+                          ? "#3b82f6"
+                          : colors.backgroundElement,
                     },
                   ]}
                 >
@@ -193,7 +240,10 @@ const POSScreen = () => {
                     style={[
                       styles.categoryPillText,
                       {
-                        color: activeCategory === "" ? "#ffffff" : colors.textSecondary,
+                        color:
+                          activeCategory === ""
+                            ? "#ffffff"
+                            : colors.textSecondary,
                         fontWeight: activeCategory === "" ? "700" : "600",
                       },
                     ]}
@@ -283,10 +333,7 @@ const POSScreen = () => {
                 No Products Found
               </Text>
               <Text
-                style={[
-                  styles.emptySubtitle,
-                  { color: colors.textSecondary },
-                ]}
+                style={[styles.emptySubtitle, { color: colors.textSecondary }]}
               >
                 {debouncedSearch
                   ? `No products matching "${debouncedSearch}"`
@@ -313,6 +360,63 @@ const POSScreen = () => {
       {/* Floating Action Controls */}
       <DraggableCart />
       <ExpandableFAB />
+
+      {/* Store Selector Sheet (Owner only) */}
+      {isOwner && (
+        <AppBottomSheet
+          visible={storeSheetVisible}
+          onVisibleChange={setStoreSheetVisible}
+          snapPoints={["40%", "70%"]}
+        >
+          <View style={styles.sheetHeader}>
+            <Text style={[styles.sheetTitle, { color: colors.text }]}>
+              Select Store
+            </Text>
+            <Text
+              style={[styles.sheetSubtitle, { color: colors.textSecondary }]}
+            >
+              Choose a store to view products
+            </Text>
+          </View>
+          {stores.length > 0 ? (
+            <View style={styles.pills}>
+              {stores.map((store) => {
+                const isActive = selectedStoreId === store.id;
+                return (
+                  <Pressable
+                    key={store.id}
+                    style={[
+                      styles.pill,
+                      {
+                        backgroundColor: isActive
+                          ? "#3b82f6"
+                          : colors.backgroundElement,
+                      },
+                    ]}
+                    onPress={() => {
+                      setSelectedStoreId(isActive ? "" : store.id);
+                      setStoreSheetVisible(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.pillText,
+                        { color: isActive ? "#fff" : colors.text },
+                      ]}
+                    >
+                      {store.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              No stores available
+            </Text>
+          )}
+        </AppBottomSheet>
+      )}
     </SafeAreaView>
   );
 };
@@ -417,5 +521,41 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 13,
     fontWeight: "600",
+  },
+  storeSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
+  sheetHeader: {
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  sheetSubtitle: {
+    fontSize: 14,
+  },
+  pills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  pill: {
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  pillText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: "center",
+    paddingVertical: 20,
   },
 });
