@@ -23,6 +23,7 @@ export interface ProductResponse {
   qty: number;
   min_stock_level: number;
   available: number;
+  reorder_point: number
   history: Array<{}>;
 }
 

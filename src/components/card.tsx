@@ -22,7 +22,7 @@ const Card = ({ product, onPress }: CardProps) => {
   const stock = product.in_stock ?? 0;
   const reorderPoint = product.reorder_point ?? 0;
   const isOutOfStock = stock <= 0;
-  const isLowStock = stock > 0 && (reorderPoint > 0 ? stock <= reorderPoint : stock <= 15);
+  const isLowStock = reorderPoint > 0 && stock > 0 && stock <= reorderPoint;
 
   const stockBadgeColor = isOutOfStock
     ? "#ef4444"
