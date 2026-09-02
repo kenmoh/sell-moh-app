@@ -13,18 +13,21 @@ export interface CategoryResponse {
 
 export interface ProductResponse {
   id: string;
-  public_id: string;
   name: string;
   sku: string | null;
   selling_price: number;
-  category_id: string | null;
+  category: string | null;
   status: string;
   qr_url: string | null;
   qr_payload: string;
+  qty: number;
+  min_stock_level: number;
+  available: number;
+  history: Array<{}>;
 }
 
 export interface PaginatedResponse<T> {
-  items: T[];
+  data: ProductResponse[];
   total: number;
   page: number;
   page_size: number;

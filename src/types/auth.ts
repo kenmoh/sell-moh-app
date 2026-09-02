@@ -32,18 +32,13 @@ export interface CreateEmployee {
   full_name: string;
   phone?: string | null;
   role: string;
+  store_id: string;
   password: string;
 }
 
 export interface EmployeeResponse {
-  user_id: string;
-  tenant_id: string;
-  email: string;
-  full_name: string;
-  role: string;
-  status: string;
-  totp_enabled: boolean;
-  last_login_at: string | null;
+  message: string;
+  data: Omit<CreateEmployee, "password">;
 }
 
 interface RoleResponse {

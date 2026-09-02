@@ -12,7 +12,7 @@ import { Product } from "@/types/product-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -35,7 +35,7 @@ const POSScreen = () => {
   const flatListRef = useRef<FlatList>(null);
   const { user } = useSession();
 
-  const isOwner = user?.role === "owner";
+  const isOwner = user?.role?.toLowerCase() === "owner";
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -65,18 +65,24 @@ const POSScreen = () => {
   }, []);
 
   const { data: categoriesData } = useQuery({
-    queryKey: ["categories"],
+    queryKey: ["categories", activeStoreId],
     queryFn: () => fetchTenantCategories(activeStoreId),
+    enabled: !!activeStoreId,
   });
-
 
   const { data: storesData } = useQuery({
     queryKey: ["stores"],
     queryFn: fetchTenantStores,
-    enabled: isOwner,
   });
 
   const stores = storesData ?? [];
+
+  useEffect(() => {
+    if (isOwner && stores?.length > 0 && !selectedStoreId) {
+      setSelectedStoreId(stores[0].id);
+    }
+  }, [isOwner, stores, selectedStoreId]);
+
   const currentStoreName =
     stores.find((s) => s.id === activeStoreId)?.name ?? "All Stores";
 
@@ -100,14 +106,19 @@ const POSScreen = () => {
         category: activeCategory || undefined,
       }),
     getNextPageParam: (lastPage, allPages) => {
-      const loadedItems = allPages.reduce((acc, p) => acc + p.items.length, 0);
+      const loadedItems = allPages.reduce(
+        (acc, p) => acc + (p.data?.length ?? 0),
+        0,
+      );
       return loadedItems < lastPage.total ? allPages.length + 1 : undefined;
     },
     initialPageParam: 1,
+    enabled: !!activeStoreId,
   });
 
   const allProducts = useMemo(
-    () => productsData?.pages.flatMap((p) => p.items) ?? [],
+    () =>
+      productsData?.pages.flatMap((p) => p.data ?? []).filter(Boolean) ?? [],
     [productsData],
   );
 
@@ -119,12 +130,7 @@ const POSScreen = () => {
         description: p.sku ?? "",
         price: p.selling_price,
         in_stock: 0,
-        category: categories.find((c) => c.id === p.category_id)
-          ? {
-              id: p.category_id!,
-              name: categories.find((c) => c.id === p.category_id)!.name,
-            }
-          : undefined,
+        category: categories.find((c) => c.name === p.category),
       })),
     [allProducts, categories],
   );
@@ -149,7 +155,7 @@ const POSScreen = () => {
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[0]}
-        onEndReached={handleEndReached}
+        onEndReached={mappedProducts.length > 0 ? handleEndReached : undefined}
         onEndReachedThreshold={0.5}
         refreshing={isRefetching}
         onRefresh={refetch}

@@ -120,14 +120,19 @@ export const createProduct = async (data: CreateProduct) => {
   return res.data!;
 };
 
-export const getProductById = async (id: string): Promise<ProductResponse> => {
+export const getProductById = async (
+  productId: string,
+  storeId: string,
+): Promise<ProductResponse> => {
   const res = await apiClient.get<{ data: ProductResponse }>(
-    `${INVENTORY_URL}/products/${id}`,
+    `${INVENTORY_URL}/${storeId}/products/${productId}`,
   );
 
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
   }
+
+  console.log("Product data fetched:", res.data?.data); // Debugging line
 
   return res.data?.data!;
 };
@@ -168,4 +173,26 @@ export const adjustProduct = async (data: AdjustProduct) => {
   }
 
   return res.data!;
+};
+
+// /api/v1/inventory/{store_id}/products/{product_id}/qr
+export const downloadQRCode = async (
+  productId: string,
+  storeId: string,
+  params?: { size?: "small" | "medium" | "large"; box_size?: number },
+): Promise<string> => {
+  const query = new URLSearchParams();
+  if (params?.size) query.append("size", params.size);
+  if (params?.box_size) query.append("box_size", String(params.box_size));
+  const qs = query.toString();
+
+  const res = await apiClient.get<{ data: string }>(
+    `${INVENTORY_URL}/${storeId}/products/${productId}/qr${qs ? `?${qs}` : ""}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? "";
 };

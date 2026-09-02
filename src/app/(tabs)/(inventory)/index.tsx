@@ -1,12 +1,23 @@
 import { fetchProducts, fetchTenantCategories } from "@/api/inventory";
+import { fetchTenantStores } from "@/api/store";
 import AdjustStockSheet from "@/components/adjust-stock-sheet";
-import InventoryCard, { InventoryItem, StatusType } from "@/components/inventory-card";
+import InventoryCard, {
+  InventoryItem,
+  StatusType,
+} from "@/components/inventory-card";
 import SearchInput from "@/components/search-input";
-import { ColorPalette, Colors, Spacing } from "@/constants/theme";
+import { ColorPalette, Colors } from "@/constants/theme";
+import { useSession } from "@/lib/ctx";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -29,7 +40,12 @@ const HeaderNav: React.FC<{
   <View style={[styles.header, { paddingTop: insetsTop + 10 }]}>
     <Text style={[styles.headerTitle, { color: colors.text }]}>Inventory</Text>
     <View style={styles.headerRight}>
-      <View style={[styles.countBadge, { backgroundColor: colors.backgroundElement }]}>
+      <View
+        style={[
+          styles.countBadge,
+          { backgroundColor: colors.backgroundElement },
+        ]}
+      >
         <Text style={[styles.countText, { color: colors.textSecondary }]}>
           {totalCount}
         </Text>
@@ -58,9 +74,24 @@ const InventoryStats: React.FC<{
   <View style={styles.statsSection}>
     <View style={styles.statsRow}>
       {[
-        { label: "Total", value: totalItems, filter: "All" as const, icon: "layers" },
-        { label: "Low Stock", value: lowStockCount, filter: "Low" as const, icon: "alert-triangle" },
-        { label: "Out of Stock", value: outOfStockCount, filter: "Out" as const, icon: "x-circle" },
+        {
+          label: "Total",
+          value: totalItems,
+          filter: "All" as const,
+          icon: "layers",
+        },
+        {
+          label: "Low Stock",
+          value: lowStockCount,
+          filter: "Low" as const,
+          icon: "alert-triangle",
+        },
+        {
+          label: "Out of Stock",
+          value: outOfStockCount,
+          filter: "Out" as const,
+          icon: "x-circle",
+        },
       ].map((stat) => {
         const isActive = statusFilter === stat.filter;
         return (
@@ -84,7 +115,7 @@ const InventoryStats: React.FC<{
                       ? "#ef4444"
                       : "#3b82f6"
                   : "transparent",
-                borderWidth: 1.5,
+                borderWidth: 1,
               },
             ]}
           >
@@ -142,7 +173,8 @@ const CategoryFilter: React.FC<{
       style={[
         styles.categoryPill,
         {
-          backgroundColor: activeCategory === "" ? "#2563eb" : colors.backgroundElement,
+          backgroundColor:
+            activeCategory === "" ? "#2563eb" : colors.backgroundElement,
         },
       ]}
     >
@@ -195,18 +227,26 @@ const EmptyInventoryState: React.FC<{
 }> = ({ hasActiveFilters, onResetFilters, colors }) => (
   <View style={styles.emptyState}>
     <View
-      style={[styles.emptyIconCircle, { backgroundColor: colors.backgroundElement }]}
+      style={[
+        styles.emptyIconCircle,
+        { backgroundColor: colors.backgroundElement },
+      ]}
     >
       <Lucide name="package-search" size={36} color={colors.textSecondary} />
     </View>
-    <Text style={[styles.emptyTitle, { color: colors.text }]}>No items found</Text>
+    <Text style={[styles.emptyTitle, { color: colors.text }]}>
+      No items found
+    </Text>
     <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
       Try adjusting your search or category filters.
     </Text>
     {hasActiveFilters && (
       <Pressable
         onPress={onResetFilters}
-        style={[styles.resetFilterButton, { backgroundColor: colors.backgroundElement }]}
+        style={[
+          styles.resetFilterButton,
+          { backgroundColor: colors.backgroundElement },
+        ]}
       >
         <Text style={[styles.resetFilterText, { color: colors.text }]}>
           Reset all filters
@@ -225,6 +265,21 @@ const InventoryScreen = () => {
   const isDark = scheme === "dark";
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
   const flatListRef = useRef<FlatList>(null);
+  const { user } = useSession();
+  const [storeId, setStoreId] = useState(user?.store_id ?? "");
+
+  const { data: storesData } = useQuery({
+    queryKey: ["stores"],
+    queryFn: fetchTenantStores,
+  });
+
+  const stores = storesData ?? [];
+
+  useEffect(() => {
+    if (!storeId && stores.length > 0) {
+      setStoreId(stores[0].id);
+    }
+  }, [storeId, stores]);
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -251,8 +306,9 @@ const InventoryScreen = () => {
   }, []);
 
   const { data: categoriesData } = useQuery({
-    queryKey: ["categories"],
-    queryFn: fetchTenantCategories,
+    queryKey: ["categories", storeId],
+    queryFn: () => fetchTenantCategories(storeId),
+    enabled: !!storeId,
   });
 
   const categories = categoriesData ?? [];
@@ -266,23 +322,28 @@ const InventoryScreen = () => {
     isRefetching,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["products", debouncedSearch, activeCategory],
+    queryKey: ["products", debouncedSearch, activeCategory, storeId],
     queryFn: ({ pageParam = 1 }) =>
-      fetchProducts({
+      fetchProducts(storeId, {
         page: pageParam,
         page_size: PAGE_SIZE,
         search: debouncedSearch || undefined,
         category: activeCategory || undefined,
       }),
     getNextPageParam: (lastPage, allPages) => {
-      const loadedItems = allPages.reduce((acc, p) => acc + p.items.length, 0);
+      const loadedItems = allPages.reduce(
+        (acc, p) => acc + (p.data?.length ?? 0),
+        0,
+      );
       return loadedItems < lastPage.total ? allPages.length + 1 : undefined;
     },
     initialPageParam: 1,
+    enabled: !!storeId,
   });
 
   const allProducts = useMemo(
-    () => productsData?.pages.flatMap((p) => p.items) ?? [],
+    () =>
+      productsData?.pages.flatMap((p) => p.data ?? []).filter(Boolean) ?? [],
     [productsData],
   );
 
@@ -295,11 +356,11 @@ const InventoryScreen = () => {
         name: p.name,
         sku: p.sku ?? "N/A",
         price: p.selling_price,
-        stock: 0,
-        status: "In Stock" as StatusType,
-        category: categories.find((c) => c.id === p.category_id)?.name ?? "Uncategorized",
+        stock: p.qty,
+        status: p.qty === 0 ? "Out" : p.qty <= 10 ? "Low" : "In Stock",
+        category: p.category ?? "Uncategorized",
       })),
-    [allProducts, categories],
+    [allProducts],
   );
 
   const filteredByStatus = useMemo(() => {
@@ -309,7 +370,9 @@ const InventoryScreen = () => {
 
   const totalItems = totalFromServer;
   const lowStockCount = mappedProducts.filter((i) => i.status === "Low").length;
-  const outOfStockCount = mappedProducts.filter((i) => i.status === "Out").length;
+  const outOfStockCount = mappedProducts.filter(
+    (i) => i.status === "Out",
+  ).length;
 
   const flatListData: ListItemType[] = useMemo(() => {
     const items: ListItemType[] = [{ type: "sticky_header" }];
@@ -320,7 +383,10 @@ const InventoryScreen = () => {
   }, [filteredByStatus]);
 
   const handleCardPress = (item: InventoryItem) => {
-    router.push({ pathname: "/(tabs)/(inventory)/[id]", params: { id: item.id } });
+    router.push({
+      pathname: "/(tabs)/(inventory)/[id]",
+      params: { id: item.id },
+    });
   };
 
   const handleQuickAdjust = (item: InventoryItem) => {
@@ -355,7 +421,9 @@ const InventoryScreen = () => {
         }
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
-        onEndReached={handleEndReached}
+        onEndReached={
+          filteredByStatus.length > 0 ? handleEndReached : undefined
+        }
         onEndReachedThreshold={0.5}
         refreshing={isRefetching}
         onRefresh={refetch}

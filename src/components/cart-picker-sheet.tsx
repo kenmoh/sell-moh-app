@@ -26,19 +26,12 @@ const CartPickerSheet = ({
   const carts = useCartStore((s) => s.carts);
   const activeCartId = useCartStore((s) => s.activeCartId);
   const setActiveCart = useCartStore((s) => s.setActiveCart);
-  const createCart = useCartStore((s) => s.createCart);
   const deleteCart = useCartStore((s) => s.deleteCart);
 
   const handleSelect = (cartId: string) => {
     setActiveCart(cartId);
     onVisibleChange(false);
     onCartSelected(cartId);
-  };
-
-  const handleCreate = () => {
-    const newId = createCart();
-    onVisibleChange(false);
-    onCartSelected(newId);
   };
 
   const getCartTotal = (cart: {
@@ -99,20 +92,6 @@ const CartPickerSheet = ({
           </Pressable>
         );
       })}
-
-      <View
-        style={[
-          styles.createButton,
-          { backgroundColor: colors.backgroundElement },
-        ]}
-      >
-        <Text
-          style={[styles.createButtonText, { color: colors.text }]}
-          onPress={handleCreate}
-        >
-          + Create New Cart
-        </Text>
-      </View>
     </AppBottomSheet>
   );
 };
@@ -137,11 +116,4 @@ const styles = StyleSheet.create({
   cartTotal: { fontSize: 13, fontWeight: "700" },
   deleteButton: { padding: 4 },
   deleteButtonText: { fontSize: 16 },
-  createButton: {
-    borderRadius: 100,
-    paddingVertical: 12,
-    alignItems: "center",
-    marginTop: 12,
-  },
-  createButtonText: { fontSize: 14, fontWeight: "600" },
 });

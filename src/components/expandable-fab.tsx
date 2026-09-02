@@ -100,6 +100,7 @@ const ExpandableFAB = () => {
   const handleCreateCart = () => {
     toggle();
     useCartStore.getState().createCart();
+    setCartSheetVisible(true);
   };
 
   const handleViewCarts = () => {

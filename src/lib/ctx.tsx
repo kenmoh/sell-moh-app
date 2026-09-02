@@ -27,11 +27,23 @@ export function useSession() {
 
 export function SessionProvider({ children }: PropsWithChildren) {
   const [[isLoading, session], setSession] = useStorageState("session");
+  const [[, userRaw], setUserRaw] = useStorageState("user");
   const [userState, setUserState] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    if (userRaw) {
+      try {
+        setUserState(JSON.parse(userRaw));
+      } catch {
+        setUserState(null);
+      }
+    }
+  }, [userRaw]);
 
   useEffect(() => {
     setLogoutHandler(() => {
       setSession(null);
+      setUserRaw(null);
       setUserState(null);
     });
     return () => setLogoutHandler(() => {});
@@ -53,10 +65,12 @@ export function SessionProvider({ children }: PropsWithChildren) {
         signIn: (accessToken, refreshToken, user) => {
           const data: SessionData = { accessToken, refreshToken };
           setSession(JSON.stringify(data));
+          setUserRaw(JSON.stringify(user));
           setUserState(user);
         },
         signOut: () => {
           setSession(null);
+          setUserRaw(null);
           setUserState(null);
         },
         session,

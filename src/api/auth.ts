@@ -13,6 +13,11 @@ import { apiClient } from "./client";
 
 const URL = "/auth";
 
+interface DeleteResponse {
+  message: string;
+  data: { success: boolean };
+}
+
 /**
  * Extracts a readable error message from the API response
  */
@@ -121,17 +126,14 @@ export const fetchTenantRoles = async (): Promise<FetchTenantRoles[]> => {
 // ____________________________________Employee Management____________________________________
 export const createEmployee = async (
   data: CreateEmployee,
-): Promise<DataMessageResponse> => {
-  const res = await apiClient.post<DataMessageResponse>(
-    `${URL}/employees`,
-    data,
-  );
+): Promise<EmployeeResponse> => {
+  const res = await apiClient.post<EmployeeResponse>(`${URL}/employees`, data);
 
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
   }
 
-  return res.data!;
+  return res.data as EmployeeResponse;
 };
 
 export const getEmployees = async (): Promise<EmployeeResponse[]> => {
@@ -146,26 +148,47 @@ export const getEmployees = async (): Promise<EmployeeResponse[]> => {
   return res.data?.data ?? [];
 };
 
-// export const updateEmployee = async (
-//   data: UpdateEmployee,
-// ): Promise<DataMessageResponse> => {
-//   const res = await apiClient.patch<DataMessageResponse>(`${URL}/employees`, data);
+export const updateEmployee = async (
+  employeeId: string,
+  data: Omit<CreateEmployee, "password | role">,
+): Promise<EmployeeResponse> => {
+  const res = await apiClient.patch<EmployeeResponse>(
+    `${URL}/employees/${employeeId}`,
+    data,
+  );
 
-//   if (!res.ok) {
-//     throw new Error(getErrorMessage(res));
-//   }
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
 
-//   return res.data!;
-// };
+  return res.data as EmployeeResponse;
+};
+export const setEmployeeStatus = async (
+  employeeId: string,
+  data: { status: "active" | "suspended" },
+): Promise<EmployeeResponse> => {
+  const res = await apiClient.patch<EmployeeResponse>(
+    `${URL}/employees/${employeeId}/status`,
+    data,
+  );
 
-// export const deleteEmployee = async (
-//   data: UpdateEmployee,
-// ): Promise<DataMessageResponse> => {
-//   const res = await apiClient.delete<DataMessageResponse>(`${URL}/employees`, data);
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
 
-//   if (!res.ok) {
-//     throw new Error(getErrorMessage(res));
-//   }
+  return res.data as EmployeeResponse;
+};
 
-//   return res.data!;
-// };
+export const deleteEmployee = async (
+  employeeId: string,
+): Promise<DeleteResponse> => {
+  const res = await apiClient.delete<DeleteResponse>(
+    `${URL}/employees/${employeeId}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data as DeleteResponse;
+};

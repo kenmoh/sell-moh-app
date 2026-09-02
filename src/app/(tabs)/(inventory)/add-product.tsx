@@ -8,7 +8,7 @@ import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack, router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -67,6 +67,7 @@ const AddProduct = () => {
   const [sheetVisible, setSheetVisible] = useState(false);
   const [actionsVisible, setActionsVisible] = useState(false);
   const [storeSheetVisible, setStoreSheetVisible] = useState(false);
+  const [categorySheetVisible, setCategorySheetVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<{
     id: string;
     name: string;
@@ -75,8 +76,9 @@ const AddProduct = () => {
   const [storeId, setStoreId] = useState(params.store_id ?? "");
 
   const { data: categoriesData } = useQuery({
-    queryKey: ["categories"],
-    queryFn: fetchTenantCategories,
+    queryKey: ["categories", storeId],
+    queryFn: () => fetchTenantCategories(storeId),
+    enabled: storeId.length > 0,
   });
 
   const { data: storesData } = useQuery({
@@ -85,6 +87,12 @@ const AddProduct = () => {
   });
 
   const stores = storesData ?? [];
+
+  useEffect(() => {
+    if (!storeId && stores.length > 0) {
+      setStoreId(stores[0].id);
+    }
+  }, [storeId, stores]);
 
   const { mutate: createProductMutation, isPending } = useMutation({
     mutationFn: createProduct,
@@ -330,56 +338,29 @@ const AddProduct = () => {
               </Text>
             </Pressable>
           </View>
-          {categories.length > 0 && (
-            <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-              Long press a category for more options
+          <Pressable
+            style={[
+              styles.selectorButton,
+              {
+                backgroundColor: colors.backgroundElement,
+                borderColor: colors.backgroundSelected,
+              },
+            ]}
+            onPress={() => setCategorySheetVisible(true)}
+          >
+            <Lucide name="tag" size={16} color={colors.textSecondary} />
+            <Text
+              style={[
+                styles.selectorText,
+                { color: categoryId ? colors.text : colors.textSecondary },
+              ]}
+            >
+              {categoryId
+                ? categories.find((c) => c.id === categoryId)?.name ?? "Selected Category"
+                : "Select category"}
             </Text>
-          )}
-          {categories.length > 0 ? (
-            <View style={styles.pills}>
-              {categories.map((cat) => {
-                const isActive = categoryId === cat.id;
-                return (
-                  <Pressable
-                    key={cat.id}
-                    style={[
-                      styles.pill,
-                      {
-                        backgroundColor: isActive
-                          ? colors.buttonPrimary
-                          : colors.backgroundElement,
-                      },
-                    ]}
-                    onPress={() => setCategoryId(isActive ? "" : cat.id)}
-                    onLongPress={() => {
-                      setSelectedCategory({
-                        id: cat.id,
-                        name: cat.name,
-                        description: cat.description,
-                      });
-                      setActionsVisible(true);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.pillText,
-                        { color: isActive ? "#fff" : colors.text },
-                      ]}
-                    >
-                      {cat.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <AppTextInput
-              leftIcon="tag"
-              placeholder="Category"
-              value={categoryId}
-              onChangeText={setCategoryId}
-            />
-          )}
+            <Lucide name="chevron-down" size={16} color={colors.textSecondary} />
+          </Pressable>
         </View>
 
         {/* Metadata */}
@@ -507,6 +488,66 @@ const AddProduct = () => {
         ) : (
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             No stores available
+          </Text>
+        )}
+      </AppBottomSheet>
+      <AppBottomSheet
+        visible={categorySheetVisible}
+        onVisibleChange={setCategorySheetVisible}
+        snapPoints={["40%", "70%"]}
+      >
+        <View style={styles.sheetHeader}>
+          <Text style={[styles.sheetTitle, { color: colors.text }]}>
+            Select Category
+          </Text>
+          <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+            Choose a category for this product
+          </Text>
+        </View>
+        {categories.length > 0 ? (
+          <View style={styles.pills}>
+            {categories.map((cat) => {
+              const isActive = categoryId === cat.id;
+              return (
+                <Pressable
+                  key={cat.id}
+                  style={[
+                    styles.pill,
+                    {
+                      backgroundColor: isActive
+                        ? colors.buttonPrimary
+                        : colors.backgroundElement,
+                    },
+                  ]}
+                  onPress={() => {
+                    setCategoryId(isActive ? "" : cat.id);
+                    setCategorySheetVisible(false);
+                  }}
+                  onLongPress={() => {
+                    setSelectedCategory({
+                      id: cat.id,
+                      name: cat.name,
+                      description: cat.description,
+                    });
+                    setCategorySheetVisible(false);
+                    setActionsVisible(true);
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.pillText,
+                      { color: isActive ? "#fff" : colors.text },
+                    ]}
+                  >
+                    {cat.name}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : (
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No categories available
           </Text>
         )}
       </AppBottomSheet>

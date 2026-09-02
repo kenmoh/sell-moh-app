@@ -10,6 +10,8 @@ export interface Cart {
   id: string;
   name: string;
   items: CartItem[];
+  couponCode?: string | null;
+  discountAmount?: number;
 }
 
 let cartCounter = 1;
@@ -28,12 +30,16 @@ interface CartState {
     quantity: number,
   ) => void;
   clearCartById: (cartId: string) => void;
+  setCartCoupon: (cartId: string, code: string | null, discountAmount?: number) => void;
+  clearCartCoupon: (cartId: string) => void;
   addItem: (product: Product, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
   totalItems: () => number;
   totalPrice: () => number;
+  activeCouponCode: () => string | null;
+  activeDiscountAmount: () => number;
 }
 
 const initialCart: Cart = { id: "cart-1", name: "Cart 1", items: [] };
@@ -119,7 +125,25 @@ const useCartStore = create<CartState>((set, get) => ({
   clearCartById: (cartId) =>
     set((state) => ({
       carts: state.carts.map((cart) =>
-        cart.id === cartId ? { ...cart, items: [] } : cart,
+        cart.id === cartId ? { ...cart, items: [], couponCode: null, discountAmount: 0 } : cart,
+      ),
+    })),
+
+  setCartCoupon: (cartId, code, discountAmount = 0) =>
+    set((state) => ({
+      carts: state.carts.map((cart) =>
+        cart.id === cartId
+          ? { ...cart, couponCode: code, discountAmount }
+          : cart,
+      ),
+    })),
+
+  clearCartCoupon: (cartId) =>
+    set((state) => ({
+      carts: state.carts.map((cart) =>
+        cart.id === cartId
+          ? { ...cart, couponCode: null, discountAmount: 0 }
+          : cart,
       ),
     })),
 
@@ -155,6 +179,18 @@ const useCartStore = create<CartState>((set, get) => ({
     return cart
       ? cart.items.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
       : 0;
+  },
+
+  activeCouponCode: () => {
+    const { carts, activeCartId } = get();
+    const cart = carts.find((c) => c.id === activeCartId);
+    return cart?.couponCode ?? null;
+  },
+
+  activeDiscountAmount: () => {
+    const { carts, activeCartId } = get();
+    const cart = carts.find((c) => c.id === activeCartId);
+    return cart?.discountAmount ?? 0;
   },
 }));
 

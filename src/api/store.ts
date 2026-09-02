@@ -1,7 +1,7 @@
 // _____________________________CATEGORY OPERATIONS_____________________________
 
 import { DataMessageResponse } from "@/types/auth";
-import { CreateStore } from "@/types/store";
+import { CreateStore, StoreDetailResponse } from "@/types/store";
 import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
 
@@ -97,6 +97,26 @@ export const fetchTenantStoreProducts = async (storeId: string) => {
   }
 
   return res.data?.data ?? [];
+};
+
+export const fetchStoreDetails = async (
+  storeId: string,
+  fromDate?: string,
+  toDate?: string,
+): Promise<StoreDetailResponse> => {
+  const params = new URLSearchParams();
+  if (fromDate) params.append("from_date", fromDate);
+  if (toDate) params.append("to_date", toDate);
+  const qs = params.toString();
+  const res = await apiClient.get<{ data: StoreDetailResponse }>(
+    `${STORE_URL}/${storeId}${qs ? `?${qs}` : ""}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
 };
 
 export const createTenantStoreProduct = async (

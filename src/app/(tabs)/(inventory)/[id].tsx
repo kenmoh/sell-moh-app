@@ -1,16 +1,27 @@
-import { fetchTenantCategories, getProductById } from "@/api/inventory";
+import {
+  fetchTenantCategories,
+  getProductById,
+} from "@/api/inventory";
+import { BASE_URL } from "@/api/client";
+import { fetchTenantStores } from "@/api/store";
+import AppBottomSheet from "@/components/bottom-sheet";
 import AdjustStockSheet from "@/components/adjust-stock-sheet";
 import { Colors } from "@/constants/theme";
+import { useSession } from "@/lib/ctx";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import * as FileSystem from "expo-file-system/legacy";
+import * as MediaLibrary from "expo-media-library";
+import * as SecureStore from "expo-secure-store";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   useColorScheme,
   View,
 } from "react-native";
@@ -56,21 +67,60 @@ const ProductDetails = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
+  const { user } = useSession();
+  const [storeId, setStoreId] = useState(user?.store_id ?? "");
   const [adjustVisible, setAdjustVisible] = useState(false);
+  const [qrVisible, setQrVisible] = useState(false);
+  const [qrSize, setQrSize] = useState<"small" | "medium" | "large">("large");
+  const [qrBoxSize, setQrBoxSize] = useState("");
+
+  const { data: storesData } = useQuery({
+    queryKey: ["stores"],
+    queryFn: fetchTenantStores,
+  });
+
+  const stores = storesData ?? [];
+
+  useEffect(() => {
+    if (!storeId && stores.length > 0) {
+      setStoreId(stores[0].id);
+    }
+  }, [storeId, stores]);
 
   const { data: product, isPending: isLoadingProduct } = useQuery({
-    queryKey: ["product", id],
-    queryFn: () => getProductById(id!),
-    enabled: !!id,
+    queryKey: ["product", id, storeId],
+    queryFn: () => getProductById(id!, storeId),
+    enabled: !!id && !!storeId,
+  });
+
+  const { mutate: downloadQR, isPending: isDownloading } = useMutation({
+    mutationFn: async () => {
+      const boxSize = qrBoxSize ? Number(qrBoxSize) : undefined;
+      const query = new URLSearchParams();
+      if (qrSize) query.append("size", qrSize);
+      if (boxSize) query.append("box_size", String(boxSize));
+      const qs = query.toString();
+      const url = `${BASE_URL}/inventory/${storeId}/products/${id}/qr${qs ? `?${qs}` : ""}`;
+      const session = JSON.parse(SecureStore.getItem("session") ?? "{}");
+      const fileUri = FileSystem.cacheDirectory + `${product?.name ?? "qr"}_qr.png`;
+      await FileSystem.downloadAsync(url, fileUri, {
+        headers: session?.accessToken ? { Authorization: `Bearer ${session.accessToken}` } : {},
+      });
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== "granted") throw new Error("Permission denied");
+      await MediaLibrary.saveToLibraryAsync(fileUri);
+      return true;
+    },
+    onSuccess: () => {
+      setQrVisible(false);
+    },
   });
 
   const { data: categories } = useQuery({
-    queryKey: ["categories"],
-    queryFn: fetchTenantCategories,
+    queryKey: ["categories", storeId],
+    queryFn: () => fetchTenantCategories(storeId),
+    enabled: !!storeId,
   });
-
-  const categoryName =
-    categories?.find((c) => c.id === product?.category_id)?.name ?? "Uncategorized";
 
   if (isLoadingProduct) {
     return (
@@ -116,7 +166,14 @@ const ProductDetails = () => {
       >
         {/* Product Identity Card */}
         <View style={[styles.identityCard, { backgroundColor: colors.card }]}>
-          <View style={{ flexDirection: "row" }}>
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 10,
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{initial}</Text>
             </View>
@@ -162,7 +219,7 @@ const ProductDetails = () => {
               ]}
             >
               <Text style={[styles.tagText, { color: colors.textSecondary }]}>
-                {categoryName}
+                {product.category ?? "Uncategorized"}
               </Text>
             </View>
           </View>
@@ -182,7 +239,7 @@ const ProductDetails = () => {
                   id: product.id,
                   name: product.name,
                   sku: product.sku ?? "",
-                  category_id: product.category_id ?? "",
+                  category_id: product.category ?? "",
                   selling_price: String(product.selling_price),
                 },
               })
@@ -215,9 +272,14 @@ const ProductDetails = () => {
               style={[styles.detailsCard, { backgroundColor: colors.card }]}
             >
               {[
-                { label: "Product ID", value: product.public_id },
-                { label: "Category", value: categoryName },
-                { label: "Status", value: product.status === "active" ? "Active" : "Inactive" },
+                {
+                  label: "Category",
+                  value: product.category ?? "Uncategorized",
+                },
+                {
+                  label: "Status",
+                  value: product.status === "active" ? "Active" : "Inactive",
+                },
                 { label: "SKU", value: product.sku ?? "N/A" },
               ].map((row, i, arr) => (
                 <View
@@ -239,10 +301,32 @@ const ProductDetails = () => {
                     {row.label}
                   </Text>
                   <Text style={[styles.detailValue, { color: colors.text }]}>
-                    {row.value}
+                    {row.value!}
                   </Text>
                 </View>
               ))}
+              <Pressable
+                style={[
+                  styles.tag,
+                  {
+                    backgroundColor: "rgba(59,130,246,0.1)",
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: 6,
+                    marginVertical: 10,
+                    height: 45,
+                    alignSelf: "center",
+                    width: "95%",
+                  },
+                ]}
+                onPress={() => setQrVisible(true)}
+              >
+                <Lucide name="qr-code" size={12} color="#3b82f6" />
+                <Text style={[styles.tagText, { color: "#3b82f6" }]}>
+                  Download QR Code
+                </Text>
+              </Pressable>
             </View>
           </View>
 
@@ -381,6 +465,72 @@ const ProductDetails = () => {
         productId={id!}
         unitCost={product?.selling_price ?? 0}
       />
+
+      <AppBottomSheet
+        visible={qrVisible}
+        onVisibleChange={setQrVisible}
+        snapPoints={["32%"]}
+      >
+        <Text style={[styles.sheetTitle, { color: colors.text }]}>
+          QR Code Size
+        </Text>
+        <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+          Size
+        </Text>
+        <View style={styles.pillRow}>
+          {(["small", "medium", "large"] as const).map((s) => {
+            const active = qrSize === s;
+            const label = s === "small" ? "Small (320px)" : s === "medium" ? "Medium (530px)" : "Large (1060px)";
+            return (
+              <Pressable
+                key={s}
+                style={[
+                  styles.pill,
+                  {
+                    backgroundColor: active ? "rgba(59,130,246,0.1)" : colors.backgroundElement,
+                    borderColor: active ? "#3b82f6" : "transparent",
+                  },
+                ]}
+                onPress={() => setQrSize(s)}
+              >
+                <Text style={[styles.pillText, { color: active ? "#3b82f6" : colors.textSecondary }]}>
+                  {label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+        <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+          Box Size (1-30, optional)
+        </Text>
+        <TextInput
+          style={[styles.sheetInput, { color: colors.text, borderColor: colors.backgroundElement }]}
+          value={qrBoxSize}
+          onChangeText={setQrBoxSize}
+          keyboardType="number-pad"
+          placeholder="Leave empty to use size default"
+          placeholderTextColor={colors.textSecondary}
+        />
+        <Text style={[styles.sheetHint, { color: colors.textSecondary }]}>
+          Box size (1-30) overrides the selected size
+        </Text>
+        <Pressable
+          style={[
+            styles.sheetButton,
+            { backgroundColor: colors.buttonPrimary },
+          ]}
+          onPress={() => downloadQR()}
+          disabled={isDownloading}
+        >
+          {isDownloading ? (
+            <ActivityIndicator color="#fff" size="small" />
+          ) : (
+            <Text style={styles.sheetButtonText}>
+              Download
+            </Text>
+          )}
+        </Pressable>
+      </AppBottomSheet>
     </View>
   );
 };
@@ -401,8 +551,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   avatar: {
-    width: 40,
-    height: 40,
+    width: 50,
+    height: 50,
     borderRadius: 36,
     backgroundColor: "rgba(59, 130, 246, 0.1)",
     alignItems: "center",
@@ -410,8 +560,8 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   avatarText: { fontSize: 28, fontWeight: "700", color: "#3b82f6" },
-  productName: { fontSize: 16, fontWeight: "700" },
-  productSku: { fontSize: 12, color: "#aaa", textTransform: "uppercase" },
+  productName: { fontSize: 12, fontWeight: "700" },
+  productSku: { fontSize: 10, color: "#aaa", textTransform: "uppercase" },
   productPrice: {
     fontSize: 22,
     fontWeight: "800",
@@ -488,4 +638,32 @@ const styles = StyleSheet.create({
   historyRight: { alignItems: "flex-end", gap: 2 },
   historyQty: { fontSize: 14, fontWeight: "700" },
   historyBalance: { fontSize: 11 },
+  sheetTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16 },
+  sheetLabel: { fontSize: 13, fontWeight: "500", marginBottom: 6 },
+  pillRow: { flexDirection: "row", gap: 8, marginBottom: 14 },
+  pill: {
+    flex: 1,
+    paddingVertical: 10,
+    borderRadius: 10,
+    alignItems: "center",
+    borderWidth: 1,
+  },
+  pillText: { fontSize: 12, fontWeight: "600" },
+  sheetInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+    marginBottom: 4,
+  },
+  sheetHint: { fontSize: 11, marginBottom: 14 },
+  sheetButton: {
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  sheetButtonText: { color: "#fff", fontSize: 15, fontWeight: "600" },
 });

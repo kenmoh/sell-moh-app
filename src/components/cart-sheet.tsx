@@ -1,8 +1,11 @@
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
+import { validateCoupon } from "@/api/discount";
+import { useMutation } from "@tanstack/react-query";
 import Lucide from "@react-native-vector-icons/lucide";
 import { useEffect, useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   StyleSheet,
   Text,
@@ -318,6 +321,104 @@ export const CartItemsList = ({
   );
 };
 
+interface CouponInputProps {
+  couponCode: string | null;
+  discountAmount: number;
+  cartSubtotal: number;
+  colors: ColorPalette;
+  onApply: (code: string) => void;
+  onRemove: () => void;
+  isValidating: boolean;
+}
+
+export const CouponInput = ({
+  couponCode,
+  discountAmount,
+  cartSubtotal,
+  colors,
+  onApply,
+  onRemove,
+  isValidating,
+}: CouponInputProps) => {
+  const [inputCode, setInputCode] = useState("");
+
+  const handleApply = () => {
+    if (inputCode.trim()) {
+      onApply(inputCode.trim().toUpperCase());
+      setInputCode("");
+    }
+  };
+
+  if (couponCode) {
+    return (
+      <View
+        style={[
+          styles.couponApplied,
+          { backgroundColor: "#10b98110", borderColor: "#10b98130" },
+        ]}
+      >
+        <View style={styles.couponAppliedLeft}>
+          <Lucide name="ticket" size={16} color="#10b981" />
+          <View>
+            <Text style={[styles.couponCode, { color: "#10b981" }]}>
+              {couponCode}
+            </Text>
+            <Text style={[styles.couponDiscount, { color: colors.textSecondary }]}>
+              -₦{discountAmount.toLocaleString()} off
+            </Text>
+          </View>
+        </View>
+        <TouchableOpacity onPress={onRemove} style={styles.couponRemoveBtn}>
+          <Lucide name="x" size={16} color="#ef4444" />
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.couponInputRow}>
+      <View style={[styles.couponInputWrapper, { backgroundColor: colors.backgroundElement }]}>
+        <Lucide name="ticket" size={16} color={colors.textSecondary} />
+        <TextInput
+          placeholder="Enter coupon code"
+          placeholderTextColor={colors.textSecondary}
+          value={inputCode}
+          onChangeText={setInputCode}
+          autoCapitalize="characters"
+          style={[styles.couponTextInput, { color: colors.text }]}
+          onSubmitEditing={handleApply}
+          returnKeyType="done"
+        />
+      </View>
+      <TouchableOpacity
+        activeOpacity={0.7}
+        onPress={handleApply}
+        disabled={!inputCode.trim() || isValidating}
+        style={[
+          styles.couponApplyBtn,
+          {
+            backgroundColor: inputCode.trim() ? "#3b82f6" : colors.backgroundElement,
+            opacity: inputCode.trim() && !isValidating ? 1 : 0.5,
+          },
+        ]}
+      >
+        {isValidating ? (
+          <ActivityIndicator size="small" color="#fff" />
+        ) : (
+          <Text
+            style={[
+              styles.couponApplyText,
+              { color: inputCode.trim() ? "#fff" : colors.textSecondary },
+            ]}
+          >
+            Apply
+          </Text>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+};
+
 interface PaymentMethodTabsProps {
   paymentMethod: PaymentMethod;
   colors: ColorPalette;
@@ -522,14 +623,20 @@ export const SplitPaymentBox = ({
 interface CartSummaryCardProps {
   totalItemsCount: number;
   totalPrice: number;
+  discountAmount: number;
+  couponCode: string | null;
   colors: ColorPalette;
 }
 
 export const CartSummaryCard = ({
   totalItemsCount,
   totalPrice,
+  discountAmount,
+  couponCode,
   colors,
 }: CartSummaryCardProps) => {
+  const finalTotal = Math.max(0, totalPrice - discountAmount);
+
   return (
     <View
       style={[
@@ -548,12 +655,22 @@ export const CartSummaryCard = ({
           ₦{totalPrice.toLocaleString()}
         </Text>
       </View>
+      {discountAmount > 0 && (
+        <View style={styles.summaryRow}>
+          <Text style={{ color: "#10b981" }}>
+            Discount{couponCode ? ` (${couponCode})` : ""}
+          </Text>
+          <Text style={{ color: "#10b981", fontWeight: "600" }}>
+            -₦{discountAmount.toLocaleString()}
+          </Text>
+        </View>
+      )}
       <View style={[styles.summaryRow, { marginTop: 8 }]}>
         <Text style={[styles.totalLabel, { color: colors.text }]}>
           Total Due
         </Text>
         <Text style={[styles.totalAmount, { color: colors.text }]}>
-          ₦{totalPrice.toLocaleString()}
+          ₦{finalTotal.toLocaleString()}
         </Text>
       </View>
     </View>
@@ -756,6 +873,8 @@ export const CartCheckoutButton = ({
 interface CartPaymentSectionProps {
   totalPrice: number;
   totalItemsCount: number;
+  discountAmount: number;
+  couponCode: string | null;
   paymentMethod: PaymentMethod;
   cashInput: string;
   transferInput: string;
@@ -781,6 +900,8 @@ interface CartPaymentSectionProps {
 export const CartPaymentSection = ({
   totalPrice,
   totalItemsCount,
+  discountAmount,
+  couponCode,
   paymentMethod,
   cashInput,
   transferInput,
@@ -802,6 +923,8 @@ export const CartPaymentSection = ({
   onSplitEven,
   onCheckout,
 }: CartPaymentSectionProps) => {
+  const finalTotal = Math.max(0, totalPrice - discountAmount);
+
   return (
     <View style={styles.paymentSection}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>
@@ -823,7 +946,7 @@ export const CartPaymentSection = ({
           numTransfer={numTransfer}
           numCard={numCard}
           totalPaid={totalPaid}
-          totalPrice={totalPrice}
+          totalPrice={finalTotal}
           isPaidValid={isPaidValid}
           remainingNeeded={remainingNeeded}
           colors={colors}
@@ -837,11 +960,13 @@ export const CartPaymentSection = ({
       <CartSummaryCard
         totalItemsCount={totalItemsCount}
         totalPrice={totalPrice}
+        discountAmount={discountAmount}
+        couponCode={couponCode}
         colors={colors}
       />
 
       <CartCheckoutButton
-        totalPrice={totalPrice}
+        totalPrice={finalTotal}
         paymentMethod={paymentMethod}
         isPaidValid={isPaidValid}
         numCash={numCash}
@@ -869,16 +994,21 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const updateQuantityInCart = useCartStore((s) => s.updateQuantityInCart);
   const removeItemFromCart = useCartStore((s) => s.removeItemFromCart);
   const clearCartById = useCartStore((s) => s.clearCartById);
+  const setCartCoupon = useCartStore((s) => s.setCartCoupon);
+  const clearCartCoupon = useCartStore((s) => s.clearCartCoupon);
 
   const activeCart = carts.find((c) => c.id === activeCartId);
   const items = activeCart?.items ?? [];
   const cartName = activeCart?.name ?? "Cart";
+  const couponCode = activeCart?.couponCode ?? null;
+  const discountAmount = activeCart?.discountAmount ?? 0;
 
   const totalPrice = items.reduce(
     (sum, i) => sum + i.product.price * i.quantity,
     0,
   );
   const totalItemsCount = items.reduce((sum, i) => sum + i.quantity, 0);
+  const finalTotal = Math.max(0, totalPrice - discountAmount);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [cashInput, setCashInput] = useState<string>("");
@@ -893,6 +1023,29 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     method: "cash" | "transfer" | "card";
     amount: number;
   } | null>(null);
+
+  // Coupon validation
+  const { mutate: validateCouponCode, isPending: isValidatingCoupon } = useMutation({
+    mutationFn: (code: string) => validateCoupon(code, totalPrice),
+    onSuccess: (result) => {
+      if (result.valid) {
+        setCartCoupon(activeCartId, result.code ?? couponCode, result.discount_amount);
+      } else {
+        Alert.alert("Invalid Coupon", result.message || "This coupon is not valid");
+      }
+    },
+    onError: () => {
+      Alert.alert("Error", "Failed to validate coupon. Please try again.");
+    },
+  });
+
+  const handleApplyCoupon = (code: string) => {
+    validateCouponCode(code);
+  };
+
+  const handleRemoveCoupon = () => {
+    clearCartCoupon(activeCartId);
+  };
 
   useEffect(() => {
     if (!visible) {
@@ -919,7 +1072,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
         cash: numCash,
         transfer: numTransfer,
         card: numCard,
-        total: totalPrice,
+        total: finalTotal,
         method: "split",
       });
       setIsSuccess(true);
@@ -928,11 +1081,11 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
   const handleSelectPaymentMethod = (method: PaymentMethod) => {
     setPaymentMethod(method);
-    if (method === "split" && totalPrice > 0) {
-      const third = Math.round(totalPrice / 3);
+    if (method === "split" && finalTotal > 0) {
+      const third = Math.round(finalTotal / 3);
       setCashInput(third.toString());
       setTransferInput(third.toString());
-      setCardInput((totalPrice - third * 2).toString());
+      setCardInput((finalTotal - third * 2).toString());
     }
   };
 
@@ -949,42 +1102,42 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   };
 
   const handleSplitEven = () => {
-    const third = Math.round(totalPrice / 3);
+    const third = Math.round(finalTotal / 3);
     setCashInput(third.toString());
     setTransferInput(third.toString());
-    setCardInput((totalPrice - third * 2).toString());
+    setCardInput((finalTotal - third * 2).toString());
   };
 
   const numCash =
     paymentMethod === "cash"
-      ? totalPrice
+      ? finalTotal
       : paymentMethod === "split"
         ? parseFloat(cashInput) || 0
         : 0;
 
   const numTransfer =
     paymentMethod === "transfer"
-      ? totalPrice
+      ? finalTotal
       : paymentMethod === "split"
         ? parseFloat(transferInput) || 0
         : 0;
 
   const numCard =
     paymentMethod === "card"
-      ? totalPrice
+      ? finalTotal
       : paymentMethod === "split"
         ? parseFloat(cardInput) || 0
         : 0;
 
   const totalPaid = numCash + numTransfer + numCard;
-  const isPaidValid = totalPrice > 0 && Math.abs(totalPaid - totalPrice) < 0.01;
-  const remainingNeeded = Math.max(0, totalPrice - totalPaid);
+  const isPaidValid = finalTotal > 0 && Math.abs(totalPaid - finalTotal) < 0.01;
+  const remainingNeeded = Math.max(0, finalTotal - totalPaid);
 
   const handleCheckout = (method?: "cash" | "transfer" | "card") => {
     if (!isPaidValid) {
       Alert.alert(
         "Invalid Payment",
-        `Payment total must equal ₦${totalPrice.toLocaleString()}`,
+        `Payment total must equal ₦${finalTotal.toLocaleString()}`,
       );
       return;
     }
@@ -1012,7 +1165,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       cash: resolvedMethod === "transfer" || resolvedMethod === "card" ? 0 : numCash,
       transfer: resolvedMethod === "cash" || resolvedMethod === "card" ? 0 : numTransfer,
       card: resolvedMethod === "cash" || resolvedMethod === "transfer" ? 0 : numCard,
-      total: totalPrice,
+      total: finalTotal,
       method: resolvedMethod,
     });
     setIsSuccess(true);
@@ -1068,9 +1221,23 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
             )}
 
             {items.length > 0 && (
+              <CouponInput
+                couponCode={couponCode}
+                discountAmount={discountAmount}
+                cartSubtotal={totalPrice}
+                colors={colors}
+                onApply={handleApplyCoupon}
+                onRemove={handleRemoveCoupon}
+                isValidating={isValidatingCoupon}
+              />
+            )}
+
+            {items.length > 0 && (
               <CartPaymentSection
                 totalPrice={totalPrice}
                 totalItemsCount={totalItemsCount}
+                discountAmount={discountAmount}
+                couponCode={couponCode}
                 paymentMethod={paymentMethod}
                 cashInput={cashInput}
                 transferInput={transferInput}
@@ -1397,5 +1564,60 @@ const styles = StyleSheet.create({
   successSubtitle: {
     fontSize: 14,
     marginTop: -8,
+  },
+
+  /* Coupon */
+  couponInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  couponInputWrapper: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  couponTextInput: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "600",
+    padding: 0,
+  },
+  couponApplyBtn: {
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  couponApplyText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  couponApplied: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderRadius: 12,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  couponAppliedLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  couponCode: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  couponDiscount: {
+    fontSize: 12,
+  },
+  couponRemoveBtn: {
+    padding: 4,
   },
 });
