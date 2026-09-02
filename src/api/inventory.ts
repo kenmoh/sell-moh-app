@@ -132,8 +132,6 @@ export const getProductById = async (
     throw new Error(getErrorMessage(res));
   }
 
-  console.log("Product data fetched:", res.data?.data); // Debugging line
-
   return res.data?.data!;
 };
 
@@ -162,9 +160,9 @@ export const deleteProduct = async (id: string) => {
   return res.data!;
 };
 
-export const adjustProduct = async (data: AdjustProduct) => {
+export const adjustProduct = async (stooreId: string, data: AdjustProduct) => {
   const res = await apiClient.post<DataMessageResponse>(
-    `${INVENTORY_URL}/adjust`,
+    `${INVENTORY_URL}/${stooreId}/adjust`,
     data,
   );
 

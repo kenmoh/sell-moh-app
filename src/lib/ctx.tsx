@@ -11,6 +11,7 @@ export interface SessionData {
 const AuthContext = createContext<{
   signIn: (accessToken: string, refreshToken: string, user: AuthUser) => void;
   signOut: () => void;
+  updateUser: (user: AuthUser) => void;
   session: string | null;
   user: AuthUser | null;
   isLoading: boolean;
@@ -72,6 +73,10 @@ export function SessionProvider({ children }: PropsWithChildren) {
           setSession(null);
           setUserRaw(null);
           setUserState(null);
+        },
+        updateUser: (user) => {
+          setUserRaw(JSON.stringify(user));
+          setUserState(user);
         },
         session,
         user: userState,

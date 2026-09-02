@@ -2,10 +2,11 @@ import { adjustProduct } from "@/api/inventory";
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useSession } from "@/lib/ctx";
 import { AdjustProduct } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -50,6 +51,7 @@ const AdjustStockSheet = ({
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
+  const { user } = useSession();
 
   const [quantity, setQuantity] = useState("");
   const [unitCostValue, setUnitCostValue] = useState(String(unitCost));
@@ -59,12 +61,15 @@ const AdjustStockSheet = ({
     {},
   );
 
+
+
   useEffect(() => {
     setUnitCostValue(String(unitCost));
   }, [unitCost]);
 
   const { mutate: adjustMutation, isPending } = useMutation({
-    mutationFn: (data: AdjustProduct) => adjustProduct(data),
+    mutationFn: (data: AdjustProduct) => adjustProduct(user?.store_id!, data),
+
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       queryClient.invalidateQueries({ queryKey: ["product", productId] });
@@ -125,9 +130,7 @@ const AdjustStockSheet = ({
       }}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          Adjust Stock
-        </Text>
+        <Text style={[styles.title, { color: colors.text }]}>Adjust Stock</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Add or remove stock for this product
         </Text>
@@ -224,9 +227,7 @@ const AdjustStockSheet = ({
             );
           })}
         </View>
-        {errors.reason && (
-          <Text style={styles.errorText}>{errors.reason}</Text>
-        )}
+        {errors.reason && <Text style={styles.errorText}>{errors.reason}</Text>}
       </View>
 
       {/* Note */}
@@ -245,9 +246,10 @@ const AdjustStockSheet = ({
         style={[
           styles.confirmButton,
           {
-            backgroundColor: parsedQty > 0 && !isPending
-              ? colors.buttonPrimary
-              : colors.backgroundSelected,
+            backgroundColor:
+              parsedQty > 0 && !isPending
+                ? colors.buttonPrimary
+                : colors.backgroundSelected,
             opacity: isPending ? 0.5 : 1,
           },
         ]}

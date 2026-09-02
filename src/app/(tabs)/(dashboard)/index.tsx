@@ -49,18 +49,51 @@ const stats = [
 ];
 
 const topProducts = [
-  { rank: 1, name: "Coca-Cola 50cl", category: "Beverages", units: 28, price: "₦12,600" },
-  { rank: 2, name: "Indomie Chicken", category: "Food", units: 22, price: "₦7,700" },
-  { rank: 3, name: "Peak Milk", category: "Dairy", units: 15, price: "₦40,500" },
+  {
+    rank: 1,
+    name: "Coca-Cola 50cl",
+    category: "Beverages",
+    units: 28,
+    price: "₦12,600",
+  },
+  {
+    rank: 2,
+    name: "Indomie Chicken",
+    category: "Food",
+    units: 22,
+    price: "₦7,700",
+  },
+  {
+    rank: 3,
+    name: "Peak Milk",
+    category: "Dairy",
+    units: 15,
+    price: "₦40,500",
+  },
 ];
 
-const categoryMeta: Record<string, { icon: string; color: string; bg: string }> = {
+const categoryMeta: Record<
+  string,
+  { icon: string; color: string; bg: string }
+> = {
   utility: { icon: "zap", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.12)" },
   rent: { icon: "home", color: "#3b82f6", bg: "rgba(59, 130, 246, 0.12)" },
-  supplies: { icon: "package", color: "#10b981", bg: "rgba(16, 185, 129, 0.12)" },
+  supplies: {
+    icon: "package",
+    color: "#10b981",
+    bg: "rgba(16, 185, 129, 0.12)",
+  },
   salaries: { icon: "users", color: "#a855f7", bg: "rgba(168, 85, 247, 0.12)" },
-  maintenance: { icon: "wrench", color: "#ef4444", bg: "rgba(239, 68, 68, 0.12)" },
-  misc: { icon: "more-horizontal", color: "#6b7280", bg: "rgba(107, 114, 128, 0.12)" },
+  maintenance: {
+    icon: "wrench",
+    color: "#ef4444",
+    bg: "rgba(239, 68, 68, 0.12)",
+  },
+  misc: {
+    icon: "more-horizontal",
+    color: "#6b7280",
+    bg: "rgba(107, 114, 128, 0.12)",
+  },
 };
 
 const categoryLabels: Record<string, string> = {
@@ -81,9 +114,27 @@ interface Expense {
 }
 
 const initialExpenses: Expense[] = [
-  { id: "1", category: "utility", amount: "₦12,500", note: "Electricity bill — December", time: "2:30 PM" },
-  { id: "2", category: "supplies", amount: "₦3,200", note: "Printer paper & toner", time: "11:15 AM" },
-  { id: "3", category: "maintenance", amount: "₦5,000", note: "AC servicing", time: "Yesterday" },
+  {
+    id: "1",
+    category: "utility",
+    amount: "₦12,500",
+    note: "Electricity bill — December",
+    time: "2:30 PM",
+  },
+  {
+    id: "2",
+    category: "supplies",
+    amount: "₦3,200",
+    note: "Printer paper & toner",
+    time: "11:15 AM",
+  },
+  {
+    id: "3",
+    category: "maintenance",
+    amount: "₦5,000",
+    note: "AC servicing",
+    time: "Yesterday",
+  },
 ];
 
 const Dashboard = () => {
@@ -99,7 +150,10 @@ const Dashboard = () => {
   const formatDate = (d: Date) => {
     const today = new Date();
     const isToday = d.toDateString() === today.toDateString();
-    const dateFormatted = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const dateFormatted = d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
     if (isToday) return `Today, ${dateFormatted}`;
     return dateFormatted;
   };
@@ -109,7 +163,11 @@ const Dashboard = () => {
     return sum + (isNaN(val) ? 0 : val);
   }, 0);
 
-  const handleAddExpense = (expense: { category: string; amount: string; note: string }) => {
+  const handleAddExpense = (expense: {
+    category: string;
+    amount: string;
+    note: string;
+  }) => {
     const newExpense: Expense = {
       id: Date.now().toString(),
       category: expense.category,
@@ -162,7 +220,11 @@ const Dashboard = () => {
             <Text style={[styles.dateText, { color: colors.text }]}>
               {formatDate(date)}
             </Text>
-            <Lucide name="chevron-down" size={16} color={colors.textSecondary} />
+            <Lucide
+              name="chevron-down"
+              size={16}
+              color={colors.textSecondary}
+            />
           </Pressable>
           {showPicker && (
             <DateTimePicker
@@ -187,7 +249,7 @@ const Dashboard = () => {
           <View style={styles.revenueHeader}>
             <View style={styles.revenueLabelRow}>
               <View style={styles.revenueIconBadge}>
-                <Lucide name="sparkles" size={14} color="#ffffff" />
+                <Lucide name="briefcase" size={14} color="#ffffff" />
               </View>
               <Text style={styles.revenueLabel}>Total Revenue</Text>
             </View>
@@ -233,7 +295,9 @@ const Dashboard = () => {
               ]}
             >
               <View style={styles.statCardHeader}>
-                <View style={[styles.statIconBadge, { backgroundColor: stat.bg }]}>
+                <View
+                  style={[styles.statIconBadge, { backgroundColor: stat.bg }]}
+                >
                   <Lucide name={stat.icon} size={18} color={stat.color} />
                 </View>
               </View>
@@ -348,11 +412,19 @@ const Dashboard = () => {
                   />
                 )}
                 <View style={styles.expenseRow}>
-                  <View style={[styles.expenseIcon, { backgroundColor: meta.bg }]}>
-                    <Lucide name={meta.icon as any} size={16} color={meta.color} />
+                  <View
+                    style={[styles.expenseIcon, { backgroundColor: meta.bg }]}
+                  >
+                    <Lucide
+                      name={meta.icon as any}
+                      size={16}
+                      color={meta.color}
+                    />
                   </View>
                   <View style={styles.expenseInfo}>
-                    <Text style={[styles.expenseCategory, { color: colors.text }]}>
+                    <Text
+                      style={[styles.expenseCategory, { color: colors.text }]}
+                    >
                       {categoryLabels[expense.category] || expense.category}
                     </Text>
                     {expense.note ? (
@@ -370,7 +442,10 @@ const Dashboard = () => {
                   <View style={styles.expenseRight}>
                     <Text style={styles.expenseAmount}>{expense.amount}</Text>
                     <Text
-                      style={[styles.expenseTime, { color: colors.textSecondary }]}
+                      style={[
+                        styles.expenseTime,
+                        { color: colors.textSecondary },
+                      ]}
                     >
                       {expense.time}
                     </Text>
@@ -545,7 +620,7 @@ const styles = StyleSheet.create({
 
   /* ─── Main Revenue Card ─── */
   revenueCard: {
-    marginHorizontal: 20,
+    marginHorizontal: 12.5,
     borderRadius: 20,
     backgroundColor: "#2563eb",
     padding: 20,
@@ -653,7 +728,7 @@ const styles = StyleSheet.create({
   statsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    paddingHorizontal: 20,
+    paddingHorizontal: 12.5,
     gap: 12,
     marginBottom: 24,
   },
@@ -731,7 +806,7 @@ const styles = StyleSheet.create({
 
   /* ─── Expense Cards ─── */
   expenseSummary: {
-    marginHorizontal: 20,
+    marginHorizontal: 12.5,
     borderRadius: 16,
     padding: 16,
     borderWidth: 1,
@@ -780,7 +855,7 @@ const styles = StyleSheet.create({
 
   /* ─── List Container Card ─── */
   listContainerCard: {
-    marginHorizontal: 20,
+    marginHorizontal: 12.5,
     borderRadius: 16,
     paddingHorizontal: 16,
     paddingVertical: 4,

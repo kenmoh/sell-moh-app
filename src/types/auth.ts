@@ -103,6 +103,7 @@ export interface AuthUser {
   status: string;
   permissions: string[];
   totp_enabled: boolean;
+  auto_create_cart: boolean;
   last_login_at: string | null;
   avatar_url: string | null;
 }

@@ -192,3 +192,26 @@ export const deleteEmployee = async (
 
   return res.data as DeleteResponse;
 };
+
+// ____________________________________Auto Create Cart____________________________________
+export const toggleAutoCreateCart = async (): Promise<{ auto_create_cart: boolean }> => {
+  const res = await apiClient.patch<{ data: { auto_create_cart: boolean } }>(
+    `${URL}/auto-create-cart`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
+export const fetchMe = async (): Promise<any> => {
+  const res = await apiClient.get<{ data: any }>(`${URL}/me`);
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};

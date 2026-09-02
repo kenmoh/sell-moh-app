@@ -5,6 +5,7 @@ import { useColorScheme, View } from "react-native";
 const OrderLayout = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack

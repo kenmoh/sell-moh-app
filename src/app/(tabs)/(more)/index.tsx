@@ -1,24 +1,54 @@
+import { fetchMe, toggleAutoCreateCart } from "@/api/auth";
 import LinkItem from "@/components/link-item";
 import MoreCard from "@/components/MoreCard";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
+import { Host, Switch } from "@expo/ui";
+import { Lucide } from "@react-native-vector-icons/lucide";
+import { useMutation } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { ScrollView, StyleSheet, useColorScheme } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const more = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const colors = Colors[scheme === "unspecified" ? "light" : scheme];
-  const { signOut } = useSession();
+  const { signOut, user, updateUser } = useSession();
+
+  const { mutate: toggleCart } = useMutation({
+    mutationFn: toggleAutoCreateCart,
+    onMutate: async () => {
+      if (!user) return;
+      const prev = { ...user };
+      updateUser({ ...user, auto_create_cart: !user.auto_create_cart });
+      return { prev };
+    },
+    onError: (_err, _vars, context) => {
+      if (context?.prev) updateUser(context.prev);
+    },
+    onSuccess: async () => {
+      try {
+        const me = await fetchMe();
+        if (me) updateUser(me);
+      } catch {}
+    },
+  });
+
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
-        paddingHorizontal: 20,
+        paddingHorizontal: 15,
         paddingTop: insets.top,
         paddingBottom: insets.bottom + 20,
-        gap: 10,
+        gap: 15,
       }}
       showsVerticalScrollIndicator={false}
     >
@@ -55,13 +85,34 @@ const more = () => {
         />
       </MoreCard>
 
-      {/* <MoreCard label="AI">
-        <LinkItem
-          label="Chat"
-          leadingIcon={"message-circle"}
-          onPress={() => router.push("/(tabs)/(more)/ai")}
-        />
-      </MoreCard> */}
+      <MoreCard label="POS">
+        <View style={styles.settingRow}>
+          <View style={styles.settingLeft}>
+            <View
+              style={[styles.settingIcon, { backgroundColor: "#3b82f615" }]}
+            >
+              <Lucide name="shopping-cart" size={18} color="#3b82f6" />
+            </View>
+            <View>
+              <Text style={[styles.settingLabel, { color: colors.text }]}>
+                Auto-Create Cart
+              </Text>
+              <Text
+                style={[styles.settingHint, { color: colors.textSecondary }]}
+              >
+                Generate cart without customer info
+              </Text>
+            </View>
+          </View>
+          <Host matchContents>
+            <Switch
+              value={user?.auto_create_cart ?? false}
+              onValueChange={() => toggleCart()}
+            />
+          </Host>
+        </View>
+      </MoreCard>
+
       <MoreCard label="Payments & Accounting">
         <LinkItem
           label="Accounting"
@@ -98,4 +149,26 @@ const more = () => {
 
 export default more;
 
-const styles = StyleSheet.create({});
+const styles = StyleSheet.create({
+  settingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingVertical: 4,
+  },
+  settingLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    flex: 1,
+  },
+  settingIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  settingLabel: { fontSize: 12, fontWeight: "600" },
+  settingHint: { fontSize: 10, marginTop: 2 },
+});

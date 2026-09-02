@@ -35,32 +35,57 @@ const ReportsScreen = () => {
 
   const toDate = useMemo(() => new Date().toISOString().split("T")[0], []);
 
-  const { data: dashboard, isLoading: isLoadingDash, refetch: refetchDash } = useQuery({
+  const {
+    data: dashboard,
+    isLoading: isLoadingDash,
+    refetch: refetchDash,
+  } = useQuery({
     queryKey: ["reports-dashboard"],
     queryFn: () => fetchDashboard(REPORT_DAYS),
   });
 
-  const { data: topProducts = [], isLoading: isLoadingTop, refetch: refetchTop } = useQuery({
+  const {
+    data: topProducts = [],
+    isLoading: isLoadingTop,
+    refetch: refetchTop,
+  } = useQuery({
     queryKey: ["reports-top-products"],
     queryFn: () => fetchTopProducts(today, toDate),
   });
 
-  const { data: paymentBreakdown, isLoading: isLoadingPay, refetch: refetchPay } = useQuery({
+  const {
+    data: paymentBreakdown,
+    isLoading: isLoadingPay,
+    refetch: refetchPay,
+  } = useQuery({
     queryKey: ["reports-payment-methods"],
     queryFn: () => fetchPaymentMethods(today, toDate),
   });
 
-  const { data: plResult, isLoading: isLoadingPL, refetch: refetchPL } = useQuery({
+  const {
+    data: plResult,
+    isLoading: isLoadingPL,
+    refetch: refetchPL,
+  } = useQuery({
     queryKey: ["reports-profit-loss"],
     queryFn: () => fetchProfitLoss(today, toDate),
   });
 
-  const { data: inventoryAlerts, isLoading: isLoadingInv, refetch: refetchInv } = useQuery({
+  const {
+    data: inventoryAlerts,
+    isLoading: isLoadingInv,
+    refetch: refetchInv,
+  } = useQuery({
     queryKey: ["reports-inventory-alerts"],
     queryFn: fetchInventoryAlerts,
   });
 
-  const isLoading = isLoadingDash || isLoadingTop || isLoadingPay || isLoadingPL || isLoadingInv;
+  const isLoading =
+    isLoadingDash ||
+    isLoadingTop ||
+    isLoadingPay ||
+    isLoadingPL ||
+    isLoadingInv;
 
   const handleRefresh = () => {
     refetchDash();
@@ -120,7 +145,12 @@ const ReportsScreen = () => {
               },
             ]}
           >
-            <View style={[styles.statIcon, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
+            <View
+              style={[
+                styles.statIcon,
+                { backgroundColor: "rgba(16,185,129,0.12)" },
+              ]}
+            >
               <Lucide name="dollar-sign" size={14} color="#10b981" />
             </View>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -140,7 +170,12 @@ const ReportsScreen = () => {
               },
             ]}
           >
-            <View style={[styles.statIcon, { backgroundColor: "rgba(59,130,246,0.12)" }]}>
+            <View
+              style={[
+                styles.statIcon,
+                { backgroundColor: "rgba(59,130,246,0.12)" },
+              ]}
+            >
               <Lucide name="shopping-bag" size={14} color="#3b82f6" />
             </View>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -160,7 +195,12 @@ const ReportsScreen = () => {
               },
             ]}
           >
-            <View style={[styles.statIcon, { backgroundColor: "rgba(168,85,247,0.12)" }]}>
+            <View
+              style={[
+                styles.statIcon,
+                { backgroundColor: "rgba(168,85,247,0.12)" },
+              ]}
+            >
               <Lucide name="trending-up" size={14} color="#a855f7" />
             </View>
             <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
@@ -207,13 +247,16 @@ const ReportsScreen = () => {
                   bg: "rgba(168,85,247,0.12)",
                 },
               ].map((item) => {
-                const pct = paymentBreakdown.total > 0
-                  ? (item.amount / paymentBreakdown.total) * 100
-                  : 0;
+                const pct =
+                  paymentBreakdown.total > 0
+                    ? (item.amount / paymentBreakdown.total) * 100
+                    : 0;
                 return (
                   <View key={item.label} style={styles.payItem}>
                     <View style={styles.payItemHeader}>
-                      <View style={[styles.payDot, { backgroundColor: item.color }]} />
+                      <View
+                        style={[styles.payDot, { backgroundColor: item.color }]}
+                      />
                       <Text style={[styles.payLabel, { color: colors.text }]}>
                         {item.label}
                       </Text>
@@ -225,7 +268,10 @@ const ReportsScreen = () => {
                       <View
                         style={[
                           styles.payBarFill,
-                          { width: `${Math.min(pct, 100)}%`, backgroundColor: item.color },
+                          {
+                            width: `${Math.min(pct, 100)}%`,
+                            backgroundColor: item.color,
+                          },
                         ]}
                       />
                     </View>
@@ -300,7 +346,10 @@ const ReportsScreen = () => {
                       {product.product_name}
                     </Text>
                     <Text
-                      style={[styles.productQty, { color: colors.textSecondary }]}
+                      style={[
+                        styles.productQty,
+                        { color: colors.textSecondary },
+                      ]}
                     >
                       {product.total_qty} sold
                     </Text>
@@ -397,7 +446,12 @@ const ReportsScreen = () => {
                 <Text style={[styles.alertStatValue, { color: "#f59e0b" }]}>
                   {inventoryAlerts.summary.low_stock}
                 </Text>
-                <Text style={[styles.alertStatLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.alertStatLabel,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Low Stock
                 </Text>
               </View>
@@ -413,7 +467,12 @@ const ReportsScreen = () => {
                 <Text style={[styles.alertStatValue, { color: "#ef4444" }]}>
                   {inventoryAlerts.summary.out_of_stock}
                 </Text>
-                <Text style={[styles.alertStatLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.alertStatLabel,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Out of Stock
                 </Text>
               </View>
@@ -443,7 +502,9 @@ const ReportsScreen = () => {
                   <Lucide
                     name="alert-triangle"
                     size={14}
-                    color={item.status === "out_of_stock" ? "#ef4444" : "#f59e0b"}
+                    color={
+                      item.status === "out_of_stock" ? "#ef4444" : "#f59e0b"
+                    }
                   />
                 </View>
                 <View style={styles.alertInfo}>

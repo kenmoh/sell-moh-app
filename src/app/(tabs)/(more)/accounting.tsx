@@ -1,9 +1,9 @@
 import {
   createExpense,
-  fetchFinancialDashboard,
-  fetchReceivables,
-  fetchPayables,
   fetchExpenses,
+  fetchFinancialDashboard,
+  fetchPayables,
+  fetchReceivables,
 } from "@/api/accounting";
 import AddExpenseSheet from "@/components/add-expense-sheet";
 import AddPayableSheet from "@/components/add-payable-sheet";
@@ -26,10 +26,10 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 type Tab = "receivables" | "payables" | "expenses";
-const tabs: { key: Tab; label: string; icon: string }[] = [
-  { key: "receivables", label: "Receivables", icon: "trending-up" },
-  { key: "payables", label: "Payables", icon: "trending-down" },
-  { key: "expenses", label: "Expenses", icon: "receipt" },
+const tabs: { key: Tab; label: string }[] = [
+  { key: "receivables", label: "Receivables" },
+  { key: "payables", label: "Payables" },
+  { key: "expenses", label: "Expenses" },
 ];
 
 const AccountingScreen = () => {
@@ -85,7 +85,8 @@ const AccountingScreen = () => {
     queryFn: () => fetchExpenses(),
   });
 
-  const isLoading = isLoadingDashboard || isLoadingAR || isLoadingAP || isLoadingExpenses;
+  const isLoading =
+    isLoadingDashboard || isLoadingAR || isLoadingAP || isLoadingExpenses;
   const isRefetching = isRefetchingAR || isRefetchingAP || isRefetchingExpenses;
 
   const { mutate: addExpense } = useMutation({
@@ -110,7 +111,10 @@ const AccountingScreen = () => {
   }, [refetchAR, refetchAP, refetchExpenses]);
 
   const handleRecordPayment = useCallback(
-    (item: { id: string; name: string; balance: number }, type: "ar" | "ap") => {
+    (
+      item: { id: string; name: string; balance: number },
+      type: "ar" | "ap",
+    ) => {
       setSelectedItem({ ...item, type });
       setShowRecordPayment(true);
     },
@@ -142,7 +146,11 @@ const AccountingScreen = () => {
             ]}
             onPress={() =>
               handleRecordPayment(
-                { id: item.id, name: item.customer_name, balance: item.balance },
+                {
+                  id: item.id,
+                  name: item.customer_name,
+                  balance: item.balance,
+                },
                 "ar",
               )
             }
@@ -201,7 +209,10 @@ const AccountingScreen = () => {
                 ₦{item.amount.toLocaleString()}
               </Text>
               <Text
-                style={[styles.listCardBalance, { color: colors.textSecondary }]}
+                style={[
+                  styles.listCardBalance,
+                  { color: colors.textSecondary },
+                ]}
               >
                 Balance: ₦{item.balance.toLocaleString()}
               </Text>
@@ -281,7 +292,10 @@ const AccountingScreen = () => {
                 ₦{item.amount.toLocaleString()}
               </Text>
               <Text
-                style={[styles.listCardBalance, { color: colors.textSecondary }]}
+                style={[
+                  styles.listCardBalance,
+                  { color: colors.textSecondary },
+                ]}
               >
                 Balance: ₦{item.balance.toLocaleString()}
               </Text>
@@ -324,9 +338,7 @@ const AccountingScreen = () => {
             </Text>
           </View>
           <View style={styles.listCardFooter}>
-            <Text
-              style={[styles.listCardSub, { color: colors.textSecondary }]}
-            >
+            <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
               {item.expense_date}
             </Text>
             {item.vendor ? (
@@ -397,10 +409,17 @@ const AccountingScreen = () => {
             >
               <View style={styles.dashboardRow}>
                 <View style={styles.dashboardItem}>
-                  <View style={[styles.dashIcon, { backgroundColor: "rgba(16,185,129,0.12)" }]}>
+                  <View
+                    style={[
+                      styles.dashIcon,
+                      { backgroundColor: "rgba(16,185,129,0.12)" },
+                    ]}
+                  >
                     <Lucide name="wallet" size={14} color="#10b981" />
                   </View>
-                  <Text style={[styles.dashLabel, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[styles.dashLabel, { color: colors.textSecondary }]}
+                  >
                     Cash
                   </Text>
                   <Text style={[styles.dashValue, { color: colors.text }]}>
@@ -408,21 +427,36 @@ const AccountingScreen = () => {
                   </Text>
                 </View>
                 <View style={styles.dashboardItem}>
-                  <View style={[styles.dashIcon, { backgroundColor: "rgba(59,130,246,0.12)" }]}>
+                  <View
+                    style={[
+                      styles.dashIcon,
+                      { backgroundColor: "rgba(59,130,246,0.12)" },
+                    ]}
+                  >
                     <Lucide name="trending-up" size={14} color="#3b82f6" />
                   </View>
-                  <Text style={[styles.dashLabel, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[styles.dashLabel, { color: colors.textSecondary }]}
+                  >
                     A/R
                   </Text>
                   <Text style={[styles.dashValue, { color: "#3b82f6" }]}>
-                    ₦{dashboard?.outstanding_receivable?.toLocaleString() ?? "0"}
+                    ₦
+                    {dashboard?.outstanding_receivable?.toLocaleString() ?? "0"}
                   </Text>
                 </View>
                 <View style={styles.dashboardItem}>
-                  <View style={[styles.dashIcon, { backgroundColor: "rgba(168,85,247,0.12)" }]}>
+                  <View
+                    style={[
+                      styles.dashIcon,
+                      { backgroundColor: "rgba(168,85,247,0.12)" },
+                    ]}
+                  >
                     <Lucide name="trending-down" size={14} color="#a855f7" />
                   </View>
-                  <Text style={[styles.dashLabel, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[styles.dashLabel, { color: colors.textSecondary }]}
+                  >
                     A/P
                   </Text>
                   <Text style={[styles.dashValue, { color: "#a855f7" }]}>
@@ -449,11 +483,6 @@ const AccountingScreen = () => {
                     ]}
                     onPress={() => setActiveTab(tab.key)}
                   >
-                    <Lucide
-                      name={tab.icon as any}
-                      size={14}
-                      color={isActive ? "#fff" : colors.textSecondary}
-                    />
                     <Text
                       style={[
                         styles.tabText,
@@ -519,7 +548,10 @@ const AccountingScreen = () => {
             {/* Add Button */}
             <View style={styles.addSection}>
               <Pressable
-                style={[styles.addBtn, { backgroundColor: colors.buttonPrimary }]}
+                style={[
+                  styles.addBtn,
+                  { backgroundColor: colors.buttonPrimary },
+                ]}
                 onPress={() => {
                   if (activeTab === "receivables") setShowAddReceivable(true);
                   else if (activeTab === "payables") setShowAddPayable(true);
@@ -528,7 +560,12 @@ const AccountingScreen = () => {
               >
                 <Lucide name="plus" size={16} color="#fff" />
                 <Text style={styles.addBtnText}>
-                  Add {activeTab === "receivables" ? "Receivable" : activeTab === "payables" ? "Payable" : "Expense"}
+                  Add{" "}
+                  {activeTab === "receivables"
+                    ? "Receivable"
+                    : activeTab === "payables"
+                      ? "Payable"
+                      : "Expense"}
                 </Text>
               </Pressable>
             </View>
@@ -549,13 +586,16 @@ const AccountingScreen = () => {
               <Lucide name="inbox" size={32} color={colors.textSecondary} />
             </View>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No {activeTab === "receivables" ? "Receivables" : activeTab === "payables" ? "Payables" : "Expenses"} Found
+              No{" "}
+              {activeTab === "receivables"
+                ? "Receivables"
+                : activeTab === "payables"
+                  ? "Payables"
+                  : "Expenses"}{" "}
+              Found
             </Text>
             <Text
-              style={[
-                styles.emptySubtitle,
-                { color: colors.textSecondary },
-              ]}
+              style={[styles.emptySubtitle, { color: colors.textSecondary }]}
             >
               {activeTab === "receivables"
                 ? "Track amounts owed by customers"
@@ -642,13 +682,14 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   tab: {
-    flex: 1,
+    // flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
+    gap: 4,
     borderRadius: 100,
     paddingVertical: 10,
+    paddingHorizontal: 12.5,
   },
   tabText: { fontSize: 13 },
   tabBadge: {
@@ -666,7 +707,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    borderRadius: 12,
+    borderRadius: 50,
     paddingVertical: 12,
   },
   addBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },

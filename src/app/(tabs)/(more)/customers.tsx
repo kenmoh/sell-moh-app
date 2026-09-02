@@ -26,19 +26,16 @@ const CustomersScreen = () => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [sheetVisible, setSheetVisible] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
 
-  const {
-    data,
-    isLoading,
-    isRefetching,
-    refetch,
-  } = useQuery({
+  const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["customers", page, search],
     queryFn: () => fetchCustomers(page, 50, search || undefined),
   });
 
-  const customers = useMemo(() => data?.items ?? [], [data]);
+  const customers = useMemo(() => data ?? [], [data]);
   const total = data?.total ?? 0;
 
   const handleOpenAdd = useCallback(() => {
@@ -64,7 +61,12 @@ const CustomersScreen = () => {
         onPress={() => handleOpenEdit(item)}
       >
         <View style={styles.cardHeader}>
-          <View style={[styles.avatar, { backgroundColor: "rgba(59,130,246,0.12)" }]}>
+          <View
+            style={[
+              styles.avatar,
+              { backgroundColor: "rgba(59,130,246,0.12)" },
+            ]}
+          >
             <Text style={[styles.avatarText, { color: "#3b82f6" }]}>
               {item.name.charAt(0).toUpperCase()}
             </Text>
@@ -74,18 +76,29 @@ const CustomersScreen = () => {
               {item.name}
             </Text>
             {item.email ? (
-              <Text style={[styles.cardEmail, { color: colors.textSecondary }]} numberOfLines={1}>
+              <Text
+                style={[styles.cardEmail, { color: colors.textSecondary }]}
+                numberOfLines={1}
+              >
                 {item.email}
               </Text>
             ) : null}
           </View>
           <Lucide name="chevron-right" size={16} color={colors.textSecondary} />
         </View>
-        <View style={styles.cardFooter}>
+
+        <View
+          style={[
+            styles.cardFooter,
+            { borderTopColor: isDark ? "#22252a" : "#f0f2f5" },
+          ]}
+        >
           {item.phone ? (
             <View style={styles.cardDetail}>
               <Lucide name="phone" size={12} color={colors.textSecondary} />
-              <Text style={[styles.cardDetailText, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.cardDetailText, { color: colors.textSecondary }]}
+              >
                 {item.phone}
               </Text>
             </View>
@@ -126,7 +139,7 @@ const CustomersScreen = () => {
       edges={["top", "left", "right"]}
     >
       <FlatList
-        data={customers}
+        data={customers || []}
         keyExtractor={(item) => item.id}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 24 }}
@@ -138,13 +151,19 @@ const CustomersScreen = () => {
                   Customers
                 </Text>
                 <Text
-                  style={[styles.headerSubtitle, { color: colors.textSecondary }]}
+                  style={[
+                    styles.headerSubtitle,
+                    { color: colors.textSecondary },
+                  ]}
                 >
                   {total} customer{total !== 1 ? "s" : ""} total
                 </Text>
               </View>
               <Pressable
-                style={[styles.addBtn, { backgroundColor: colors.buttonPrimary }]}
+                style={[
+                  styles.addBtn,
+                  { backgroundColor: colors.buttonPrimary },
+                ]}
                 onPress={handleOpenAdd}
               >
                 <Lucide name="plus" size={20} color="#fff" />
@@ -172,7 +191,11 @@ const CustomersScreen = () => {
                 { backgroundColor: colors.backgroundElement },
               ]}
             >
-              <Lucide name="users-round" size={32} color={colors.textSecondary} />
+              <Lucide
+                name="users-round"
+                size={32}
+                color={colors.textSecondary}
+              />
             </View>
             <Text style={[styles.emptyTitle, { color: colors.text }]}>
               No Customers Found
@@ -186,7 +209,10 @@ const CustomersScreen = () => {
             </Text>
             {!search && (
               <Pressable
-                style={[styles.emptyBtn, { backgroundColor: colors.buttonPrimary }]}
+                style={[
+                  styles.emptyBtn,
+                  { backgroundColor: colors.buttonPrimary },
+                ]}
                 onPress={handleOpenAdd}
               >
                 <Lucide name="plus" size={16} color="#fff" />
@@ -258,7 +284,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#e5e7eb",
   },
   cardDetail: { flexDirection: "row", alignItems: "center", gap: 4, flex: 1 },
   cardDetailText: { fontSize: 12, flex: 1 },

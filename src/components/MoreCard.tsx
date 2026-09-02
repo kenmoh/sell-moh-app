@@ -26,9 +26,9 @@ const MoreCard = ({
         style={{
           backgroundColor: colors.card,
           borderRadius: 16,
-          paddingHorizontal: 18,
-          paddingVertical: 20,
-          gap: 25,
+          paddingHorizontal: 20,
+          paddingVertical: 35,
+          gap: 40,
         }}
       >
         {children}
