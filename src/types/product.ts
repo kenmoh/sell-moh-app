@@ -51,6 +51,7 @@ export interface CreateProduct {
   selling_price: number;
   tax_rate?: number | null;
   reorder_point: number;
+  qty?: number;
   metadata?: Record<string, any> | null;
 }
 

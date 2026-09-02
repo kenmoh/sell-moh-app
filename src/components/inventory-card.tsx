@@ -141,7 +141,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({
           </Text>
           <View style={styles.skuRow}>
             <Text style={[styles.skuText, { color: colors.textSecondary }]}>
-              {item.sku}
+              {item.sku.slice(0, 16)}
             </Text>
           </View>
         </View>

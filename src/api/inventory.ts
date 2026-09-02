@@ -107,9 +107,9 @@ export const fetchProducts = async (
   return res.data!;
 };
 
-export const createProduct = async (data: CreateProduct) => {
+export const createProduct = async (storeId: string, data: CreateProduct) => {
   const res = await apiClient.post<DataMessageResponse>(
-    `${INVENTORY_URL}/products`,
+    `${INVENTORY_URL}/${storeId}/products/create`,
     data,
   );
 

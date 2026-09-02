@@ -5,9 +5,10 @@ import AppBottomSheet from "@/components/bottom-sheet";
 import CategoryActionsSheet from "@/components/category-actions-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { CreateProduct } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack, router, useLocalSearchParams } from "expo-router";
+import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Pressable,
@@ -25,6 +26,7 @@ const productSchema = z.object({
   cost_price: z.string().min(1, "Cost price is required"),
   selling_price: z.string().min(1, "Selling price is required"),
   reorder_point: z.string().min(1, "Reorder point is required"),
+  initial_stock: z.string().optional(),
   category_id: z.string().optional(),
   description: z.string().optional(),
   unit: z.string().optional(),
@@ -57,6 +59,7 @@ const AddProduct = () => {
   const [unit, setUnit] = useState("");
   const [taxRate, setTaxRate] = useState("");
   const [reorderPoint, setReorderPoint] = useState("");
+  const [initialStock, setInitialStock] = useState("");
   const [trackInventory, setTrackInventory] = useState(true);
   const [categoryId, setCategoryId] = useState(params.category_id ?? "");
   const [metadata, setMetadata] = useState<MetadataEntry[]>([]);
@@ -94,8 +97,10 @@ const AddProduct = () => {
     }
   }, [storeId, stores]);
 
+  console.log("Selected store ID:", storeId);
+
   const { mutate: createProductMutation, isPending } = useMutation({
-    mutationFn: createProduct,
+    mutationFn: (data: CreateProduct) => createProduct(storeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["products"] });
       router.back();
@@ -143,6 +148,7 @@ const AddProduct = () => {
       cost_price: costPrice,
       selling_price: sellingPrice,
       reorder_point: reorderPoint,
+      initial_stock: initialStock || undefined,
       category_id: categoryId || undefined,
       description: description || undefined,
       unit: unit || undefined,
@@ -166,6 +172,7 @@ const AddProduct = () => {
       cost_price: parseFloat(result.data.cost_price) || 0,
       selling_price: parseFloat(result.data.selling_price) || 0,
       reorder_point: parseInt(result.data.reorder_point, 10) || 0,
+      qty: result.data.initial_stock ? parseFloat(result.data.initial_stock) || 0 : 0,
       category_id: result.data.category_id || null,
       description: result.data.description || null,
       unit: result.data.unit || null,
@@ -278,6 +285,17 @@ const AddProduct = () => {
           </View>
         </View>
 
+        {/* Initial Stock */}
+        <View style={styles.section}>
+          <AppTextInput
+            leftIcon="package"
+            placeholder="Initial stock quantity (optional)"
+            value={initialStock}
+            onChangeText={setInitialStock}
+            keyboardType="decimal-pad"
+          />
+        </View>
+
         {/* Unit */}
         <View style={styles.section}>
           <AppTextInput
@@ -311,10 +329,15 @@ const AddProduct = () => {
               ]}
             >
               {storeId
-                ? stores.find((s) => s.id === storeId)?.name ?? "Selected Store"
+                ? (stores.find((s) => s.id === storeId)?.name ??
+                  "Selected Store")
                 : "Select store"}
             </Text>
-            <Lucide name="chevron-down" size={16} color={colors.textSecondary} />
+            <Lucide
+              name="chevron-down"
+              size={16}
+              color={colors.textSecondary}
+            />
           </Pressable>
         </View>
 
@@ -356,10 +379,15 @@ const AddProduct = () => {
               ]}
             >
               {categoryId
-                ? categories.find((c) => c.id === categoryId)?.name ?? "Selected Category"
+                ? (categories.find((c) => c.id === categoryId)?.name ??
+                  "Selected Category")
                 : "Select category"}
             </Text>
-            <Lucide name="chevron-down" size={16} color={colors.textSecondary} />
+            <Lucide
+              name="chevron-down"
+              size={16}
+              color={colors.textSecondary}
+            />
           </Pressable>
         </View>
 
@@ -422,7 +450,11 @@ const AddProduct = () => {
         >
           <Lucide name="save" size={18} color="#fff" />
           <Text style={styles.saveBtnText}>
-            {isPending ? "Saving..." : isEditing ? "Update Product" : "Save Product"}
+            {isPending
+              ? "Saving..."
+              : isEditing
+                ? "Update Product"
+                : "Save Product"}
           </Text>
         </Pressable>
       </ScrollView>
