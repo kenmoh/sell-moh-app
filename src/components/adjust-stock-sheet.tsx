@@ -89,7 +89,7 @@ const AdjustStockSheet = ({
     setErrors({});
   };
 
-  const parsedQty = parseInt(quantity || "0", 10);
+  const parsedQty = parseInt(quantity || "0", 10) || 0;
 
   const handleConfirm = () => {
     const result = adjustSchema.safeParse({
@@ -165,8 +165,11 @@ const AdjustStockSheet = ({
             keyboardType="number-pad"
             value={quantity}
             onChangeText={(t) => {
-              const filtered = t.replace(/[^0-9]/g, "");
-              setQuantity(filtered);
+              const filtered = t.replace(/[^0-9-]/g, "");
+              const dashCount = (filtered.match(/-/g) || []).length;
+              if (dashCount <= 1 && (filtered === "" || filtered === "-" || /^-?\d+$/.test(filtered))) {
+                setQuantity(filtered);
+              }
             }}
             placeholder="0"
             placeholderTextColor={colors.textSecondary}
@@ -247,7 +250,7 @@ const AdjustStockSheet = ({
           styles.confirmButton,
           {
             backgroundColor:
-              parsedQty > 0 && !isPending
+              parsedQty !== 0 && !isPending
                 ? colors.buttonPrimary
                 : colors.backgroundSelected,
             opacity: isPending ? 0.5 : 1,
