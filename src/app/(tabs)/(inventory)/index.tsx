@@ -357,21 +357,28 @@ const InventoryScreen = () => {
         sku: p.sku ?? "N/A",
         price: p.selling_price,
         stock: p.qty,
-        status: p.qty === 0 ? "Out" : p.qty <= 10 ? "Low" : "In Stock",
+        reorder_point: p.reorder_point ?? 0,
         category: p.category ?? "Uncategorized",
       })),
     [allProducts],
   );
 
+  const getStatus = (item: InventoryItem): StatusType =>
+    item.stock === 0
+      ? "Out"
+      : item.reorder_point > 0 && item.stock <= item.reorder_point
+        ? "Low"
+        : "In Stock";
+
   const filteredByStatus = useMemo(() => {
     if (statusFilter === "All") return mappedProducts;
-    return mappedProducts.filter((item) => item.status === statusFilter);
+    return mappedProducts.filter((item) => getStatus(item) === statusFilter);
   }, [mappedProducts, statusFilter]);
 
   const totalItems = totalFromServer;
-  const lowStockCount = mappedProducts.filter((i) => i.status === "Low").length;
+  const lowStockCount = mappedProducts.filter((i) => getStatus(i) === "Low").length;
   const outOfStockCount = mappedProducts.filter(
-    (i) => i.status === "Out",
+    (i) => getStatus(i) === "Out",
   ).length;
 
   const flatListData: ListItemType[] = useMemo(() => {

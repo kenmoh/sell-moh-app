@@ -18,7 +18,7 @@ export interface InventoryItem {
   sku: string;
   price: number;
   stock: number;
-  status: StatusType;
+  reorder_point: number;
   category: string;
   image?: string;
 }
@@ -69,11 +69,18 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({
 }) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
-  const status = statusConfig[item.status] || statusConfig["In Stock"];
+
+  const status: StatusType =
+    item.stock === 0
+      ? "Out"
+      : item.reorder_point > 0 && item.stock <= item.reorder_point
+        ? "Low"
+        : "In Stock";
+
+  const statusCfg = statusConfig[status];
   const iconName = categoryIconMap[item.category] || "package";
 
-  // Calculate stock progress width (assuming 50 units as comfortable stock benchmark)
-  const maxBenchmark = 50;
+  const maxBenchmark = item.reorder_point > 0 ? item.reorder_point * 2 : 50;
   const stockRatio = Math.min(Math.max(item.stock / maxBenchmark, 0), 1);
 
   return (
@@ -108,10 +115,10 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({
           </Text>
         </View>
 
-        <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-          <View style={[styles.statusDot, { backgroundColor: status.dot }]} />
-          <Text style={[styles.statusText, { color: status.color }]}>
-            {item.stock} {status.label}
+        <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
+          <View style={[styles.statusDot, { backgroundColor: statusCfg.dot }]} />
+          <Text style={[styles.statusText, { color: statusCfg.color }]}>
+            {item.stock} {statusCfg.label}
           </Text>
         </View>
       </View>
@@ -165,7 +172,7 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({
                 styles.stockFill,
                 {
                   width: `${stockRatio * 100}%`,
-                  backgroundColor: status.color,
+                  backgroundColor: statusCfg.color,
                 },
               ]}
             />
