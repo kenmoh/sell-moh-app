@@ -20,8 +20,9 @@ const Card = ({ product, onPress }: CardProps) => {
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
 
   const stock = product.in_stock ?? 0;
+  const reorderPoint = product.reorder_point ?? 0;
   const isOutOfStock = stock <= 0;
-  const isLowStock = stock > 0 && stock <= 15;
+  const isLowStock = stock > 0 && (reorderPoint > 0 ? stock <= reorderPoint : stock <= 15);
 
   const stockBadgeColor = isOutOfStock
     ? "#ef4444"

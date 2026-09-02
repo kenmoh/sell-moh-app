@@ -11,6 +11,7 @@ export interface Product {
   imageUrl?: string;
   category?: Category;
   in_stock: number;
+  reorder_point?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
