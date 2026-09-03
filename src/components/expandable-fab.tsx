@@ -5,7 +5,7 @@ import { Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
 import { useSession } from "@/lib/ctx";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -24,7 +24,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { createCart } from "@/api/cart";
+import { createCart, listCarts } from "@/api/cart";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const FAB_SIZE = 56;
@@ -43,7 +43,13 @@ const ExpandableFAB = () => {
   const [cartSheetVisible, setCartSheetVisible] = useState(false);
 
   const totalItems = useCartStore((s) => s.totalItems());
-  const carts = useCartStore((s) => s.carts);
+
+  const { data: apiCarts } = useQuery({
+    queryKey: ["carts"],
+    queryFn: listCarts,
+  });
+
+  const activeCartCount = apiCarts?.length ?? 0;
 
   const rotation = useSharedValue(0);
   const overlayOpacity = useSharedValue(0);
@@ -142,8 +148,6 @@ const ExpandableFAB = () => {
     toggle();
     setPickerVisible(true);
   };
-
-  const activeCartCount = carts.length;
 
   return (
     <>
