@@ -1,4 +1,5 @@
 import { createCart, listCarts } from "@/api/cart";
+import CartPickerSheet from "@/components/cart-picker-sheet";
 import CartSheet from "@/components/cart-sheet";
 import NewCartSheet from "@/components/new-cart-sheet";
 import { Colors } from "@/constants/theme";
@@ -38,6 +39,7 @@ const ExpandableFAB = () => {
 
   const [expanded, setExpanded] = useState(false);
   const [newCartSheetVisible, setNewCartSheetVisible] = useState(false);
+  const [pickerVisible, setPickerVisible] = useState(false);
   const [cartSheetVisible, setCartSheetVisible] = useState(false);
 
   const totalItems = useCartStore((s) => s.totalItems());
@@ -128,8 +130,7 @@ const ExpandableFAB = () => {
 
   const handleViewCarts = () => {
     toggle();
-    queryClient.invalidateQueries({ queryKey: ["carts"] });
-    setCartSheetVisible(true);
+    setPickerVisible(true);
   };
 
   const activeCartCount = apiCarts?.length ?? carts.length;
@@ -202,6 +203,14 @@ const ExpandableFAB = () => {
         onVisibleChange={setNewCartSheetVisible}
         storeId={user?.store_id ?? ""}
         onCartCreated={() => setCartSheetVisible(true)}
+      />
+      <CartPickerSheet
+        visible={pickerVisible}
+        onVisibleChange={setPickerVisible}
+        onCartSelected={(cartId) => {
+          useCartStore.getState().setActiveCart(cartId);
+          setCartSheetVisible(true);
+        }}
       />
       <CartSheet
         visible={cartSheetVisible}
