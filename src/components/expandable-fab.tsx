@@ -144,19 +144,19 @@ const ExpandableFAB = () => {
           <Pressable
             onPress={handleViewCarts}
             style={[
-              styles.subFabButton,
+              styles.subFabRow,
               { backgroundColor: colors.card, shadowColor: colors.text },
             ]}
           >
-            <Lucide name="list" size={20} color={colors.text} />
-          </Pressable>
-          <View style={[styles.label, { backgroundColor: colors.card }]}>
+            <View style={styles.subFabButton}>
+              <Lucide name="list" size={20} color={colors.text} />
+            </View>
             <Text style={[styles.labelText, { color: colors.text }]}>
               {activeCartCount === 1
                 ? "Cart"
                 : `Carts (${activeCartCount})`}
             </Text>
-          </View>
+          </Pressable>
         </Animated.View>
 
         <Animated.View style={[styles.subFab, subFab1Style]}>
@@ -164,22 +164,22 @@ const ExpandableFAB = () => {
             onPress={handleCreateCart}
             disabled={isPending}
             style={[
-              styles.subFabButton,
+              styles.subFabRow,
               { backgroundColor: colors.card, shadowColor: colors.text },
               isPending && { opacity: 0.6 },
             ]}
           >
-            {isPending ? (
-              <ActivityIndicator size={18} color={colors.text} />
-            ) : (
-              <Lucide name="plus" size={20} color={colors.text} />
-            )}
-          </Pressable>
-          <View style={[styles.label, { backgroundColor: colors.card }]}>
+            <View style={styles.subFabButton}>
+              {isPending ? (
+                <ActivityIndicator size={18} color={colors.text} />
+              ) : (
+                <Lucide name="plus" size={20} color={colors.text} />
+              )}
+            </View>
             <Text style={[styles.labelText, { color: colors.text }]}>
               New Cart
             </Text>
-          </View>
+          </Pressable>
         </Animated.View>
 
         <Animated.View style={mainStyle}>
@@ -254,21 +254,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     gap: 8,
   },
+  subFabRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 4,
+    paddingRight: 14,
+    paddingVertical: 4,
+    borderRadius: 28,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
   subFabButton: {
     width: SUB_FAB_SIZE,
     height: SUB_FAB_SIZE,
     borderRadius: SUB_FAB_SIZE / 2,
     alignItems: "center",
     justifyContent: "center",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  label: {
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
   },
   labelText: { fontSize: 12, fontWeight: "600" },
 });
