@@ -1,6 +1,7 @@
 import { fetchProducts, fetchTenantCategories } from "@/api/inventory";
 import { fetchTenantStores } from "@/api/store";
 import AdjustStockSheet from "@/components/adjust-stock-sheet";
+import AppBottomSheet from "@/components/bottom-sheet";
 import InventoryCard, {
   InventoryItem,
   StatusType,
@@ -28,6 +29,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const PAGE_SIZE = 20;
 const SEARCH_MIN_LENGTH = 3;
@@ -36,9 +38,26 @@ const HeaderNav: React.FC<{
   totalCount: number;
   colors: ColorPalette;
   insetsTop: number;
-}> = ({ totalCount, colors, insetsTop }) => (
+  isOwner: boolean;
+  currentStoreName: string;
+  onOpenStoreSheet: () => void;
+}> = ({ totalCount, colors, insetsTop, isOwner, currentStoreName, onOpenStoreSheet }) => (
   <View style={[styles.header, { paddingTop: insetsTop + 10 }]}>
-    <Text style={[styles.headerTitle, { color: colors.text }]}>Inventory</Text>
+    <View style={{ flex: 1 }}>
+      <Text style={[styles.headerTitle, { color: colors.text }]}>Inventory</Text>
+      {isOwner ? (
+        <Pressable onPress={onOpenStoreSheet} style={styles.storeSelector}>
+          <Text style={[styles.headerSubtitle, { color: colors.buttonPrimary }]}>
+            {currentStoreName}
+          </Text>
+          <Lucide name="chevron-down" size={14} color={colors.buttonPrimary} />
+        </Pressable>
+      ) : (
+        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+          {currentStoreName}
+        </Text>
+      )}
+    </View>
     <View style={styles.headerRight}>
       <View
         style={[
@@ -264,9 +283,14 @@ const InventoryScreen = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
+  const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
   const { user } = useSession();
-  const [storeId, setStoreId] = useState(user?.store_id ?? "");
+  const isOwner = user?.role?.toLowerCase() === "owner";
+  const [selectedStoreId, setSelectedStoreId] = useState(user?.store_id ?? "");
+  const [storeSheetVisible, setStoreSheetVisible] = useState(false);
+
+  const activeStoreId = isOwner ? selectedStoreId : (user?.store_id ?? "");
 
   const { data: storesData } = useQuery({
     queryKey: ["stores"],
@@ -276,10 +300,13 @@ const InventoryScreen = () => {
   const stores = storesData ?? [];
 
   useEffect(() => {
-    if (!storeId && stores.length > 0) {
-      setStoreId(stores[0].id);
+    if (isOwner && stores?.length > 0 && !selectedStoreId) {
+      setSelectedStoreId(stores[0].id);
     }
-  }, [storeId, stores]);
+  }, [isOwner, stores, selectedStoreId]);
+
+  const currentStoreName =
+    stores.find((s) => s.id === activeStoreId)?.name ?? "All Stores";
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -306,9 +333,9 @@ const InventoryScreen = () => {
   }, []);
 
   const { data: categoriesData } = useQuery({
-    queryKey: ["categories", storeId],
-    queryFn: () => fetchTenantCategories(storeId),
-    enabled: !!storeId,
+    queryKey: ["categories", activeStoreId],
+    queryFn: () => fetchTenantCategories(activeStoreId),
+    enabled: !!activeStoreId,
   });
 
   const categories = categoriesData ?? [];
@@ -322,9 +349,9 @@ const InventoryScreen = () => {
     isRefetching,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["products", debouncedSearch, activeCategory, storeId],
+    queryKey: ["products", debouncedSearch, activeCategory, activeStoreId],
     queryFn: ({ pageParam = 1 }) =>
-      fetchProducts(storeId, {
+      fetchProducts(activeStoreId, {
         page: pageParam,
         page_size: PAGE_SIZE,
         search: debouncedSearch || undefined,
@@ -338,7 +365,7 @@ const InventoryScreen = () => {
       return loadedItems < lastPage.total ? allPages.length + 1 : undefined;
     },
     initialPageParam: 1,
-    enabled: !!storeId,
+    enabled: !!activeStoreId,
   });
 
   const allProducts = useMemo(
@@ -436,6 +463,14 @@ const InventoryScreen = () => {
         onRefresh={refetch}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.background }}>
+            <HeaderNav
+              totalCount={totalItems}
+              colors={colors}
+              insetsTop={insets.top}
+              isOwner={isOwner}
+              currentStoreName={currentStoreName}
+              onOpenStoreSheet={() => setStoreSheetVisible(true)}
+            />
             <InventoryStats
               totalItems={totalItems}
               lowStockCount={lowStockCount}
@@ -515,8 +550,63 @@ const InventoryScreen = () => {
         visible={adjustSheetVisible}
         onVisibleChange={setAdjustSheetVisible}
         productId={selectedItem?.id ?? ""}
+        storeId={activeStoreId}
         unitCost={selectedItem?.price ?? 0}
       />
+
+      {isOwner && (
+        <AppBottomSheet
+          visible={storeSheetVisible}
+          onVisibleChange={setStoreSheetVisible}
+          snapPoints={["40%", "70%"]}
+        >
+          <View style={styles.sheetHeader}>
+            <Text style={[styles.sheetTitle, { color: colors.text }]}>
+              Select Store
+            </Text>
+            <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+              Choose a store to view inventory
+            </Text>
+          </View>
+          {stores.length > 0 ? (
+            <View style={styles.pills}>
+              {stores.map((store) => {
+                const isActive = selectedStoreId === store.id;
+                return (
+                  <Pressable
+                    key={store.id}
+                    style={[
+                      styles.pill,
+                      {
+                        backgroundColor: isActive
+                          ? "#3b82f6"
+                          : colors.backgroundElement,
+                      },
+                    ]}
+                    onPress={() => {
+                      setSelectedStoreId(isActive ? "" : store.id);
+                      setStoreSheetVisible(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.pillText,
+                        { color: isActive ? "#fff" : colors.text },
+                      ]}
+                    >
+                      {store.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          ) : (
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              No stores available
+            </Text>
+          )}
+        </AppBottomSheet>
+      )}
     </View>
   );
 };
@@ -533,6 +623,13 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   headerTitle: { fontSize: 22, fontWeight: "800" },
+  headerSubtitle: { fontSize: 13, fontWeight: "600", marginTop: 2 },
+  storeSelector: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    marginTop: 2,
+  },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
   countBadge: {
     paddingHorizontal: 10,
@@ -601,4 +698,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   resetFilterText: { fontSize: 14, fontWeight: "600" },
+  sheetHeader: { marginBottom: 16 },
+  sheetTitle: { fontSize: 18, fontWeight: "700" },
+  sheetSubtitle: { fontSize: 13, marginTop: 4 },
+  pills: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  pill: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  pillText: { fontSize: 14, fontWeight: "600" },
+  emptyText: { fontSize: 14, textAlign: "center", paddingVertical: 20 },
 });

@@ -1,19 +1,17 @@
-import {
-  fetchTenantCategories,
-  getProductById,
-} from "@/api/inventory";
 import { BASE_URL } from "@/api/client";
+import { getProductById } from "@/api/inventory";
 import { fetchTenantStores } from "@/api/store";
-import AppBottomSheet from "@/components/bottom-sheet";
 import AdjustStockSheet from "@/components/adjust-stock-sheet";
+import AppBottomSheet from "@/components/bottom-sheet";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
+import { StockHistoryItem } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import * as FileSystem from "expo-file-system/legacy";
 import * as MediaLibrary from "expo-media-library";
-import * as SecureStore from "expo-secure-store";
 import { router, useLocalSearchParams } from "expo-router";
+import * as SecureStore from "expo-secure-store";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -27,40 +25,46 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const salesData = [
-  { day: "Mon", units: 18 },
-  { day: "Tue", units: 24 },
-  { day: "Wed", units: 12 },
-  { day: "Thu", units: 30 },
-  { day: "Fri", units: 22 },
-  { day: "Sat", units: 28 },
-];
-const maxSales = Math.max(...salesData.map((d) => d.units));
+function getStockStatus(
+  qty: number,
+  reorderPoint: number
+): { label: string; color: string } {
+  if (qty === 0) return { label: "Out of Stock", color: "#dc2626" };
+  if (reorderPoint > 0 && qty <= reorderPoint)
+    return { label: "Low Stock", color: "#f59e0b" };
+  return { label: "In Stock", color: "#16a34a" };
+}
 
-const stockHistory = [
-  {
-    date: "Dec 10, 2024",
-    action: "Restock",
-    qty: +50,
-    balance: 48,
-    note: "Supplier delivery",
-  },
-  { date: "Dec 3, 2024", action: "Sale", qty: -12, balance: 58, note: "" },
-  {
-    date: "Nov 28, 2024",
-    action: "Adjustment",
-    qty: -3,
-    balance: 70,
-    note: "Damaged units",
-  },
-  {
-    date: "Nov 20, 2024",
-    action: "Restock",
-    qty: +25,
-    balance: 73,
-    note: "Weekly restock",
-  },
-];
+function formatHistoryDate(iso: string): string {
+  if (!iso) return "";
+  try {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+  } catch {
+    return iso;
+  }
+}
+
+function movementLabel(type: string): string {
+  switch (type) {
+    case "adjustment":
+      return "Adjustment";
+    case "sale":
+      return "Sale";
+    case "restock":
+      return "Restock";
+    case "transfer":
+      return "Transfer";
+    case "return":
+      return "Return";
+    default:
+      return type;
+  }
+}
 
 const ProductDetails = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -102,9 +106,12 @@ const ProductDetails = () => {
       const qs = query.toString();
       const url = `${BASE_URL}/inventory/${storeId}/products/${id}/qr${qs ? `?${qs}` : ""}`;
       const session = JSON.parse(SecureStore.getItem("session") ?? "{}");
-      const fileUri = FileSystem.cacheDirectory + `${product?.name ?? "qr"}_qr.png`;
+      const fileUri =
+        FileSystem.cacheDirectory + `${product?.name ?? "qr"}_qr.png`;
       await FileSystem.downloadAsync(url, fileUri, {
-        headers: session?.accessToken ? { Authorization: `Bearer ${session.accessToken}` } : {},
+        headers: session?.accessToken
+          ? { Authorization: `Bearer ${session.accessToken}` }
+          : {},
       });
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== "granted") throw new Error("Permission denied");
@@ -114,12 +121,6 @@ const ProductDetails = () => {
     onSuccess: () => {
       setQrVisible(false);
     },
-  });
-
-  const { data: categories } = useQuery({
-    queryKey: ["categories", storeId],
-    queryFn: () => fetchTenantCategories(storeId),
-    enabled: !!storeId,
   });
 
   if (isLoadingProduct) {
@@ -154,6 +155,7 @@ const ProductDetails = () => {
 
   const initial = product.name.charAt(0).toUpperCase();
   const priceFormatted = `₦${product.selling_price.toLocaleString()}`;
+  const stockStatus = getStockStatus(product.qty, product.reorder_point);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -261,6 +263,76 @@ const ProductDetails = () => {
         </View>
 
         <View style={{ paddingHorizontal: 20, gap: 24 }}>
+          {/* Stock Info */}
+          <View>
+            <Text
+              style={[styles.sectionLabel, { color: colors.textSecondary }]}
+            >
+              STOCK
+            </Text>
+            <View
+              style={[styles.detailsCard, { backgroundColor: colors.card }]}
+            >
+              {([
+                {
+                  label: "Available",
+                  value: String(product.available),
+                  badge: stockStatus.label,
+                  badgeColor: stockStatus.color,
+                },
+                { label: "Total Qty", value: String(product.qty) },
+                { label: "Reserved", value: String(product.reserved_qty) },
+                {
+                  label: "Reorder Point",
+                  value: String(product.reorder_point),
+                },
+                { label: "Cost Price", value: `₦${(product.unit_cost ?? product.cost_price ?? 0).toLocaleString()}` },
+              ] as Array<{ label: string; value: string; badge?: string; badgeColor?: string }>).map((row, i, arr) => (
+                <View
+                  key={row.label}
+                  style={[
+                    styles.detailRow,
+                    i < arr.length - 1 && {
+                      borderBottomWidth: StyleSheet.hairlineWidth,
+                      borderBottomColor: colors.backgroundElement,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.detailLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {row.label}
+                  </Text>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                    <Text style={[styles.detailValue, { color: colors.text }]}>
+                      {row.value}
+                    </Text>
+                    {"badge" in row && row.badge ? (
+                      <View
+                        style={[
+                          styles.tag,
+                          { backgroundColor: `${row.badgeColor}18` },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.tagText,
+                            { color: row.badgeColor, fontSize: 10 },
+                          ]}
+                        >
+                          {row.badge}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+                </View>
+              ))}
+            </View>
+          </View>
+
           {/* Details */}
           <View>
             <Text
@@ -330,60 +402,6 @@ const ProductDetails = () => {
             </View>
           </View>
 
-          {/* Sales History */}
-          <View>
-            <Text
-              style={[styles.sectionLabel, { color: colors.textSecondary }]}
-            >
-              SALES HISTORY
-            </Text>
-            <View style={[styles.chartCard, { backgroundColor: colors.card }]}>
-              <View style={styles.chartBars}>
-                {salesData.map((d, i) => {
-                  const height = (d.units / maxSales) * 120;
-                  const isLast = i === salesData.length - 1;
-                  return (
-                    <View key={i} style={styles.barWrapper}>
-                      <Text
-                        style={[
-                          styles.barValue,
-                          { color: colors.textSecondary },
-                        ]}
-                      >
-                        {d.units}
-                      </Text>
-                      <View
-                        style={[
-                          styles.bar,
-                          {
-                            height,
-                            backgroundColor: isLast ? "#2563eb" : "#93c5fd",
-                          },
-                        ]}
-                      />
-                      <Text
-                        style={[
-                          styles.barLabel,
-                          { color: colors.textSecondary },
-                        ]}
-                      >
-                        {d.day}
-                      </Text>
-                    </View>
-                  );
-                })}
-              </View>
-              <View style={styles.chartCaption}>
-                <Lucide name="trending-up" size={14} color="#16a34a" />
-                <Text
-                  style={[styles.captionText, { color: colors.textSecondary }]}
-                >
-                  Last 7 days: 28 units sold
-                </Text>
-              </View>
-            </View>
-          </View>
-
           {/* Stock History */}
           <View>
             <Text
@@ -394,66 +412,77 @@ const ProductDetails = () => {
             <View
               style={[styles.historyCard, { backgroundColor: colors.card }]}
             >
-              {stockHistory.map((entry, i) => {
-                const isPositive = entry.qty > 0;
-                return (
-                  <View
-                    key={i}
-                    style={[
-                      styles.historyRow,
-                      i < stockHistory.length - 1 && {
-                        borderBottomWidth: StyleSheet.hairlineWidth,
-                        borderBottomColor: colors.backgroundElement,
-                      },
-                    ]}
-                  >
-                    <View style={styles.historyLeft}>
-                      <Text
-                        style={[
-                          styles.historyDate,
-                          { color: colors.textSecondary },
-                        ]}
-                      >
-                        {entry.date}
-                      </Text>
-                      <Text
-                        style={[styles.historyAction, { color: colors.text }]}
-                      >
-                        {entry.action}
-                      </Text>
-                      {entry.note ? (
+              {(product.history ?? []).length === 0 ? (
+                <Text
+                  style={[
+                    styles.emptyText,
+                    { color: colors.textSecondary, paddingVertical: 16, textAlign: "center" },
+                  ]}
+                >
+                  No stock history yet
+                </Text>
+              ) : (
+                (product.history ?? []).map((entry: StockHistoryItem, i: number) => {
+                  const isPositive = entry.qty_change > 0;
+                  return (
+                    <View
+                      key={entry.id ?? i}
+                      style={[
+                        styles.historyRow,
+                        i < (product.history?.length ?? 0) - 1 && {
+                          borderBottomWidth: StyleSheet.hairlineWidth,
+                          borderBottomColor: colors.backgroundElement,
+                        },
+                      ]}
+                    >
+                      <View style={styles.historyLeft}>
                         <Text
                           style={[
-                            styles.historyNote,
+                            styles.historyDate,
                             { color: colors.textSecondary },
                           ]}
                         >
-                          {entry.note}
+                          {formatHistoryDate(entry.created_at)}
                         </Text>
-                      ) : null}
+                        <Text
+                          style={[styles.historyAction, { color: colors.text }]}
+                        >
+                          {movementLabel(entry.movement_type)}
+                        </Text>
+                        {entry.notes ? (
+                          <Text
+                            style={[
+                              styles.historyNote,
+                              { color: colors.textSecondary },
+                            ]}
+                          >
+                            {entry.notes}
+                          </Text>
+                        ) : null}
+                      </View>
+                      <View style={styles.historyRight}>
+                        <Text
+                          style={[
+                            styles.historyQty,
+                            { color: isPositive ? "#16a34a" : "#dc2626" },
+                          ]}
+                        >
+                          {isPositive ? "+" : ""}
+                          {entry.qty_change}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.historyBalance,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
+                          Bal: {entry.balance_after}
+                        </Text>
+                      </View>
                     </View>
-                    <View style={styles.historyRight}>
-                      <Text
-                        style={[
-                          styles.historyQty,
-                          { color: isPositive ? "#16a34a" : "#dc2626" },
-                        ]}
-                      >
-                        {isPositive ? "+" : ""}
-                        {entry.qty}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.historyBalance,
-                          { color: colors.textSecondary },
-                        ]}
-                      >
-                        Bal: {entry.balance}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
+                  );
+                })
+              )}
             </View>
           </View>
         </View>
@@ -463,7 +492,8 @@ const ProductDetails = () => {
         visible={adjustVisible}
         onVisibleChange={setAdjustVisible}
         productId={id!}
-        unitCost={product?.selling_price ?? 0}
+        storeId={storeId}
+        unitCost={product?.unit_cost ?? product?.cost_price ?? 0}
       />
 
       <AppBottomSheet
@@ -480,20 +510,32 @@ const ProductDetails = () => {
         <View style={styles.pillRow}>
           {(["small", "medium", "large"] as const).map((s) => {
             const active = qrSize === s;
-            const label = s === "small" ? "Small (320px)" : s === "medium" ? "Medium (530px)" : "Large (1060px)";
+            const label =
+              s === "small"
+                ? "Small (320px)"
+                : s === "medium"
+                  ? "Medium (530px)"
+                  : "Large (1060px)";
             return (
               <Pressable
                 key={s}
                 style={[
                   styles.pill,
                   {
-                    backgroundColor: active ? "rgba(59,130,246,0.1)" : colors.backgroundElement,
+                    backgroundColor: active
+                      ? "rgba(59,130,246,0.1)"
+                      : colors.backgroundElement,
                     borderColor: active ? "#3b82f6" : "transparent",
                   },
                 ]}
                 onPress={() => setQrSize(s)}
               >
-                <Text style={[styles.pillText, { color: active ? "#3b82f6" : colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.pillText,
+                    { color: active ? "#3b82f6" : colors.textSecondary },
+                  ]}
+                >
                   {label}
                 </Text>
               </Pressable>
@@ -504,7 +546,10 @@ const ProductDetails = () => {
           Box Size (1-30, optional)
         </Text>
         <TextInput
-          style={[styles.sheetInput, { color: colors.text, borderColor: colors.backgroundElement }]}
+          style={[
+            styles.sheetInput,
+            { color: colors.text, borderColor: colors.backgroundElement },
+          ]}
           value={qrBoxSize}
           onChangeText={setQrBoxSize}
           keyboardType="number-pad"
@@ -525,9 +570,7 @@ const ProductDetails = () => {
           {isDownloading ? (
             <ActivityIndicator color="#fff" size="small" />
           ) : (
-            <Text style={styles.sheetButtonText}>
-              Download
-            </Text>
+            <Text style={styles.sheetButtonText}>Download</Text>
           )}
         </Pressable>
       </AppBottomSheet>
@@ -604,25 +647,6 @@ const styles = StyleSheet.create({
   },
   detailLabel: { fontSize: 14 },
   detailValue: { fontSize: 14, fontWeight: "600" },
-  chartCard: { borderRadius: 14, padding: 16 },
-  chartBars: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    justifyContent: "space-between",
-    height: 160,
-    gap: 8,
-  },
-  barWrapper: { flex: 1, alignItems: "center", justifyContent: "flex-end" },
-  barValue: { fontSize: 10, fontWeight: "500", marginBottom: 4 },
-  bar: { width: "100%", borderRadius: 6, minHeight: 8 },
-  barLabel: { fontSize: 10, fontWeight: "500", marginTop: 4 },
-  chartCaption: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 12,
-  },
-  captionText: { fontSize: 12, fontWeight: "500" },
   historyCard: { borderRadius: 14, padding: 4 },
   historyRow: {
     flexDirection: "row",

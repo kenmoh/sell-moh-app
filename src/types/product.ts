@@ -11,20 +11,43 @@ export interface CategoryResponse {
   created_at: string;
 }
 
+export interface StockHistoryItem {
+  id: string;
+  product_id: string;
+  product_name?: string;
+  product_sku?: string;
+  store_id: string;
+  store_name?: string;
+  movement_type: string;
+  qty_change: number;
+  balance_before: number;
+  balance_after: number;
+  reference_type?: string;
+  reference_id?: string;
+  reason?: string;
+  unit_cost?: number;
+  notes?: string;
+  created_by?: string;
+  created_at: string;
+}
+
 export interface ProductResponse {
   id: string;
   name: string;
   sku: string | null;
   selling_price: number;
+  cost_price: number;
   category: string | null;
   status: string;
+  image_url: string | null;
   qr_url: string | null;
-  qr_payload: string;
+  reorder_point: number;
   qty: number;
-  min_stock_level: number;
+  reserved_qty: number;
   available: number;
-  reorder_point: number
-  history: Array<{}>;
+  min_stock_level: number;
+  unit_cost: number | null;
+  history: StockHistoryItem[];
 }
 
 export interface PaginatedResponse<T> {
