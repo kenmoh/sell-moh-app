@@ -1265,6 +1265,19 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     setVoidPinVisible(true);
   };
 
+  const handleQuantityChange = (cartId: string, productId: string, newQty: number) => {
+    if (newQty <= 0) {
+      const item = items.find((i) => i.product.id === productId);
+      if (item?.itemId) {
+        setPendingVoidItems([{ itemId: item.itemId, productId }]);
+        setVoidPin("");
+        setVoidPinVisible(true);
+        return;
+      }
+    }
+    updateQuantityInCart(cartId, productId, newQty);
+  };
+
   const handleVoidSubmit = async () => {
     if (!voidPin.trim() || pendingVoidItems.length === 0) return;
     try {
@@ -1324,7 +1337,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
                 items={items}
                 activeCartId={activeCartId}
                 colors={colors}
-                onUpdateQuantity={updateQuantityInCart}
+                onUpdateQuantity={handleQuantityChange}
                 onRemoveItem={handleRemoveItem}
               />
             )}
