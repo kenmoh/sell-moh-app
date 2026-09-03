@@ -4,6 +4,7 @@ import { create } from "zustand";
 export interface CartItem {
   product: Product;
   quantity: number;
+  itemId?: string;
 }
 
 export interface Cart {
@@ -25,7 +26,7 @@ interface CartState {
   createCart: (name?: string, sessionId?: string, customerName?: string, customerPhone?: string) => string;
   deleteCart: (cartId: string) => void;
   setActiveCart: (cartId: string) => void;
-  addItemToCart: (cartId: string, product: Product, quantity?: number) => void;
+  addItemToCart: (cartId: string, product: Product, quantity?: number, itemId?: string) => void;
   removeItemFromCart: (cartId: string, productId: string) => void;
   updateQuantityInCart: (
     cartId: string,
@@ -35,7 +36,7 @@ interface CartState {
   clearCartById: (cartId: string) => void;
   setCartCoupon: (cartId: string, code: string | null, discountAmount?: number) => void;
   clearCartCoupon: (cartId: string) => void;
-  addItem: (product: Product, quantity?: number) => void;
+  addItem: (product: Product, quantity?: number, itemId?: string) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -83,7 +84,7 @@ const useCartStore = create<CartState>((set, get) => ({
 
   setActiveCart: (cartId) => set({ activeCartId: cartId }),
 
-  addItemToCart: (cartId, product, quantity = 1) =>
+  addItemToCart: (cartId, product, quantity = 1, itemId) =>
     set((state) => ({
       carts: state.carts.map((cart) => {
         if (cart.id !== cartId) return cart;
@@ -98,7 +99,10 @@ const useCartStore = create<CartState>((set, get) => ({
             ),
           };
         }
-        return { ...cart, items: [...cart.items, { product, quantity }] };
+        return {
+          ...cart,
+          items: [...cart.items, { product, quantity, itemId }],
+        };
       }),
     })),
 
@@ -153,9 +157,9 @@ const useCartStore = create<CartState>((set, get) => ({
       ),
     })),
 
-  addItem: (product, quantity) => {
+  addItem: (product, quantity, itemId) => {
     const { activeCartId, addItemToCart } = get();
-    addItemToCart(activeCartId, product, quantity);
+    addItemToCart(activeCartId, product, quantity, itemId);
   },
 
   removeItem: (productId) => {

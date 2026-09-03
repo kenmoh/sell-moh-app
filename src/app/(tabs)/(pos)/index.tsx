@@ -309,10 +309,15 @@ const POSScreen = () => {
             product={item}
             onPress={() => {
               const state = useCartStore.getState();
-              state.addItem(item);
               const cartId = state.activeCartId;
               if (cartId && !cartId.startsWith("cart-")) {
-                addToCart(cartId, { product_id: item.id, qty: 1 }).catch(() => {});
+                addToCart(cartId, { product_id: item.id, qty: 1 })
+                  .then((res) => {
+                    state.addItem(item, 1, res.id);
+                  })
+                  .catch(() => {});
+              } else {
+                state.addItem(item);
               }
             }}
           />

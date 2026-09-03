@@ -1,4 +1,5 @@
 import { validateCoupon } from "@/api/discount";
+import { voidCartItem } from "@/api/cart";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
 import Lucide from "@react-native-vector-icons/lucide";
@@ -162,34 +163,43 @@ export const CartHeader = ({
       <View style={styles.headerTitleRow}>
         <Lucide name="shopping-bag" size={20} color={colors.text} />
         <View style={{ flex: 1 }}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {sessionId || cartName}
-          </Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 2 }}>
+            <Text style={[styles.headerTitle, { color: colors.text }]}>
+              Cart
+            </Text>
+            <Text style={[{ color: colors.text, fontSize: 10 }]}>
+              ({sessionId?.toUpperCase() || cartName})
+            </Text>
+          </View>
           {customerName && (
-            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.headerSubtitle, { color: colors.textSecondary }]}
+            >
               {customerName}
               {customerPhone ? ` · ${customerPhone}` : ""}
             </Text>
           )}
         </View>
-        {totalItemsCount > 0 && (
-          <View style={styles.itemBadge}>
-            <Text style={styles.itemBadgeText}>{totalItemsCount}</Text>
-          </View>
+        <View>
+          {totalItemsCount > 0 && (
+            <View style={styles.itemBadge}>
+              <Text style={styles.itemBadgeText}>{totalItemsCount}</Text>
+            </View>
+          )}
+        </View>
+        {hasItems && (
+          <TouchableOpacity
+            activeOpacity={0.7}
+            onPress={onClearCart}
+            style={styles.clearCartBtn}
+          >
+            <Lucide name="trash-2" size={16} color={colors.error} />
+            <Text style={[styles.clearCartText, { color: colors.error }]}>
+              Clear
+            </Text>
+          </TouchableOpacity>
         )}
       </View>
-      {hasItems && (
-        <TouchableOpacity
-          activeOpacity={0.7}
-          onPress={onClearCart}
-          style={styles.clearCartBtn}
-        >
-          <Lucide name="trash-2" size={16} color={colors.error} />
-          <Text style={[styles.clearCartText, { color: colors.error }]}>
-            Clear
-          </Text>
-        </TouchableOpacity>
-      )}
     </View>
   );
 };
@@ -1042,6 +1052,12 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     amount: number;
   } | null>(null);
 
+  const [voidPinVisible, setVoidPinVisible] = useState(false);
+  const [voidPin, setVoidPin] = useState("");
+  const [pendingVoidItems, setPendingVoidItems] = useState<
+    { itemId: string; productId: string }[]
+  >([]);
+
   // Coupon validation
   const { mutate: validateCouponCode, isPending: isValidatingCoupon } =
     useMutation({
@@ -1212,19 +1228,48 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     onVisibleChange(false);
   };
 
+  const handleRemoveItem = (productId: string) => {
+    const item = items.find((i) => i.product.id === productId);
+    if (!item?.itemId) {
+      removeItemFromCart(activeCartId, productId);
+      return;
+    }
+    setPendingVoidItems([{ itemId: item.itemId, productId }]);
+    setVoidPin("");
+    setVoidPinVisible(true);
+  };
+
+  const handleVoidSubmit = async () => {
+    if (!voidPin.trim() || pendingVoidItems.length === 0) return;
+    try {
+      for (const item of pendingVoidItems) {
+        await voidCartItem(item.itemId, { supervisor_pin: voidPin.trim() });
+        removeItemFromCart(activeCartId, item.productId);
+      }
+      setPendingVoidItems([]);
+      setVoidPin("");
+      setVoidPinVisible(false);
+    } catch (e: any) {
+      Alert.alert("Error", e?.message || "Invalid PIN or void failed");
+    }
+  };
+
   const handleClearCart = () => {
     if (items.length === 0) return;
-    Alert.alert("Clear Cart", "Are you sure you want to remove all items?", [
-      { text: "Cancel", style: "cancel" },
-      {
-        text: "Clear",
-        style: "destructive",
-        onPress: () => clearCartById(activeCartId),
-      },
-    ]);
+    const itemsWithId = items
+      .filter((i) => i.itemId)
+      .map((i) => ({ itemId: i.itemId!, productId: i.product.id }));
+    if (itemsWithId.length === 0) {
+      clearCartById(activeCartId);
+      return;
+    }
+    setPendingVoidItems(itemsWithId);
+    setVoidPin("");
+    setVoidPinVisible(true);
   };
 
   return (
+    <>
     <AppBottomSheet visible={visible} onVisibleChange={onVisibleChange}>
       <View style={styles.container}>
         {isSuccess && lastPayment ? (
@@ -1254,7 +1299,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
                 activeCartId={activeCartId}
                 colors={colors}
                 onUpdateQuantity={updateQuantityInCart}
-                onRemoveItem={removeItemFromCart}
+                onRemoveItem={handleRemoveItem}
               />
             )}
 
@@ -1302,6 +1347,53 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
         )}
       </View>
     </AppBottomSheet>
+
+    <AppBottomSheet
+      visible={voidPinVisible}
+      onVisibleChange={setVoidPinVisible}
+      snapPoints={["35%"]}
+    >
+      <Text style={[styles.voidTitle, { color: colors.text }]}>
+        Supervisor PIN Required
+      </Text>
+      <Text style={[styles.voidSubtitle, { color: colors.textSecondary }]}>
+        Enter supervisor PIN to {pendingVoidItems.length > 1 ? "clear cart" : "remove item"}
+      </Text>
+      <TextInput
+        style={[styles.voidPinInput, { color: colors.text, borderColor: colors.backgroundElement }]}
+        placeholder="Enter PIN"
+        placeholderTextColor={colors.textSecondary}
+        value={voidPin}
+        onChangeText={setVoidPin}
+        keyboardType="number-pad"
+        maxLength={6}
+        secureTextEntry
+        autoFocus
+      />
+      <View style={styles.voidActions}>
+        <Pressable
+          onPress={() => {
+            setVoidPinVisible(false);
+            setVoidPin("");
+            setPendingVoidItems([]);
+          }}
+          style={[styles.voidCancelBtn, { borderColor: colors.backgroundElement }]}
+        >
+          <Text style={[styles.voidCancelText, { color: colors.text }]}>Cancel</Text>
+        </Pressable>
+        <Pressable
+          onPress={handleVoidSubmit}
+          disabled={!voidPin.trim()}
+          style={[
+            styles.voidConfirmBtn,
+            { backgroundColor: !voidPin.trim() ? colors.textSecondary : colors.error },
+          ]}
+        >
+          <Text style={styles.voidConfirmText}>Confirm</Text>
+        </Pressable>
+      </View>
+    </AppBottomSheet>
+    </>
   );
 };
 
@@ -1664,4 +1756,35 @@ const styles = StyleSheet.create({
   couponRemoveBtn: {
     padding: 4,
   },
+  voidTitle: { fontSize: 18, fontWeight: "700" },
+  voidSubtitle: { fontSize: 13, marginTop: 4, marginBottom: 16 },
+  voidPinInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 16,
+    letterSpacing: 4,
+    textAlign: "center",
+  },
+  voidActions: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 16,
+  },
+  voidCancelBtn: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  voidCancelText: { fontSize: 14, fontWeight: "600" },
+  voidConfirmBtn: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
+  voidConfirmText: { color: "#fff", fontSize: 14, fontWeight: "600" },
 });
