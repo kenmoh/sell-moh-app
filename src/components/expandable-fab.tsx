@@ -119,36 +119,34 @@ const ExpandableFAB = () => {
           <Pressable
             onPress={handleViewCarts}
             style={[
-              styles.subFabButton,
+              styles.subFabRow,
               { backgroundColor: colors.card, shadowColor: colors.text },
             ]}
           >
-            <Lucide name="list" size={20} color={colors.text} />
-          </Pressable>
-          <View style={[styles.label, { backgroundColor: colors.card }]}>
+            <View style={styles.subFabButton}>
+              <Lucide name="list" size={20} color={colors.text} />
+            </View>
             <Text style={[styles.labelText, { color: colors.text }]}>
-              {carts.length === 1
-                ? "Cart"
-                : `Carts (${carts.length})`}
+              {carts.length === 1 ? "Cart" : `Carts (${carts.length})`}
             </Text>
-          </View>
+          </Pressable>
         </Animated.View>
 
         <Animated.View style={[styles.subFab, subFab1Style]}>
           <Pressable
             onPress={handleCreateCart}
             style={[
-              styles.subFabButton,
+              styles.subFabRow,
               { backgroundColor: colors.card, shadowColor: colors.text },
             ]}
           >
-            <Lucide name="plus" size={20} color={colors.text} />
-          </Pressable>
-          <View style={[styles.label, { backgroundColor: colors.card }]}>
+            <View style={styles.subFabButton}>
+              <Lucide name="plus" size={20} color={colors.text} />
+            </View>
             <Text style={[styles.labelText, { color: colors.text }]}>
               New Cart
             </Text>
-          </View>
+          </Pressable>
         </Animated.View>
 
         <Animated.View style={mainStyle}>
@@ -223,15 +221,19 @@ const styles = StyleSheet.create({
     borderRadius: SUB_FAB_SIZE / 2,
     alignItems: "center",
     justifyContent: "center",
+  },
+  subFabRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 4,
+    paddingRight: 14,
+    paddingVertical: 4,
+    borderRadius: 28,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
-  },
-  label: {
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
   },
   labelText: { fontSize: 12, fontWeight: "600" },
 });
