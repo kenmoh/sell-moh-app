@@ -84,8 +84,13 @@ const CartPickerSheet = ({
             >
               <View style={{ flex: 1 }}>
                 <Text style={[styles.cartName, { color: colors.text }]}>
-                  {cart.customer_name || "Walk-in"}
+                  {cart.session_id || "Untitled Cart"}
                 </Text>
+                {cart.customer_name && (
+                  <Text style={[styles.cartPhone, { color: colors.textSecondary }]}>
+                    {cart.customer_name}
+                  </Text>
+                )}
                 {cart.customer_phone && (
                   <Text style={[styles.cartPhone, { color: colors.textSecondary }]}>
                     {cart.customer_phone}
