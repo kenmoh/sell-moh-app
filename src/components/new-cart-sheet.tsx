@@ -87,7 +87,7 @@ const NewCartSheet = ({
       useCartStore
         .getState()
         .createCart(
-          cart.customer_name || "Cart",
+          cart.session_id || "Cart",
           cart.session_id,
           cart.customer_name ?? undefined,
           cart.customer_phone ?? undefined,

@@ -44,7 +44,7 @@ const CartPickerSheet = ({
       store.setActiveCart(cart.id);
     } else {
       store.createCart(
-        cart.customer_name || "Cart",
+        cart.session_id || "Cart",
         cart.session_id,
         cart.customer_name ?? undefined,
         cart.customer_phone ?? undefined,

@@ -114,7 +114,7 @@ const ExpandableFAB = () => {
       useCartStore
         .getState()
         .createCart(
-          cart.customer_name || "Cart",
+          cart.session_id || "Cart",
           cart.session_id,
           cart.customer_name ?? undefined,
         );
