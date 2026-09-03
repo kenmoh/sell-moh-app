@@ -1,6 +1,7 @@
 import {
   CartCreatedResponse,
   CartDetailResponse,
+  CartListItem,
   CheckoutRequest,
   CheckoutResultResponse,
   CreateCartRequest,
@@ -10,6 +11,16 @@ import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
 
 const URL = "/cart";
+
+export const listCarts = async (): Promise<CartListItem[]> => {
+  const res = await apiClient.get<{ data: CartListItem[] }>(URL);
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? [];
+};
 
 export const createCart = async (
   data: CreateCartRequest,

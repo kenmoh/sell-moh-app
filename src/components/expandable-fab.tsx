@@ -1,10 +1,15 @@
-import CartPickerSheet from "@/components/cart-picker-sheet";
+import { createCart, listCarts } from "@/api/cart";
 import CartSheet from "@/components/cart-sheet";
+import NewCartSheet from "@/components/new-cart-sheet";
 import { Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
+import { useSession } from "@/lib/ctx";
+import { CartListItem } from "@/types/cart";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Dimensions,
   Pressable,
   StyleSheet,
@@ -21,7 +26,6 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 
-const SCREEN_WIDTH = Dimensions.get("window").width;
 const FAB_SIZE = 56;
 const MARGIN = 16;
 const SUB_FAB_SIZE = 48;
@@ -29,13 +33,21 @@ const SUB_FAB_SIZE = 48;
 const ExpandableFAB = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
+  const queryClient = useQueryClient();
+  const { user } = useSession();
 
   const [expanded, setExpanded] = useState(false);
-  const [pickerVisible, setPickerVisible] = useState(false);
+  const [newCartSheetVisible, setNewCartSheetVisible] = useState(false);
   const [cartSheetVisible, setCartSheetVisible] = useState(false);
 
   const totalItems = useCartStore((s) => s.totalItems());
   const carts = useCartStore((s) => s.carts);
+
+  const { data: apiCarts } = useQuery({
+    queryKey: ["carts"],
+    queryFn: listCarts,
+    enabled: false,
+  });
 
   const rotation = useSharedValue(0);
   const overlayOpacity = useSharedValue(0);
@@ -62,9 +74,7 @@ const ExpandableFAB = () => {
     });
     subFab1Opacity.value = withDelay(
       50,
-      withTiming(to, {
-        duration: 200,
-      }),
+      withTiming(to, { duration: 200 }),
     );
     subFab2Y.value = withSpring(to ? -136 : 0, {
       damping: 20,
@@ -72,9 +82,7 @@ const ExpandableFAB = () => {
     });
     subFab2Opacity.value = withDelay(
       100,
-      withTiming(to, {
-        duration: 200,
-      }),
+      withTiming(to, { duration: 200 }),
     );
   };
 
@@ -97,20 +105,38 @@ const ExpandableFAB = () => {
     opacity: subFab2Opacity.value,
   }));
 
+  const { mutate: quickCreateCart, isPending } = useMutation({
+    mutationFn: () =>
+      createCart({
+        store_id: user?.store_id ?? "",
+      }),
+    onSuccess: (cart) => {
+      useCartStore.getState().createCart(cart.customer_name || "Cart");
+      queryClient.invalidateQueries({ queryKey: ["carts"] });
+      setCartSheetVisible(true);
+    },
+  });
+
   const handleCreateCart = () => {
     toggle();
-    useCartStore.getState().createCart();
-    setCartSheetVisible(true);
+    if (user?.auto_create_cart) {
+      quickCreateCart();
+    } else {
+      setNewCartSheetVisible(true);
+    }
   };
 
   const handleViewCarts = () => {
     toggle();
-    setPickerVisible(true);
+    queryClient.invalidateQueries({ queryKey: ["carts"] });
+    setCartSheetVisible(true);
   };
+
+  const activeCartCount = apiCarts?.length ?? carts.length;
 
   return (
     <>
-      <Animated.View style={[styles.overlay, overlayStyle]}>
+      <Animated.View style={[styles.overlay, overlayOpacity]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />
       </Animated.View>
 
@@ -127,7 +153,7 @@ const ExpandableFAB = () => {
               <Lucide name="list" size={20} color={colors.text} />
             </View>
             <Text style={[styles.labelText, { color: colors.text }]}>
-              {carts.length === 1 ? "Cart" : `Carts (${carts.length})`}
+              {activeCartCount === 1 ? "Cart" : `Carts (${activeCartCount})`}
             </Text>
           </Pressable>
         </Animated.View>
@@ -135,13 +161,19 @@ const ExpandableFAB = () => {
         <Animated.View style={[styles.subFab, subFab1Style]}>
           <Pressable
             onPress={handleCreateCart}
+            disabled={isPending}
             style={[
               styles.subFabRow,
               { backgroundColor: colors.card, shadowColor: colors.text },
+              isPending && { opacity: 0.6 },
             ]}
           >
             <View style={styles.subFabButton}>
-              <Lucide name="plus" size={20} color={colors.text} />
+              {isPending ? (
+                <ActivityIndicator size={18} color={colors.text} />
+              ) : (
+                <Lucide name="plus" size={20} color={colors.text} />
+              )}
             </View>
             <Text style={[styles.labelText, { color: colors.text }]}>
               New Cart
@@ -165,13 +197,11 @@ const ExpandableFAB = () => {
         </Animated.View>
       </View>
 
-      <CartPickerSheet
-        visible={pickerVisible}
-        onVisibleChange={setPickerVisible}
-        onCartSelected={(cartId) => {
-          useCartStore.getState().setActiveCart(cartId);
-          setCartSheetVisible(true);
-        }}
+      <NewCartSheet
+        visible={newCartSheetVisible}
+        onVisibleChange={setNewCartSheetVisible}
+        storeId={user?.store_id ?? ""}
+        onCartCreated={() => setCartSheetVisible(true)}
       />
       <CartSheet
         visible={cartSheetVisible}

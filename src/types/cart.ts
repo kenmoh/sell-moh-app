@@ -25,6 +25,17 @@ export interface CartDetailResponse {
   items: CartItemResponse[];
 }
 
+export interface CartListItem {
+  id: string;
+  session_id: string;
+  status: string;
+  customer_name: string | null;
+  customer_phone: string | null;
+  item_count: number;
+  total: number;
+  created_at: string;
+}
+
 export interface CheckoutResultResponse {
   sale_id: string;
   sale_number: string;
