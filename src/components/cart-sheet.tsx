@@ -1,5 +1,5 @@
 import { validateCoupon } from "@/api/discount";
-import { voidCartItem } from "@/api/cart";
+import { voidCartItem, getCart } from "@/api/cart";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
 import Lucide from "@react-native-vector-icons/lucide";
@@ -1059,6 +1059,34 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     { itemId: string; productId: string }[]
   >([]);
 
+  // Sync API cart items (with itemId) into Zustand when sheet opens
+  useEffect(() => {
+    if (!visible || !activeCart || activeCartId.startsWith("cart-")) return;
+    getCart(activeCartId).then((apiCart) => {
+      const state = useCartStore.getState();
+      const cart = state.carts.find((c) => c.id === activeCartId);
+      if (!cart) return;
+      const merged = apiCart.items.map((apiItem) => {
+        const local = cart.items.find((i) => i.product.id === apiItem.product_id);
+        return {
+          product: local?.product ?? {
+            id: apiItem.product_id,
+            name: apiItem.name,
+            price: apiItem.unit_price,
+            in_stock: 0,
+          },
+          quantity: apiItem.qty,
+          itemId: apiItem.id,
+        };
+      });
+      useCartStore.setState((s) => ({
+        carts: s.carts.map((c) =>
+          c.id === activeCartId ? { ...c, items: merged } : c,
+        ),
+      }));
+    }).catch(() => {});
+  }, [visible, activeCartId]);
+
   // Coupon validation
   const { mutate: validateCouponCode, isPending: isValidatingCoupon } =
     useMutation({
@@ -1231,10 +1259,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
   const handleRemoveItem = (productId: string) => {
     const item = items.find((i) => i.product.id === productId);
-    if (!item?.itemId) {
-      removeItemFromCart(activeCartId, productId);
-      return;
-    }
+    if (!item?.itemId) return;
     setPendingVoidItems([{ itemId: item.itemId, productId }]);
     setVoidPin("");
     setVoidPinVisible(true);
