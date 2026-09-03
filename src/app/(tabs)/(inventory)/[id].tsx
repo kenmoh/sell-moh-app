@@ -67,12 +67,12 @@ function movementLabel(type: string): string {
 }
 
 const ProductDetails = () => {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, storeId: storeIdParam } = useLocalSearchParams<{ id: string; storeId?: string }>();
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const { user } = useSession();
-  const [storeId, setStoreId] = useState(user?.store_id ?? "");
+  const [storeId, setStoreId] = useState(storeIdParam ?? user?.store_id ?? "");
   const [adjustVisible, setAdjustVisible] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
   const [qrSize, setQrSize] = useState<"small" | "medium" | "large">("large");

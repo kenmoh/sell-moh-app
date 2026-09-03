@@ -419,7 +419,7 @@ const InventoryScreen = () => {
   const handleCardPress = (item: InventoryItem) => {
     router.push({
       pathname: "/(tabs)/(inventory)/[id]",
-      params: { id: item.id },
+      params: { id: item.id, storeId: activeStoreId },
     });
   };
 
