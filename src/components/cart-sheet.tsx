@@ -1062,7 +1062,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   // Sync API cart items (with itemId) into Zustand when sheet opens
   useEffect(() => {
     if (!visible || !activeCart || activeCartId.startsWith("cart-")) return;
+    console.log("[CartSheet] Syncing cart from API", { activeCartId });
     getCart(activeCartId).then((apiCart) => {
+      console.log("[CartSheet] API cart items", apiCart.items.map(i => ({ id: i.id, name: i.name, product_id: i.product_id })));
       const state = useCartStore.getState();
       const cart = state.carts.find((c) => c.id === activeCartId);
       if (!cart) return;
@@ -1084,7 +1086,8 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
           c.id === activeCartId ? { ...c, items: merged } : c,
         ),
       }));
-    }).catch(() => {});
+      console.log("[CartSheet] Merged items", merged.map(i => ({ name: i.product.name, itemId: i.itemId })));
+    }).catch((e) => console.log("[CartSheet] Sync error", e));
   }, [visible, activeCartId]);
 
   // Coupon validation
@@ -1259,6 +1262,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
   const handleRemoveItem = (productId: string) => {
     const item = items.find((i) => i.product.id === productId);
+    console.log("[CartSheet] handleRemoveItem", { productId, item, itemId: item?.itemId, allItems: items.map(i => ({ name: i.product.name, itemId: i.itemId })) });
     if (!item?.itemId) return;
     setPendingVoidItems([{ itemId: item.itemId, productId }]);
     setVoidPin("");
