@@ -6,10 +6,10 @@ import { Lucide } from "@react-native-vector-icons/lucide";
 import { useRef, useState } from "react";
 import {
   Dimensions,
-  Pressable,
   StyleSheet,
   Text,
   useColorScheme,
+  View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
