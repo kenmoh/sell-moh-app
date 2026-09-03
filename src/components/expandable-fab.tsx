@@ -1,13 +1,11 @@
-import { createCart, listCarts } from "@/api/cart";
 import CartPickerSheet from "@/components/cart-picker-sheet";
 import CartSheet from "@/components/cart-sheet";
 import NewCartSheet from "@/components/new-cart-sheet";
 import { Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
 import { useSession } from "@/lib/ctx";
-import { CartListItem } from "@/types/cart";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -26,7 +24,9 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
+import { createCart } from "@/api/cart";
 
+const SCREEN_WIDTH = Dimensions.get("window").width;
 const FAB_SIZE = 56;
 const MARGIN = 16;
 const SUB_FAB_SIZE = 48;
@@ -44,12 +44,6 @@ const ExpandableFAB = () => {
 
   const totalItems = useCartStore((s) => s.totalItems());
   const carts = useCartStore((s) => s.carts);
-
-  const { data: apiCarts } = useQuery({
-    queryKey: ["carts"],
-    queryFn: listCarts,
-    enabled: false,
-  });
 
   const rotation = useSharedValue(0);
   const overlayOpacity = useSharedValue(0);
@@ -76,7 +70,9 @@ const ExpandableFAB = () => {
     });
     subFab1Opacity.value = withDelay(
       50,
-      withTiming(to, { duration: 200 }),
+      withTiming(to, {
+        duration: 200,
+      }),
     );
     subFab2Y.value = withSpring(to ? -136 : 0, {
       damping: 20,
@@ -84,7 +80,9 @@ const ExpandableFAB = () => {
     });
     subFab2Opacity.value = withDelay(
       100,
-      withTiming(to, { duration: 200 }),
+      withTiming(to, {
+        duration: 200,
+      }),
     );
   };
 
@@ -133,11 +131,11 @@ const ExpandableFAB = () => {
     setPickerVisible(true);
   };
 
-  const activeCartCount = apiCarts?.length ?? carts.length;
+  const activeCartCount = carts.length;
 
   return (
     <>
-      <Animated.View style={[styles.overlay, overlayOpacity]}>
+      <Animated.View style={[styles.overlay, overlayStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={toggle} />
       </Animated.View>
 
@@ -146,17 +144,19 @@ const ExpandableFAB = () => {
           <Pressable
             onPress={handleViewCarts}
             style={[
-              styles.subFabRow,
+              styles.subFabButton,
               { backgroundColor: colors.card, shadowColor: colors.text },
             ]}
           >
-            <View style={styles.subFabButton}>
-              <Lucide name="list" size={20} color={colors.text} />
-            </View>
-            <Text style={[styles.labelText, { color: colors.text }]}>
-              {activeCartCount === 1 ? "Cart" : `Carts (${activeCartCount})`}
-            </Text>
+            <Lucide name="list" size={20} color={colors.text} />
           </Pressable>
+          <View style={[styles.label, { backgroundColor: colors.card }]}>
+            <Text style={[styles.labelText, { color: colors.text }]}>
+              {activeCartCount === 1
+                ? "Cart"
+                : `Carts (${activeCartCount})`}
+            </Text>
+          </View>
         </Animated.View>
 
         <Animated.View style={[styles.subFab, subFab1Style]}>
@@ -164,22 +164,22 @@ const ExpandableFAB = () => {
             onPress={handleCreateCart}
             disabled={isPending}
             style={[
-              styles.subFabRow,
+              styles.subFabButton,
               { backgroundColor: colors.card, shadowColor: colors.text },
               isPending && { opacity: 0.6 },
             ]}
           >
-            <View style={styles.subFabButton}>
-              {isPending ? (
-                <ActivityIndicator size={18} color={colors.text} />
-              ) : (
-                <Lucide name="plus" size={20} color={colors.text} />
-              )}
-            </View>
+            {isPending ? (
+              <ActivityIndicator size={18} color={colors.text} />
+            ) : (
+              <Lucide name="plus" size={20} color={colors.text} />
+            )}
+          </Pressable>
+          <View style={[styles.label, { backgroundColor: colors.card }]}>
             <Text style={[styles.labelText, { color: colors.text }]}>
               New Cart
             </Text>
-          </Pressable>
+          </View>
         </Animated.View>
 
         <Animated.View style={mainStyle}>
@@ -260,19 +260,15 @@ const styles = StyleSheet.create({
     borderRadius: SUB_FAB_SIZE / 2,
     alignItems: "center",
     justifyContent: "center",
-  },
-  subFabRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingLeft: 4,
-    paddingRight: 14,
-    paddingVertical: 4,
-    borderRadius: 28,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+  },
+  label: {
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
   },
   labelText: { fontSize: 12, fontWeight: "600" },
 });

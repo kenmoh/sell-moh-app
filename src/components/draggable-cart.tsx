@@ -6,10 +6,10 @@ import { Lucide } from "@react-native-vector-icons/lucide";
 import { useRef, useState } from "react";
 import {
   Dimensions,
+  Pressable,
   StyleSheet,
   Text,
   useColorScheme,
-  View,
 } from "react-native";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import Animated, {
@@ -37,11 +37,6 @@ const DraggableCart = () => {
   const contextX = useSharedValue(0);
   const contextY = useSharedValue(0);
 
-  const tapGesture = Gesture.Tap()
-    .onEnd(() => {
-      setSheetVisible(true);
-    });
-
   const panGesture = Gesture.Pan()
     .onStart(() => {
       contextX.value = translateX.value;
@@ -61,8 +56,6 @@ const DraggableCart = () => {
       translateY.value = withSpring(0, { damping: 20, stiffness: 200 });
     });
 
-  const composedGesture = Gesture.Exclusive(panGesture, tapGesture);
-
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { translateX: translateX.value },
@@ -72,9 +65,10 @@ const DraggableCart = () => {
 
   return (
     <>
-      <GestureDetector gesture={composedGesture}>
+      <GestureDetector gesture={panGesture}>
         <Animated.View style={[styles.fab, animatedStyle]}>
-          <View
+          <Pressable
+            onPress={() => setSheetVisible(true)}
             style={[
               styles.fabButton,
               { backgroundColor: colors.text, shadowColor: colors.text },
@@ -84,7 +78,7 @@ const DraggableCart = () => {
             <Text style={[styles.badge, { backgroundColor: "#2f7df6" }]}>
               {totalItems}
             </Text>
-          </View>
+          </Pressable>
         </Animated.View>
       </GestureDetector>
       <CartSheet visible={sheetVisible} onVisibleChange={setSheetVisible} />
