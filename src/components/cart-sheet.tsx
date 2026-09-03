@@ -1,5 +1,5 @@
 import { validateCoupon } from "@/api/discount";
-import { voidCartItem, getCart } from "@/api/cart";
+import { voidCartItem, getCart, clearCartItems } from "@/api/cart";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
 import Lucide from "@react-native-vector-icons/lucide";
@@ -1055,8 +1055,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
   const [voidPinVisible, setVoidPinVisible] = useState(false);
   const [voidPin, setVoidPin] = useState("");
+  const [voidQty, setVoidQty] = useState("");
   const [pendingVoidItems, setPendingVoidItems] = useState<
-    { itemId: string; productId: string }[]
+    { itemId: string; productId: string; maxQty: number }[]
   >([]);
 
   // Sync API cart items (with itemId) into Zustand when sheet opens
@@ -1260,8 +1261,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const handleRemoveItem = (cartId: string, productId: string) => {
     const item = items.find((i) => i.product.id === productId);
     if (!item?.itemId) return;
-    setPendingVoidItems([{ itemId: item.itemId, productId }]);
+    setPendingVoidItems([{ itemId: item.itemId, productId, maxQty: item.quantity }]);
     setVoidPin("");
+    setVoidQty("");
     setVoidPinVisible(true);
   };
 
@@ -1269,8 +1271,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     if (newQty <= 0) {
       const item = items.find((i) => i.product.id === productId);
       if (item?.itemId) {
-        setPendingVoidItems([{ itemId: item.itemId, productId }]);
+        setPendingVoidItems([{ itemId: item.itemId, productId, maxQty: item.quantity }]);
         setVoidPin("");
+        setVoidQty("");
         setVoidPinVisible(true);
         return;
       }
@@ -1281,12 +1284,43 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const handleVoidSubmit = async () => {
     if (!voidPin.trim() || pendingVoidItems.length === 0) return;
     try {
-      for (const item of pendingVoidItems) {
-        await voidCartItem(item.itemId, { supervisor_pin: voidPin.trim() });
-        removeItemFromCart(activeCartId, item.productId);
+      const pin = voidPin.trim();
+      const isClearAll = pendingVoidItems.length > 1 && !voidQty.trim();
+
+      if (isClearAll) {
+        // Bulk clear — single API call
+        await clearCartItems(activeCartId, { supervisor_pin: pin });
+        clearCartById(activeCartId);
+      } else {
+        // Single item void (possibly partial qty)
+        const voidedQty = voidQty.trim() ? Number(voidQty.trim()) : undefined;
+        for (const item of pendingVoidItems) {
+          await voidCartItem(item.itemId, { supervisor_pin: pin, qty: voidedQty });
+          if (voidedQty && voidedQty < item.maxQty) {
+            // Partial void — update qty in Zustand
+            useCartStore.setState((s) => ({
+              carts: s.carts.map((c) =>
+                c.id === activeCartId
+                  ? {
+                      ...c,
+                      items: c.items.map((i) =>
+                        i.itemId === item.itemId
+                          ? { ...i, quantity: i.quantity - voidedQty }
+                          : i
+                      ),
+                    }
+                  : c
+              ),
+            }));
+          } else {
+            removeItemFromCart(activeCartId, item.productId);
+          }
+        }
       }
+
       setPendingVoidItems([]);
       setVoidPin("");
+      setVoidQty("");
       setVoidPinVisible(false);
     } catch (e: any) {
       Alert.alert("Error", e?.message || "Invalid PIN or void failed");
@@ -1295,15 +1329,13 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
   const handleClearCart = () => {
     if (items.length === 0) return;
-    const itemsWithId = items
-      .filter((i) => i.itemId)
-      .map((i) => ({ itemId: i.itemId!, productId: i.product.id }));
-    if (itemsWithId.length === 0) {
-      clearCartById(activeCartId);
-      return;
-    }
-    setPendingVoidItems(itemsWithId);
+    setPendingVoidItems(
+      items
+        .filter((i) => i.itemId)
+        .map((i) => ({ itemId: i.itemId!, productId: i.product.id, maxQty: i.quantity }))
+    );
     setVoidPin("");
+    setVoidQty("");
     setVoidPinVisible(true);
   };
 
@@ -1390,17 +1422,37 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     <AppBottomSheet
       visible={voidPinVisible}
       onVisibleChange={setVoidPinVisible}
-      snapPoints={["35%"]}
+      snapPoints={["40%"]}
     >
       <Text style={[styles.voidTitle, { color: colors.text }]}>
         Supervisor PIN Required
       </Text>
       <Text style={[styles.voidSubtitle, { color: colors.textSecondary }]}>
-        Enter supervisor PIN to {pendingVoidItems.length > 1 ? "clear cart" : "remove item"}
+        {pendingVoidItems.length > 1
+          ? `Clear all ${pendingVoidItems.length} items from cart?`
+          : `Void "${pendingVoidItems[0]?.productId ? items.find((i) => i.product.id === pendingVoidItems[0]?.productId)?.product.name : ""}"`}
       </Text>
+
+      {pendingVoidItems.length === 1 && pendingVoidItems[0].maxQty > 1 && (
+        <View style={{ marginBottom: 12 }}>
+          <Text style={[styles.voidLabel, { color: colors.textSecondary }]}>
+            Quantity to void (max {pendingVoidItems[0].maxQty})
+          </Text>
+          <TextInput
+            style={[styles.voidPinInput, { color: colors.text, borderColor: colors.backgroundElement }]}
+            placeholder={`All ${pendingVoidItems[0].maxQty}`}
+            placeholderTextColor={colors.textSecondary}
+            value={voidQty}
+            onChangeText={setVoidQty}
+            keyboardType="number-pad"
+            maxLength={4}
+          />
+        </View>
+      )}
+
       <TextInput
         style={[styles.voidPinInput, { color: colors.text, borderColor: colors.backgroundElement }]}
-        placeholder="Enter PIN"
+        placeholder="Enter supervisor PIN"
         placeholderTextColor={colors.textSecondary}
         value={voidPin}
         onChangeText={setVoidPin}
@@ -1414,6 +1466,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
           onPress={() => {
             setVoidPinVisible(false);
             setVoidPin("");
+            setVoidQty("");
             setPendingVoidItems([]);
           }}
           style={[styles.voidCancelBtn, { borderColor: colors.backgroundElement }]}
@@ -1797,6 +1850,7 @@ const styles = StyleSheet.create({
   },
   voidTitle: { fontSize: 18, fontWeight: "700" },
   voidSubtitle: { fontSize: 13, marginTop: 4, marginBottom: 16 },
+  voidLabel: { fontSize: 12, marginBottom: 6 },
   voidPinInput: {
     borderWidth: 1,
     borderRadius: 10,

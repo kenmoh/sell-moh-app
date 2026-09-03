@@ -67,6 +67,22 @@ export const voidCartItem = async (
   }
 };
 
+export const clearCartItems = async (
+  cartId: string,
+  data: VoidItemRequest,
+): Promise<{ cleared: number }> => {
+  const res = await apiClient.post<{ data: { cleared: number } }>(
+    `${URL}/${cartId}/clear`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? { cleared: 0 };
+};
+
 export const addToCart = async (
   cartId: string,
   data: AddToCartRequest,

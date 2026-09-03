@@ -69,6 +69,7 @@ export interface CheckoutRequest {
 
 export interface VoidItemRequest {
   supervisor_pin: string;
+  qty?: number;
 }
 
 export interface AddToCartRequest {
