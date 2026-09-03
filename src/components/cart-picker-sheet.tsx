@@ -39,17 +39,24 @@ const CartPickerSheet = ({
 
   const handleSelect = (cart: CartListItem) => {
     const store = useCartStore.getState();
-    const existing = store.carts.find((c) => c.id === cart.id);
+    const existing = store.carts.find((c) => c.sessionId === cart.session_id);
     if (existing) {
-      store.setActiveCart(cart.id);
+      store.setActiveCart(existing.id);
     } else {
-      store.createCart(
-        cart.session_id || "Cart",
-        cart.session_id,
-        cart.customer_name ?? undefined,
-        cart.customer_phone ?? undefined,
-      );
-      useCartStore.setState({ activeCartId: cart.id });
+      useCartStore.setState((state) => ({
+        carts: [
+          ...state.carts,
+          {
+            id: cart.id,
+            name: cart.session_id || "Cart",
+            sessionId: cart.session_id,
+            customerName: cart.customer_name ?? undefined,
+            customerPhone: cart.customer_phone ?? undefined,
+            items: [],
+          },
+        ],
+        activeCartId: cart.id,
+      }));
     }
     onVisibleChange(false);
     onCartSelected(cart.id);

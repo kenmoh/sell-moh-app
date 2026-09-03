@@ -84,14 +84,20 @@ const NewCartSheet = ({
       });
     },
     onSuccess: (cart) => {
-      useCartStore
-        .getState()
-        .createCart(
-          cart.session_id || "Cart",
-          cart.session_id,
-          cart.customer_name ?? undefined,
-          cart.customer_phone ?? undefined,
-        );
+      useCartStore.setState((state) => ({
+        carts: [
+          ...state.carts,
+          {
+            id: cart.id,
+            name: cart.session_id || "Cart",
+            sessionId: cart.session_id,
+            customerName: cart.customer_name ?? undefined,
+            customerPhone: cart.customer_phone ?? undefined,
+            items: [],
+          },
+        ],
+        activeCartId: cart.id,
+      }));
       queryClient.invalidateQueries({ queryKey: ["carts"] });
       onVisibleChange(false);
       onCartCreated();
