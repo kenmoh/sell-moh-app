@@ -12,6 +12,7 @@ export interface CartCreatedResponse {
   session_id: string;
   store_id: string | null;
   status: string;
+  customer_name: string;
   resumed: boolean;
 }
 
@@ -68,4 +69,9 @@ export interface CheckoutRequest {
 
 export interface VoidItemRequest {
   supervisor_pin: string;
+}
+
+export interface AddToCartRequest {
+  product_id: string;
+  qty?: number;
 }

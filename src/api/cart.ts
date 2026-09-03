@@ -1,6 +1,8 @@
 import {
+  AddToCartRequest,
   CartCreatedResponse,
   CartDetailResponse,
+  CartItemResponse,
   CartListItem,
   CheckoutRequest,
   CheckoutResultResponse,
@@ -63,6 +65,22 @@ export const voidCartItem = async (
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
   }
+};
+
+export const addToCart = async (
+  cartId: string,
+  data: AddToCartRequest,
+): Promise<CartItemResponse> => {
+  const res = await apiClient.post<{ data: CartItemResponse }>(
+    `${URL}/${cartId}/items`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
 };
 
 export const checkoutCart = async (
