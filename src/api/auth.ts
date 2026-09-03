@@ -215,3 +215,26 @@ export const fetchMe = async (): Promise<any> => {
 
   return res.data?.data!;
 };
+
+export const getPinStatus = async (): Promise<{
+  has_pin: boolean;
+  expires_at: string | null;
+}> => {
+  const res = await apiClient.get<{ data: { has_pin: boolean; expires_at: string | null } }>(
+    `${URL}/pin/status`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? { has_pin: false, expires_at: null };
+};
+
+export const setSupervisorPin = async (pin: string): Promise<void> => {
+  const res = await apiClient.post(`${URL}/pin`, { pin });
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+};
