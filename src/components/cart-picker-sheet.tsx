@@ -38,7 +38,19 @@ const CartPickerSheet = ({
   const carts = apiCarts ?? [];
 
   const handleSelect = (cart: CartListItem) => {
-    setActiveCart(cart.id);
+    const store = useCartStore.getState();
+    const existing = store.carts.find((c) => c.id === cart.id);
+    if (existing) {
+      store.setActiveCart(cart.id);
+    } else {
+      store.createCart(
+        cart.customer_name || "Cart",
+        cart.session_id,
+        cart.customer_name ?? undefined,
+        cart.customer_phone ?? undefined,
+      );
+      useCartStore.setState({ activeCartId: cart.id });
+    }
     onVisibleChange(false);
     onCartSelected(cart.id);
   };
@@ -47,7 +59,10 @@ const CartPickerSheet = ({
     if (!iso) return "";
     try {
       const d = new Date(iso);
-      return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      return d.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+      });
     } catch {
       return "";
     }
@@ -58,7 +73,10 @@ const CartPickerSheet = ({
       <Text style={[styles.title, { color: colors.text }]}>Your Carts</Text>
 
       {isPending ? (
-        <ActivityIndicator color={colors.buttonPrimary} style={{ paddingVertical: 24 }} />
+        <ActivityIndicator
+          color={colors.buttonPrimary}
+          style={{ paddingVertical: 24 }}
+        />
       ) : carts.length === 0 ? (
         <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
           No active carts
@@ -84,28 +102,36 @@ const CartPickerSheet = ({
             >
               <View style={{ flex: 1 }}>
                 <Text style={[styles.cartName, { color: colors.text }]}>
-                  {cart.session_id || "Untitled Cart"}
+                  {cart.session_id.toUpperCase() || "Untitled Cart"}
                 </Text>
                 {cart.customer_name && (
-                  <Text style={[styles.cartPhone, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[styles.cartPhone, { color: colors.textSecondary }]}
+                  >
                     {cart.customer_name}
                   </Text>
                 )}
                 {cart.customer_phone && (
-                  <Text style={[styles.cartPhone, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[styles.cartPhone, { color: colors.textSecondary }]}
+                  >
                     {cart.customer_phone}
                   </Text>
                 )}
               </View>
               <View style={styles.cartMeta}>
-                <Text style={[styles.cartCount, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.cartCount, { color: colors.textSecondary }]}
+                >
                   {cart.item_count} {cart.item_count === 1 ? "item" : "items"}
                 </Text>
                 <Text style={[styles.cartTotal, { color: colors.text }]}>
                   ₦{cart.total.toLocaleString()}
                 </Text>
                 {cart.created_at && (
-                  <Text style={[styles.cartTime, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[styles.cartTime, { color: colors.textSecondary }]}
+                  >
                     {formatTime(cart.created_at)}
                   </Text>
                 )}

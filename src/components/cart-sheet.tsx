@@ -1,8 +1,8 @@
+import { validateCoupon } from "@/api/discount";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
-import { validateCoupon } from "@/api/discount";
-import { useMutation } from "@tanstack/react-query";
 import Lucide from "@react-native-vector-icons/lucide";
+import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -14,12 +14,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import Animated, {
-  FadeIn,
-  FadeOut,
-  Layout,
-  withSpring,
-} from "react-native-reanimated";
+import Animated, { FadeIn, FadeOut, Layout } from "react-native-reanimated";
 import AppBottomSheet from "./bottom-sheet";
 
 export type PaymentMethod = "cash" | "transfer" | "split" | "card";
@@ -84,7 +79,9 @@ export const CartSuccessView = ({
           <>
             {receipt.cash > 0 && (
               <View style={styles.summaryRow}>
-                <Text style={{ color: colors.textSecondary }}>Cash Portion</Text>
+                <Text style={{ color: colors.textSecondary }}>
+                  Cash Portion
+                </Text>
                 <Text style={{ color: colors.text, fontWeight: "600" }}>
                   ₦{receipt.cash.toLocaleString()}
                 </Text>
@@ -102,7 +99,9 @@ export const CartSuccessView = ({
             )}
             {receipt.card > 0 && (
               <View style={styles.summaryRow}>
-                <Text style={{ color: colors.textSecondary }}>Card Portion</Text>
+                <Text style={{ color: colors.textSecondary }}>
+                  Card Portion
+                </Text>
                 <Text style={{ color: colors.text, fontWeight: "600" }}>
                   ₦{receipt.card.toLocaleString()}
                 </Text>
@@ -139,6 +138,9 @@ export const CartSuccessView = ({
 
 interface CartHeaderProps {
   cartName: string;
+  sessionId?: string;
+  customerName?: string;
+  customerPhone?: string;
   totalItemsCount: number;
   hasItems: boolean;
   colors: ColorPalette;
@@ -147,6 +149,9 @@ interface CartHeaderProps {
 
 export const CartHeader = ({
   cartName,
+  sessionId,
+  customerName,
+  customerPhone,
   totalItemsCount,
   hasItems,
   colors,
@@ -156,9 +161,17 @@ export const CartHeader = ({
     <View style={styles.header}>
       <View style={styles.headerTitleRow}>
         <Lucide name="shopping-bag" size={20} color={colors.text} />
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          {cartName}
-        </Text>
+        <View style={{ flex: 1 }}>
+          <Text style={[styles.headerTitle, { color: colors.text }]}>
+            {sessionId || cartName}
+          </Text>
+          {customerName && (
+            <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
+              {customerName}
+              {customerPhone ? ` · ${customerPhone}` : ""}
+            </Text>
+          )}
+        </View>
         {totalItemsCount > 0 && (
           <View style={styles.itemBadge}>
             <Text style={styles.itemBadgeText}>{totalItemsCount}</Text>
@@ -224,7 +237,6 @@ export const CartItemRow = ({
       style={[
         styles.itemCard,
         {
-          backgroundColor: colors.sheet,
           borderColor: colors.backgroundElement,
         },
       ]}
@@ -363,7 +375,9 @@ export const CouponInput = ({
             <Text style={[styles.couponCode, { color: "#10b981" }]}>
               {couponCode}
             </Text>
-            <Text style={[styles.couponDiscount, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.couponDiscount, { color: colors.textSecondary }]}
+            >
               -₦{discountAmount.toLocaleString()} off
             </Text>
           </View>
@@ -377,7 +391,12 @@ export const CouponInput = ({
 
   return (
     <View style={styles.couponInputRow}>
-      <View style={[styles.couponInputWrapper, { backgroundColor: colors.backgroundElement }]}>
+      <View
+        style={[
+          styles.couponInputWrapper,
+          { backgroundColor: colors.backgroundElement },
+        ]}
+      >
         <Lucide name="ticket" size={16} color={colors.textSecondary} />
         <TextInput
           placeholder="Enter coupon code"
@@ -397,7 +416,9 @@ export const CouponInput = ({
         style={[
           styles.couponApplyBtn,
           {
-            backgroundColor: inputCode.trim() ? "#3b82f6" : colors.backgroundElement,
+            backgroundColor: inputCode.trim()
+              ? "#3b82f6"
+              : colors.backgroundElement,
             opacity: inputCode.trim() && !isValidating ? 1 : 0.5,
           },
         ]}
@@ -511,10 +532,7 @@ export const SplitPaymentBox = ({
 }: SplitPaymentBoxProps) => {
   return (
     <Animated.View
-      entering={FadeIn.duration(240)
-        .springify()
-        .damping(14)
-        .stiffness(120)}
+      entering={FadeIn.duration(240).springify().damping(14).stiffness(120)}
       exiting={FadeOut.duration(160)}
       style={[
         styles.splitBox,
@@ -1025,19 +1043,27 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   } | null>(null);
 
   // Coupon validation
-  const { mutate: validateCouponCode, isPending: isValidatingCoupon } = useMutation({
-    mutationFn: (code: string) => validateCoupon(code, totalPrice),
-    onSuccess: (result) => {
-      if (result.valid) {
-        setCartCoupon(activeCartId, result.code ?? couponCode, result.discount_amount);
-      } else {
-        Alert.alert("Invalid Coupon", result.message || "This coupon is not valid");
-      }
-    },
-    onError: () => {
-      Alert.alert("Error", "Failed to validate coupon. Please try again.");
-    },
-  });
+  const { mutate: validateCouponCode, isPending: isValidatingCoupon } =
+    useMutation({
+      mutationFn: (code: string) => validateCoupon(code, totalPrice),
+      onSuccess: (result) => {
+        if (result.valid) {
+          setCartCoupon(
+            activeCartId,
+            result.code ?? couponCode,
+            result.discount_amount,
+          );
+        } else {
+          Alert.alert(
+            "Invalid Coupon",
+            result.message || "This coupon is not valid",
+          );
+        }
+      },
+      onError: () => {
+        Alert.alert("Error", "Failed to validate coupon. Please try again.");
+      },
+    });
 
   const handleApplyCoupon = (code: string) => {
     validateCouponCode(code);
@@ -1162,9 +1188,18 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
     const resolvedMethod = method ?? paymentMethod;
     setLastPayment({
-      cash: resolvedMethod === "transfer" || resolvedMethod === "card" ? 0 : numCash,
-      transfer: resolvedMethod === "cash" || resolvedMethod === "card" ? 0 : numTransfer,
-      card: resolvedMethod === "cash" || resolvedMethod === "transfer" ? 0 : numCard,
+      cash:
+        resolvedMethod === "transfer" || resolvedMethod === "card"
+          ? 0
+          : numCash,
+      transfer:
+        resolvedMethod === "cash" || resolvedMethod === "card"
+          ? 0
+          : numTransfer,
+      card:
+        resolvedMethod === "cash" || resolvedMethod === "transfer"
+          ? 0
+          : numCard,
       total: finalTotal,
       method: resolvedMethod,
     });
@@ -1202,6 +1237,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
           <>
             <CartHeader
               cartName={cartName}
+              sessionId={activeCart?.sessionId}
+              customerName={activeCart?.customerName}
+              customerPhone={activeCart?.customerPhone}
               totalItemsCount={totalItemsCount}
               hasItems={items.length > 0}
               colors={colors}
@@ -1292,6 +1330,10 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
   },
+  headerSubtitle: {
+    fontSize: 12,
+    marginTop: 2,
+  },
   itemBadge: {
     backgroundColor: "#2f7df6",
     borderRadius: 10,
@@ -1348,6 +1390,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderTopWidth: 1,
     paddingVertical: 14,
+    paddingHorizontal: 10,
     gap: 10,
     marginTop: -1,
   },
@@ -1404,6 +1447,7 @@ const styles = StyleSheet.create({
   paymentSection: {
     width: "100%",
     marginTop: 8,
+    paddingHorizontal: 8,
     gap: 12,
   },
   sectionTitle: {
@@ -1488,10 +1532,9 @@ const styles = StyleSheet.create({
   /* Summary Card */
   summaryCard: {
     width: "100%",
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
     paddingHorizontal: 16,
     paddingVertical: 14,
+    borderRadius: 15,
     gap: 6,
   },
   summaryRow: {
@@ -1570,6 +1613,7 @@ const styles = StyleSheet.create({
   couponInputRow: {
     flexDirection: "row",
     alignItems: "center",
+    paddingHorizontal: 8,
     gap: 8,
   },
   couponInputWrapper: {
@@ -1590,7 +1634,7 @@ const styles = StyleSheet.create({
   couponApplyBtn: {
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
   },
   couponApplyText: {
     fontSize: 14,

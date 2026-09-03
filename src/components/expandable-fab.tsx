@@ -111,7 +111,13 @@ const ExpandableFAB = () => {
         store_id: user?.store_id ?? "",
       }),
     onSuccess: (cart) => {
-      useCartStore.getState().createCart(cart.customer_name || "Cart");
+      useCartStore
+        .getState()
+        .createCart(
+          cart.customer_name || "Cart",
+          cart.session_id,
+          cart.customer_name ?? undefined,
+        );
       queryClient.invalidateQueries({ queryKey: ["carts"] });
       setCartSheetVisible(true);
     },

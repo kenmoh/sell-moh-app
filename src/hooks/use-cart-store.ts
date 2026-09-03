@@ -9,6 +9,9 @@ export interface CartItem {
 export interface Cart {
   id: string;
   name: string;
+  sessionId?: string;
+  customerName?: string;
+  customerPhone?: string;
   items: CartItem[];
   couponCode?: string | null;
   discountAmount?: number;
@@ -19,7 +22,7 @@ let cartCounter = 1;
 interface CartState {
   carts: Cart[];
   activeCartId: string;
-  createCart: (name?: string) => string;
+  createCart: (name?: string, sessionId?: string, customerName?: string, customerPhone?: string) => string;
   deleteCart: (cartId: string) => void;
   setActiveCart: (cartId: string) => void;
   addItemToCart: (cartId: string, product: Product, quantity?: number) => void;
@@ -49,12 +52,15 @@ const useCartStore = create<CartState>((set, get) => ({
   carts: [initialCart],
   activeCartId: "cart-1",
 
-  createCart: (name?: string) => {
+  createCart: (name?: string, sessionId?: string, customerName?: string, customerPhone?: string) => {
     const id = `cart-${cartCounter}`;
     const cartName = name || `Cart ${cartCounter}`;
     cartCounter++;
     set((state) => ({
-      carts: [...state.carts, { id, name: cartName, items: [] }],
+      carts: [
+        ...state.carts,
+        { id, name: cartName, sessionId, customerName, customerPhone, items: [] },
+      ],
       activeCartId: id,
     }));
     return id;
