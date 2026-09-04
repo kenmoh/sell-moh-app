@@ -6,7 +6,7 @@ import useCartStore from "@/hooks/use-cart-store";
 import { useSession } from "@/lib/ctx";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Dimensions,
@@ -50,6 +50,32 @@ const ExpandableFAB = () => {
   });
 
   const activeCartCount = apiCarts?.length ?? 0;
+
+  // Sync API carts into Zustand and set latest as active
+  const carts = useCartStore((s) => s.carts);
+  useEffect(() => {
+    if (!apiCarts || apiCarts.length === 0) return;
+    const store = useCartStore.getState();
+    const synced: typeof store.carts = apiCarts.map((c) => ({
+      id: c.id,
+      name: c.session_id || "Cart",
+      sessionId: c.session_id,
+      customerName: c.customer_name ?? undefined,
+      customerPhone: c.customer_phone ?? undefined,
+      items: [],
+    }));
+    // Merge: keep existing carts with their items, add new ones from API
+    const existingIds = new Set(store.carts.map((c) => c.id));
+    const merged = [
+      ...synced.filter((c) => !existingIds.has(c.id)),
+      ...store.carts,
+    ];
+    const latestCart = synced[0]; // API returns newest first
+    useCartStore.setState({
+      carts: merged,
+      activeCartId: latestCart?.id ?? "",
+    });
+  }, [apiCarts]);
 
   const rotation = useSharedValue(0);
   const overlayOpacity = useSharedValue(0);

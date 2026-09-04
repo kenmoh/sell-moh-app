@@ -46,12 +46,9 @@ interface CartState {
   activeDiscountAmount: () => number;
 }
 
-const initialCart: Cart = { id: "cart-1", name: "Cart 1", items: [] };
-cartCounter = 2;
-
 const useCartStore = create<CartState>((set, get) => ({
-  carts: [initialCart],
-  activeCartId: "cart-1",
+  carts: [],
+  activeCartId: "",
 
   createCart: (name?: string, sessionId?: string, customerName?: string, customerPhone?: string) => {
     const id = `cart-${cartCounter}`;
@@ -70,15 +67,10 @@ const useCartStore = create<CartState>((set, get) => ({
   deleteCart: (cartId) =>
     set((state) => {
       const filtered = state.carts.filter((c) => c.id !== cartId);
-      if (filtered.length === 0) {
-        const newCart: Cart = { id: "cart-1", name: "Cart 1", items: [] };
-        cartCounter = 2;
-        return { carts: [newCart], activeCartId: "cart-1" };
-      }
       return {
         carts: filtered,
         activeCartId:
-          state.activeCartId === cartId ? filtered[0].id : state.activeCartId,
+          state.activeCartId === cartId ? (filtered[0]?.id ?? "") : state.activeCartId,
       };
     }),
 
