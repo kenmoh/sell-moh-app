@@ -1,4 +1,5 @@
 import { createEmployee, fetchTenantRoles } from "@/api/auth";
+import { fetchTenantStores } from "@/api/store";
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
@@ -22,6 +23,7 @@ const employeeSchema = z.object({
   email: z.string().trim().email("Enter a valid email"),
   phone: z.string().optional(),
   role: z.string().min(1, "Select a role"),
+  storeId: z.string().min(1, "Select a store"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -42,6 +44,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
   const [phone, setPhone] = useState("");
   const [role, setRole] = useState("");
   const [password, setPassword] = useState("");
+  const [storeId, setStoreId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<EmployeeField, string>>>(
     {},
@@ -50,6 +53,12 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
   const { data: rolesData, isLoading: isLoadingRoles } = useQuery({
     queryKey: ["roles"],
     queryFn: fetchTenantRoles,
+    enabled: visible,
+  });
+
+  const { data: storesData, isLoading: isLoadingStores } = useQuery({
+    queryKey: ["stores"],
+    queryFn: fetchTenantStores,
     enabled: visible,
   });
 
@@ -71,6 +80,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
     setPhone("");
     setRole("");
     setPassword("");
+    setStoreId(null);
     setShowPassword(false);
     setErrors({});
   };
@@ -81,6 +91,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
       email,
       phone: phone || undefined,
       role,
+      storeId: storeId || "",
       password,
     });
 
@@ -101,7 +112,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
       phone: result.data.phone || null,
       role: result.data.role,
       password: result.data.password,
-      store_id: null,
+      store_id: result.data.storeId,
     });
   };
 
@@ -207,7 +218,51 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
           )}
         </View>
 
-        {/* Security */}
+        {/* Store */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            Store
+          </Text>
+
+          {isLoadingStores ? (
+            <ActivityIndicator
+              color={colors.buttonPrimary}
+              style={{ padding: 20 }}
+            />
+          ) : (
+            <View style={styles.roleRow}>
+              {storesData?.map((s) => {
+                const isActive = storeId === s.id;
+                return (
+                  <Pressable
+                    key={s.id}
+                    style={[
+                      styles.rolePill,
+                      {
+                        backgroundColor: isActive
+                          ? colors.buttonPrimary
+                          : colors.backgroundElement,
+                      },
+                    ]}
+                    onPress={() => setStoreId(isActive ? null : s.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.rolePillText,
+                        { color: isActive ? "#fff" : colors.text },
+                      ]}
+                    >
+                      {s.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          )}
+          {errors.storeId && (
+            <Text style={styles.errorText}>{errors.storeId}</Text>
+          )}
+        </View>
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
             Security
