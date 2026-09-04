@@ -65,7 +65,7 @@ const CartDetail = () => {
       <View style={{ flex: 1 }}>
         <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
         <Text style={[styles.itemPrice, { color: colors.textSecondary }]}>
-          ₦{item.unit_price.toLocaleString()} × {item.qty}
+          ₦{item.unit_price.toLocaleString()} × {Number(item.qty)}
         </Text>
       </View>
       <Text style={[styles.itemTotal, { color: colors.text }]}>
@@ -127,6 +127,7 @@ const CartDetail = () => {
             data={cart.items}
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
+            style={{ flex: 1 }}
             contentContainerStyle={{ paddingBottom: 20 }}
             showsVerticalScrollIndicator={false}
           />
