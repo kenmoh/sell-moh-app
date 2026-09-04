@@ -228,7 +228,7 @@ export const getPinStatus = async (): Promise<{
     throw new Error(getErrorMessage(res));
   }
 
-  return res.data?.data ?? { has_pin: false, expires_at: null };
+  return res.data?.data!;
 };
 
 export const setSupervisorPin = async (pin: string): Promise<void> => {

@@ -30,7 +30,7 @@ const ProfileScreen = () => {
   const [pinInput, setPinInput] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
 
-  const { data: pinData } = useQuery({
+  const { data: pinData, error: pinError } = useQuery({
     queryKey: ["pin-status"],
     queryFn: getPinStatus,
   });
@@ -141,12 +141,14 @@ const ProfileScreen = () => {
                 <Text style={[styles.pinLabel, { color: colors.text }]}>
                   Supervisor PIN
                 </Text>
-                <Text style={[styles.pinStatus, { color: colors.textSecondary }]}>
-                  {pinData?.has_pin
-                    ? daysUntilExpiry !== null
-                      ? `Set — expires in ${daysUntilExpiry} days`
-                      : "Set"
-                    : "Not set"}
+                <Text style={[styles.pinStatus, { color: pinError ? "#e74c3c" : colors.textSecondary }]}>
+                  {pinError
+                    ? "Unable to load"
+                    : pinData?.has_pin
+                      ? daysUntilExpiry !== null
+                        ? `Set — expires in ${daysUntilExpiry} days`
+                        : "Set"
+                      : "Not set"}
                 </Text>
               </View>
             </View>
