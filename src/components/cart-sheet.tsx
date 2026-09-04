@@ -1,7 +1,14 @@
 import { validateCoupon } from "@/api/discount";
-import { voidCartItem, getCart, clearCartItems } from "@/api/cart";
+import { voidCartItem, getCart, clearCartItems, checkoutCart } from "@/api/cart";
+import {
+  recordCashPayment,
+  initiateCardPayment,
+  initiateTransferPayment,
+  recordSplitPayment,
+} from "@/api/payments";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
+import { useSession } from "@/lib/ctx";
 import Lucide from "@react-native-vector-icons/lucide";
 import { useMutation } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
@@ -17,6 +24,7 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeOut, Layout } from "react-native-reanimated";
+import { useRouter } from "expo-router";
 import AppBottomSheet from "./bottom-sheet";
 
 export type PaymentMethod = "cash" | "transfer" | "split" | "card";
@@ -1017,6 +1025,8 @@ export const CartPaymentSection = ({
 const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const scheme = useColorScheme();
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
+  const { user } = useSession();
+  const router = useRouter();
 
   const carts = useCartStore((s) => s.carts);
   const activeCartId = useCartStore((s) => s.activeCartId);
@@ -1205,7 +1215,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const isPaidValid = finalTotal > 0 && Math.abs(totalPaid - finalTotal) < 0.01;
   const remainingNeeded = Math.max(0, finalTotal - totalPaid);
 
-  const handleCheckout = (method?: "cash" | "transfer" | "card") => {
+  const handleCheckout = async (method?: "cash" | "transfer" | "card") => {
     if (!isPaidValid) {
       Alert.alert(
         "Invalid Payment",
@@ -1214,6 +1224,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       return;
     }
 
+    const resolvedMethod = method ?? paymentMethod;
+
+    // For split payment, track which parts have been paid
     if (paymentMethod === "split" && method) {
       if (method === "cash" && !splitPaidCash) {
         setSplitPaidCash(true);
@@ -1232,7 +1245,6 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       }
     }
 
-    const resolvedMethod = method ?? paymentMethod;
     setLastPayment({
       cash:
         resolvedMethod === "transfer" || resolvedMethod === "card"
@@ -1249,7 +1261,128 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       total: finalTotal,
       method: resolvedMethod,
     });
-    setIsSuccess(true);
+
+    try {
+      // 1. Checkout the cart to create the sale
+      const checkoutResult = await checkoutCart(activeCartId, {
+        customer_name: activeCart?.customerName || undefined,
+        customer_phone: activeCart?.customerPhone || undefined,
+      });
+
+      const saleId = checkoutResult.sale_id;
+
+      // 2. Initiate payment based on method
+      if (resolvedMethod === "cash") {
+        await recordCashPayment({
+          sale_id: saleId,
+          amount: finalTotal,
+        });
+        setIsSuccess(true);
+        return;
+      }
+
+      if (resolvedMethod === "card") {
+        const cardResult = await initiateCardPayment({
+          sale_id: saleId,
+          amount: finalTotal,
+        });
+        // Navigate to payment awaiting screen for QR code
+        onVisibleChange(false);
+        router.push({
+          pathname: "/(pos)/payment-awaiting/[saleId]",
+          params: {
+            saleId,
+            paymentId: cardResult.payment_id,
+            method: "card",
+            amount: String(finalTotal),
+            qrCode: cardResult.qr_code_base64 || "",
+            txRef: cardResult.tx_ref || "",
+          },
+        });
+        return;
+      }
+
+      if (resolvedMethod === "transfer") {
+        const transferResult = await initiateTransferPayment({
+          sale_id: saleId,
+          amount: finalTotal,
+        });
+        onVisibleChange(false);
+        router.push({
+          pathname: "/(pos)/payment-awaiting/[saleId]",
+          params: {
+            saleId,
+            paymentId: transferResult.payment_id,
+            method: "transfer",
+            amount: String(finalTotal),
+            accountNumber: transferResult.account_number || "",
+            bankName: transferResult.bank_name || "",
+            txRef: transferResult.tx_ref || "",
+            accountExpiration: transferResult.account_expiration || "",
+          },
+        });
+        return;
+      }
+
+      // Split payment — record all parts
+      if (resolvedMethod === "split") {
+        await recordSplitPayment({
+          sale_id: saleId,
+          cash_amount: numCash,
+          card_amount: numCard,
+          transfer_amount: numTransfer,
+        });
+
+        // If card or transfer is part of split, navigate to awaiting screen
+        if (numCard > 0) {
+          const cardResult = await initiateCardPayment({
+            sale_id: saleId,
+            amount: numCard,
+          });
+          onVisibleChange(false);
+          router.push({
+            pathname: "/(pos)/payment-awaiting/[saleId]",
+            params: {
+              saleId,
+              paymentId: cardResult.payment_id,
+              method: "card",
+              amount: String(numCard),
+              qrCode: cardResult.qr_code_base64 || "",
+              txRef: cardResult.tx_ref || "",
+            },
+          });
+          return;
+        }
+
+        if (numTransfer > 0) {
+          const transferResult = await initiateTransferPayment({
+            sale_id: saleId,
+            amount: numTransfer,
+          });
+          onVisibleChange(false);
+          router.push({
+            pathname: "/(pos)/payment-awaiting/[saleId]",
+            params: {
+              saleId,
+              paymentId: transferResult.payment_id,
+              method: "transfer",
+              amount: String(numTransfer),
+              accountNumber: transferResult.account_number || "",
+              bankName: transferResult.bank_name || "",
+              txRef: transferResult.tx_ref || "",
+              accountExpiration: transferResult.account_expiration || "",
+            },
+          });
+          return;
+        }
+
+        // All cash in split — show success
+        setIsSuccess(true);
+        return;
+      }
+    } catch (err: any) {
+      Alert.alert("Payment Failed", err?.message || "Something went wrong");
+    }
   };
 
   const handleFinishSuccess = () => {

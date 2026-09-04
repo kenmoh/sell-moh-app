@@ -5,6 +5,7 @@ import {
   CardPaymentResult,
   CashPaymentRequest,
   CashPaymentResult,
+  PaymentStatusResponse,
   ResolvedAccount,
   SplitPaymentRequest,
   SplitPaymentResult,
@@ -174,6 +175,22 @@ export const verifyAccount = async (
   const res = await apiClient.post<{ data: ResolvedAccount }>(
     `${URL}/setup/verify-account`,
     data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
+// ── Payment Status Polling ────────────────────────────────────────────────
+
+export const getPaymentStatus = async (
+  saleId: string,
+): Promise<PaymentStatusResponse> => {
+  const res = await apiClient.get<{ data: PaymentStatusResponse }>(
+    `${URL}/status/${saleId}`,
   );
 
   if (!res.ok) {

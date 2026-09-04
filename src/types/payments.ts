@@ -59,6 +59,10 @@ export interface TransferPaymentResult {
   account_number: string | null;
   bank_name: string | null;
   instructions: string | null;
+  tx_ref: string | null;
+  transfer_reference: string | null;
+  account_expiration: string | null;
+  transfer_note: string | null;
 }
 
 export interface SplitSuggestion {
@@ -123,4 +127,21 @@ export interface ResolvedAccount {
 export interface AccountVerifyRequest {
   account_number: string;
   bank_code: string;
+}
+
+// ── Payment Status Polling ────────────────────────────────────────────────
+
+export interface PaymentIntentStatus {
+  method: string;
+  status: string;
+  tx_ref: string | null;
+  amount: number;
+}
+
+export interface PaymentStatusResponse {
+  sale_id: string;
+  status: string;
+  amount_paid: number;
+  total: number;
+  intents: PaymentIntentStatus[];
 }
