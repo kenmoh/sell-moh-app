@@ -718,6 +718,7 @@ interface CartCheckoutButtonProps {
   totalPrice: number;
   paymentMethod: PaymentMethod;
   isPaidValid: boolean;
+  isCheckingOut: boolean;
   numCash: number;
   numTransfer: number;
   numCard: number;
@@ -733,6 +734,7 @@ export const CartCheckoutButton = ({
   totalPrice,
   paymentMethod,
   isPaidValid,
+  isCheckingOut,
   numCash,
   numTransfer,
   numCard,
@@ -767,7 +769,7 @@ export const CartCheckoutButton = ({
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => onCheckout("cash")}
-              disabled={!isPaidValid || splitPaidCash}
+              disabled={!isPaidValid || splitPaidCash || isCheckingOut}
               style={[
                 styles.splitButton,
                 {
@@ -809,7 +811,7 @@ export const CartCheckoutButton = ({
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => onCheckout("transfer")}
-              disabled={!isPaidValid || splitPaidTransfer}
+              disabled={!isPaidValid || splitPaidTransfer || isCheckingOut}
               style={[
                 styles.splitButton,
                 {
@@ -851,7 +853,7 @@ export const CartCheckoutButton = ({
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => onCheckout("card")}
-              disabled={!isPaidValid || splitPaidCard}
+              disabled={!isPaidValid || splitPaidCard || isCheckingOut}
               style={[
                 styles.splitButton,
                 {
@@ -890,17 +892,23 @@ export const CartCheckoutButton = ({
       <TouchableOpacity
         activeOpacity={0.8}
         onPress={() => onCheckout()}
-        disabled={!isPaidValid}
+        disabled={!isPaidValid || isCheckingOut}
         style={[
           styles.primaryButton,
           {
-            backgroundColor: isPaidValid ? "#2f7df6" : "#2f7df670",
+            backgroundColor: isPaidValid && !isCheckingOut ? "#2f7df6" : "#2f7df670",
           },
         ]}
       >
-        <Lucide name="check-circle" size={20} color="#ffffff" />
+        {isCheckingOut ? (
+          <ActivityIndicator size="small" color="#ffffff" />
+        ) : (
+          <Lucide name="check-circle" size={20} color="#ffffff" />
+        )}
         <Text style={styles.primaryButtonText}>
-          Pay ₦{totalPrice.toLocaleString()} • {paymentMethod.toUpperCase()}
+          {isCheckingOut
+            ? "Processing..."
+            : `Pay ₦${totalPrice.toLocaleString()} • ${paymentMethod.toUpperCase()}`}
         </Text>
       </TouchableOpacity>
     </Animated.View>
@@ -925,6 +933,7 @@ interface CartPaymentSectionProps {
   splitPaidCash: boolean;
   splitPaidTransfer: boolean;
   splitPaidCard: boolean;
+  isCheckingOut: boolean;
   colors: ColorPalette;
   onSelectPaymentMethod: (method: PaymentMethod) => void;
   onCashChange: (val: string) => void;
@@ -952,6 +961,7 @@ export const CartPaymentSection = ({
   splitPaidCash,
   splitPaidTransfer,
   splitPaidCard,
+  isCheckingOut,
   colors,
   onSelectPaymentMethod,
   onCashChange,
@@ -1006,6 +1016,7 @@ export const CartPaymentSection = ({
         totalPrice={finalTotal}
         paymentMethod={paymentMethod}
         isPaidValid={isPaidValid}
+        isCheckingOut={isCheckingOut}
         numCash={numCash}
         numTransfer={numTransfer}
         numCard={numCard}
@@ -1215,7 +1226,181 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const isPaidValid = finalTotal > 0 && Math.abs(totalPaid - finalTotal) < 0.01;
   const remainingNeeded = Math.max(0, finalTotal - totalPaid);
 
-  const handleCheckout = async (method?: "cash" | "transfer" | "card") => {
+  const { mutate: checkoutMutation, isPending: isCheckingOut } = useMutation({
+    mutationFn: async (method: "cash" | "transfer" | "card") => {
+      const checkoutResult = await checkoutCart(activeCartId, {
+        customer_name: activeCart?.customerName || undefined,
+        customer_phone: activeCart?.customerPhone || undefined,
+      });
+
+      const saleId = checkoutResult.sale_id;
+      const customerEmail = user?.email || "";
+
+      if (method === "cash") {
+        await recordCashPayment({ sale_id: saleId, amount: finalTotal });
+        return { type: "cash" as const };
+      }
+
+      if (method === "card") {
+        const [cardResult, transferResult] = await Promise.all([
+          initiateCardPayment({ sale_id: saleId, amount: finalTotal, customer_email: customerEmail }),
+          initiateTransferPayment({ sale_id: saleId, amount: finalTotal, customer_email: customerEmail }),
+        ]);
+        return {
+          type: "card" as const,
+          saleId,
+          cardResult,
+          transferResult,
+        };
+      }
+
+      // transfer
+      const transferResult = await initiateTransferPayment({
+        sale_id: saleId, amount: finalTotal, customer_email: customerEmail,
+      });
+      return {
+        type: "transfer" as const,
+        saleId,
+        transferResult,
+      };
+    },
+    onSuccess: (result) => {
+      if (result.type === "cash") {
+        setIsSuccess(true);
+        return;
+      }
+
+      onVisibleChange(false);
+
+      if (result.type === "card") {
+        router.push({
+          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
+          params: {
+            saleId: result.saleId,
+            paymentId: result.cardResult.payment_id,
+            method: "card",
+            amount: String(finalTotal),
+            qrCode: result.cardResult.qr_code_base64 || "",
+            txRef: result.cardResult.tx_ref || "",
+            accountNumber: result.transferResult.account_number || "",
+            bankName: result.transferResult.bank_name || "",
+            expiryDate: result.transferResult.expiry_date || "",
+          },
+        });
+      } else {
+        router.push({
+          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
+          params: {
+            saleId: result.saleId,
+            paymentId: result.transferResult.payment_id,
+            method: "transfer",
+            amount: String(finalTotal),
+            accountNumber: result.transferResult.account_number || "",
+            bankName: result.transferResult.bank_name || "",
+            txRef: result.transferResult.tx_ref || "",
+            expiryDate: result.transferResult.expiry_date || "",
+          },
+        });
+      }
+    },
+    onError: (err: any) => {
+      Alert.alert("Payment Failed", err?.message || "Something went wrong");
+    },
+  });
+
+  const { mutate: splitCheckoutMutation, isPending: isSplitCheckingOut } = useMutation({
+    mutationFn: async () => {
+      const checkoutResult = await checkoutCart(activeCartId, {
+        customer_name: activeCart?.customerName || undefined,
+        customer_phone: activeCart?.customerPhone || undefined,
+      });
+
+      const saleId = checkoutResult.sale_id;
+      const customerEmail = user?.email || "";
+
+      await recordSplitPayment({
+        sale_id: saleId,
+        splits: {
+          cash: numCash || undefined,
+          card: numCard || undefined,
+          transfer: numTransfer || undefined,
+        },
+        customer_email: customerEmail,
+      });
+
+      if (numCard > 0) {
+        const [cardResult, transferResult] = await Promise.all([
+          initiateCardPayment({ sale_id: saleId, amount: numCard, customer_email: customerEmail }),
+          initiateTransferPayment({ sale_id: saleId, amount: numCard, customer_email: customerEmail }),
+        ]);
+        return {
+          type: "card" as const,
+          saleId,
+          cardResult,
+          transferResult,
+          amount: numCard,
+        };
+      }
+
+      if (numTransfer > 0) {
+        const transferResult = await initiateTransferPayment({
+          sale_id: saleId, amount: numTransfer, customer_email: customerEmail,
+        });
+        return {
+          type: "transfer" as const,
+          saleId,
+          transferResult,
+          amount: numTransfer,
+        };
+      }
+
+      return { type: "cash" as const };
+    },
+    onSuccess: (result) => {
+      if (result.type === "cash") {
+        setIsSuccess(true);
+        return;
+      }
+
+      onVisibleChange(false);
+
+      if (result.type === "card") {
+        router.push({
+          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
+          params: {
+            saleId: result.saleId,
+            paymentId: result.cardResult.payment_id,
+            method: "card",
+            amount: String(result.amount),
+            qrCode: result.cardResult.qr_code_base64 || "",
+            txRef: result.cardResult.tx_ref || "",
+            accountNumber: result.transferResult.account_number || "",
+            bankName: result.transferResult.bank_name || "",
+            expiryDate: result.transferResult.expiry_date || "",
+          },
+        });
+      } else {
+        router.push({
+          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
+          params: {
+            saleId: result.saleId,
+            paymentId: result.transferResult.payment_id,
+            method: "transfer",
+            amount: String(result.amount),
+            accountNumber: result.transferResult.account_number || "",
+            bankName: result.transferResult.bank_name || "",
+            txRef: result.transferResult.tx_ref || "",
+            expiryDate: result.transferResult.expiry_date || "",
+          },
+        });
+      }
+    },
+    onError: (err: any) => {
+      Alert.alert("Payment Failed", err?.message || "Something went wrong");
+    },
+  });
+
+  const handleCheckout = (method?: "cash" | "transfer" | "card") => {
     if (!isPaidValid) {
       Alert.alert(
         "Invalid Payment",
@@ -1226,7 +1411,6 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
     const resolvedMethod = method ?? paymentMethod;
 
-    // For split payment, track which parts have been paid
     if (paymentMethod === "split" && method) {
       if (method === "cash" && !splitPaidCash) {
         setSplitPaidCash(true);
@@ -1246,169 +1430,17 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     }
 
     setLastPayment({
-      cash:
-        resolvedMethod === "transfer" || resolvedMethod === "card"
-          ? 0
-          : numCash,
-      transfer:
-        resolvedMethod === "cash" || resolvedMethod === "card"
-          ? 0
-          : numTransfer,
-      card:
-        resolvedMethod === "cash" || resolvedMethod === "transfer"
-          ? 0
-          : numCard,
+      cash: resolvedMethod === "transfer" || resolvedMethod === "card" ? 0 : numCash,
+      transfer: resolvedMethod === "cash" || resolvedMethod === "card" ? 0 : numTransfer,
+      card: resolvedMethod === "cash" || resolvedMethod === "transfer" ? 0 : numCard,
       total: finalTotal,
       method: resolvedMethod,
     });
 
-    try {
-      // 1. Checkout the cart to create the sale
-      const checkoutResult = await checkoutCart(activeCartId, {
-        customer_name: activeCart?.customerName || undefined,
-        customer_phone: activeCart?.customerPhone || undefined,
-      });
-
-      const saleId = checkoutResult.sale_id;
-      const customerEmail = user?.email || "";
-
-      // 2. Initiate payment based on method
-      if (resolvedMethod === "cash") {
-        await recordCashPayment({
-          sale_id: saleId,
-          amount: finalTotal,
-        });
-        setIsSuccess(true);
-        return;
-      }
-
-      if (resolvedMethod === "card") {
-        const [cardResult, transferResult] = await Promise.all([
-          initiateCardPayment({
-            sale_id: saleId,
-            amount: finalTotal,
-            customer_email: customerEmail,
-          }),
-          initiateTransferPayment({
-            sale_id: saleId,
-            amount: finalTotal,
-            customer_email: customerEmail,
-          }),
-        ]);
-        onVisibleChange(false);
-        router.push({
-          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
-          params: {
-            saleId,
-            paymentId: cardResult.payment_id,
-            method: "card",
-            amount: String(finalTotal),
-            qrCode: cardResult.qr_code_base64 || "",
-            txRef: cardResult.tx_ref || "",
-            accountNumber: transferResult.account_number || "",
-            bankName: transferResult.bank_name || "",
-            expiryDate: transferResult.expiry_date || "",
-          },
-        });
-        return;
-      }
-
-      if (resolvedMethod === "transfer") {
-        const transferResult = await initiateTransferPayment({
-          sale_id: saleId,
-          amount: finalTotal,
-          customer_email: customerEmail,
-        });
-        onVisibleChange(false);
-        router.push({
-          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
-          params: {
-            saleId,
-            paymentId: transferResult.payment_id,
-            method: "transfer",
-            amount: String(finalTotal),
-            accountNumber: transferResult.account_number || "",
-            bankName: transferResult.bank_name || "",
-            txRef: transferResult.tx_ref || "",
-            expiryDate: transferResult.expiry_date || "",
-          },
-        });
-        return;
-      }
-
-      // Split payment — record all parts
-      if (resolvedMethod === "split") {
-        await recordSplitPayment({
-          sale_id: saleId,
-          splits: {
-            cash: numCash || undefined,
-            card: numCard || undefined,
-            transfer: numTransfer || undefined,
-          },
-          customer_email: customerEmail,
-        });
-
-        // If card or transfer is part of split, navigate to awaiting screen
-        if (numCard > 0) {
-          const [cardResult, transferResult] = await Promise.all([
-            initiateCardPayment({
-              sale_id: saleId,
-              amount: numCard,
-              customer_email: customerEmail,
-            }),
-            initiateTransferPayment({
-              sale_id: saleId,
-              amount: numCard,
-              customer_email: customerEmail,
-            }),
-          ]);
-          onVisibleChange(false);
-          router.push({
-            pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
-            params: {
-              saleId,
-              paymentId: cardResult.payment_id,
-              method: "card",
-              amount: String(numCard),
-              qrCode: cardResult.qr_code_base64 || "",
-              txRef: cardResult.tx_ref || "",
-              accountNumber: transferResult.account_number || "",
-              bankName: transferResult.bank_name || "",
-              expiryDate: transferResult.expiry_date || "",
-            },
-          });
-          return;
-        }
-
-        if (numTransfer > 0) {
-          const transferResult = await initiateTransferPayment({
-            sale_id: saleId,
-            amount: numTransfer,
-            customer_email: customerEmail,
-          });
-          onVisibleChange(false);
-          router.push({
-            pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
-            params: {
-              saleId,
-              paymentId: transferResult.payment_id,
-              method: "transfer",
-              amount: String(numTransfer),
-              accountNumber: transferResult.account_number || "",
-              bankName: transferResult.bank_name || "",
-              txRef: transferResult.tx_ref || "",
-              expiryDate: transferResult.expiry_date || "",
-            },
-          });
-          return;
-        }
-
-        // All cash in split — show success
-        setIsSuccess(true);
-        return;
-      }
-    } catch (err: any) {
-      Alert.alert("Payment Failed", err?.message || "Something went wrong");
+    if (paymentMethod === "split") {
+      splitCheckoutMutation();
+    } else {
+      checkoutMutation(resolvedMethod as "cash" | "transfer" | "card");
     }
   };
 
@@ -1567,6 +1599,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
                 splitPaidCash={splitPaidCash}
                 splitPaidTransfer={splitPaidTransfer}
                 splitPaidCard={splitPaidCard}
+                isCheckingOut={isCheckingOut || isSplitCheckingOut}
                 colors={colors}
                 onSelectPaymentMethod={handleSelectPaymentMethod}
                 onCashChange={handleCashChange}
