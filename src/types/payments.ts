@@ -26,6 +26,8 @@ export interface SplitPaymentRequest {
     card?: number;
     transfer?: number;
   };
+  customer_email: string;
+  customer_name?: string;
 }
 
 // ── Payment Responses ──────────────────────────────────────────────────────

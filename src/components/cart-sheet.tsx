@@ -1270,6 +1270,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       });
 
       const saleId = checkoutResult.sale_id;
+      const customerEmail = user?.email || "";
 
       // 2. Initiate payment based on method
       if (resolvedMethod === "cash") {
@@ -1285,11 +1286,11 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
         const cardResult = await initiateCardPayment({
           sale_id: saleId,
           amount: finalTotal,
+          customer_email: customerEmail,
         });
-        // Navigate to payment awaiting screen for QR code
         onVisibleChange(false);
         router.push({
-          pathname: "/(pos)/payment-awaiting/[saleId]",
+          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
           params: {
             saleId,
             paymentId: cardResult.payment_id,
@@ -1306,10 +1307,11 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
         const transferResult = await initiateTransferPayment({
           sale_id: saleId,
           amount: finalTotal,
+          customer_email: customerEmail,
         });
         onVisibleChange(false);
         router.push({
-          pathname: "/(pos)/payment-awaiting/[saleId]",
+          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
           params: {
             saleId,
             paymentId: transferResult.payment_id,
@@ -1328,9 +1330,12 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       if (resolvedMethod === "split") {
         await recordSplitPayment({
           sale_id: saleId,
-          cash_amount: numCash,
-          card_amount: numCard,
-          transfer_amount: numTransfer,
+          splits: {
+            cash: numCash || undefined,
+            card: numCard || undefined,
+            transfer: numTransfer || undefined,
+          },
+          customer_email: customerEmail,
         });
 
         // If card or transfer is part of split, navigate to awaiting screen
@@ -1338,10 +1343,11 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
           const cardResult = await initiateCardPayment({
             sale_id: saleId,
             amount: numCard,
+            customer_email: customerEmail,
           });
           onVisibleChange(false);
           router.push({
-            pathname: "/(pos)/payment-awaiting/[saleId]",
+            pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
             params: {
               saleId,
               paymentId: cardResult.payment_id,
@@ -1358,10 +1364,11 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
           const transferResult = await initiateTransferPayment({
             sale_id: saleId,
             amount: numTransfer,
+            customer_email: customerEmail,
           });
           onVisibleChange(false);
           router.push({
-            pathname: "/(pos)/payment-awaiting/[saleId]",
+            pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
             params: {
               saleId,
               paymentId: transferResult.payment_id,
