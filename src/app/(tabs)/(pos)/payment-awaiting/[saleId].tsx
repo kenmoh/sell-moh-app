@@ -7,6 +7,7 @@ import {
   ActivityIndicator,
   Alert,
   Image,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -37,7 +38,6 @@ export default function PaymentAwaitingScreen() {
   const params = useLocalSearchParams<PaymentAwaitingParams>();
   const {
     saleId,
-    paymentId,
     method,
     amount,
     qrCode,
@@ -48,7 +48,7 @@ export default function PaymentAwaitingScreen() {
   } = params;
 
   const [copied, setCopied] = useState(false);
-  const { data: status, error, isPolling } = usePaymentStatus(saleId, true);
+  const { data: status } = usePaymentStatus(saleId, true);
 
   useEffect(() => {
     if (status?.status === "completed") {
@@ -68,65 +68,202 @@ export default function PaymentAwaitingScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["top"]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={["top"]}
+    >
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Lucide name="arrow-left" size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Receive money</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Receive money
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={styles.content}>
-        {/* QR Code section — shown for card payments */}
-        {method === "card" && qrCode ? (
-          <View style={[styles.qrCard, { backgroundColor: colors.backgroundElement }]}>
-            <View style={styles.qrWrapper}>
-              <Image
-                source={{ uri: `data:image/png;base64,${qrCode}` }}
-                style={styles.qrCode}
-                resizeMode="contain"
-              />
-            </View>
-            <Text style={[styles.qrLabel, { color: colors.textSecondary }]}>
-              Scan to pay this account
-            </Text>
+      <ScrollView
+        style={styles.scrollContent}
+        contentContainerStyle={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* QR Code — shown for card payments */}
+        {method === "card" && (
+          <View
+            style={[
+              styles.qrCard,
+              { backgroundColor: colors.backgroundElement },
+            ]}
+          >
+            {qrCode ? (
+              <>
+                <View style={styles.qrWrapper}>
+                  <Image
+                    source={{ uri: `data:image/png;base64,${qrCode}` }}
+                    style={styles.qrCode}
+                    resizeMode="contain"
+                  />
+                </View>
+                <Text style={[styles.qrLabel, { color: colors.textSecondary }]}>
+                  Scan to pay this account
+                </Text>
+              </>
+            ) : (
+              <>
+                <ActivityIndicator
+                  size="large"
+                  color={colors.buttonPrimary}
+                />
+                <Text
+                  style={[styles.qrLabel, { color: colors.textSecondary }]}
+                >
+                  Generating QR code...
+                </Text>
+              </>
+            )}
           </View>
-        ) : method === "card" ? (
-          <View style={[styles.qrCard, { backgroundColor: colors.backgroundElement }]}>
-            <ActivityIndicator size="large" color={colors.buttonPrimary} />
-            <Text style={[styles.qrLabel, { color: colors.textSecondary }]}>
-              Generating QR code...
-            </Text>
-          </View>
-        ) : null}
+        )}
 
-        {/* Transfer details — shown for transfer payments */}
-        {method === "transfer" && (
+        {/* Bank transfer details — shown for card (below QR) and transfer */}
+        {accountNumber && (
           <View style={styles.transferSection}>
-            {/* Account Name */}
-            <View style={[styles.detailCard, { backgroundColor: colors.backgroundElement }]}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                Account name
-              </Text>
-              <Text style={[styles.detailValue, { color: colors.text }]}>
-                StoreFlow Payment
+            <View style={styles.sectionHeader}>
+              <Lucide name="landmark" size={18} color={colors.textSecondary} />
+              <Text
+                style={[styles.sectionTitle, { color: colors.textSecondary }]}
+              >
+                {method === "card"
+                  ? "Or pay via bank transfer"
+                  : "Bank transfer details"}
               </Text>
             </View>
 
             {/* Account Number */}
-            <View style={[styles.detailCard, { backgroundColor: colors.backgroundElement }]}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
+            <View
+              style={[
+                styles.detailCard,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.detailLabel,
+                  { color: colors.textSecondary },
+                ]}
+              >
                 Account number
               </Text>
               <View style={styles.detailRow}>
                 <Text style={[styles.detailValue, { color: colors.text }]}>
-                  {accountNumber || "Generating..."}
+                  {accountNumber}
                 </Text>
-                {accountNumber && (
+                <TouchableOpacity
+                  onPress={() => handleCopy(accountNumber)}
+                  style={styles.copyBtn}
+                >
+                  <Lucide
+                    name={copied ? "check" : "copy"}
+                    size={20}
+                    color={copied ? "#10b981" : colors.buttonPrimary}
+                  />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Bank Name */}
+            {bankName && (
+              <View
+                style={[
+                  styles.detailCard,
+                  { backgroundColor: colors.backgroundElement },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.detailLabel,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Bank
+                </Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
+                  {bankName}
+                </Text>
+              </View>
+            )}
+
+            {/* Amount */}
+            <View
+              style={[
+                styles.detailCard,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
+              <Text
+                style={[
+                  styles.detailLabel,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                Amount
+              </Text>
+              <Text
+                style={[styles.detailValue, { color: colors.buttonPrimary }]}
+              >
+                ₦{parseFloat(amount).toLocaleString()}
+              </Text>
+            </View>
+
+            {/* Expiry */}
+            {expiryDate && (
+              <View
+                style={[
+                  styles.detailCard,
+                  { backgroundColor: colors.backgroundElement },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.detailLabel,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Expires
+                </Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
+                  {expiryDate}
+                </Text>
+              </View>
+            )}
+
+            {/* Tx Ref */}
+            {txRef && (
+              <View
+                style={[
+                  styles.detailCard,
+                  { backgroundColor: colors.backgroundElement },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.detailLabel,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Reference
+                </Text>
+                <View style={styles.detailRow}>
+                  <Text
+                    style={[
+                      styles.detailValue,
+                      { color: colors.text, flex: 1 },
+                    ]}
+                  >
+                    {txRef}
+                  </Text>
                   <TouchableOpacity
-                    onPress={() => handleCopy(accountNumber)}
+                    onPress={() => handleCopy(txRef)}
                     style={styles.copyBtn}
                   >
                     <Lucide
@@ -135,81 +272,32 @@ export default function PaymentAwaitingScreen() {
                       color={copied ? "#10b981" : colors.buttonPrimary}
                     />
                   </TouchableOpacity>
-                )}
-              </View>
-            </View>
-
-            {/* Bank Name */}
-            {bankName ? (
-              <View style={[styles.detailCard, { backgroundColor: colors.backgroundElement }]}>
-                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                  Bank
-                </Text>
-                <Text style={[styles.detailValue, { color: colors.text }]}>
-                  {bankName}
-                </Text>
-              </View>
-            ) : null}
-
-            {/* Amount */}
-            <View style={[styles.detailCard, { backgroundColor: colors.backgroundElement }]}>
-              <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                Amount
-              </Text>
-              <Text style={[styles.detailValue, { color: colors.buttonPrimary }]}>
-                ₦{parseFloat(amount).toLocaleString()}
-              </Text>
-            </View>
-
-            {/* Expiration */}
-            {expiryDate ? (
-              <View style={[styles.detailCard, { backgroundColor: colors.backgroundElement }]}>
-                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                  Expires
-                </Text>
-                <Text style={[styles.detailValue, { color: colors.text }]}>
-                  {expiryDate}
-                </Text>
-              </View>
-            ) : null}
-
-            {/* Tx Ref */}
-            {txRef ? (
-              <View style={[styles.detailCard, { backgroundColor: colors.backgroundElement }]}>
-                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
-                  Reference
-                </Text>
-                <View style={styles.detailRow}>
-                  <Text style={[styles.detailValue, { color: colors.text, flex: 1 }]}>
-                    {txRef}
-                  </Text>
-                  <TouchableOpacity onPress={() => handleCopy(txRef)} style={styles.copyBtn}>
-                    <Lucide
-                      name={copied ? "check" : "copy"}
-                      size={20}
-                      color={copied ? "#10b981" : colors.buttonPrimary}
-                    />
-                  </TouchableOpacity>
                 </View>
               </View>
-            ) : null}
+            )}
           </View>
         )}
 
         {/* Polling indicator */}
         <View style={styles.pollingRow}>
           <ActivityIndicator size="small" color={colors.buttonPrimary} />
-          <Text style={[styles.pollingText, { color: colors.textSecondary }]}>
+          <Text
+            style={[styles.pollingText, { color: colors.textSecondary }]}
+          >
             Waiting for payment...
           </Text>
         </View>
+      </ScrollView>
 
-        {/* Cancel button */}
+      {/* Cancel button — fixed at bottom */}
+      <View style={[styles.bottomBar, { backgroundColor: colors.background }]}>
         <TouchableOpacity
           onPress={() => router.back()}
           style={[styles.cancelBtn, { borderColor: colors.backgroundElement }]}
         >
-          <Text style={[styles.cancelText, { color: colors.text }]}>Cancel</Text>
+          <Text style={[styles.cancelText, { color: colors.text }]}>
+            Cancel
+          </Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -237,9 +325,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-  content: {
+  scrollContent: {
     flex: 1,
+  },
+  scrollContainer: {
     paddingHorizontal: 16,
+    paddingBottom: 24,
     gap: 16,
   },
   qrCard: {
@@ -264,12 +355,22 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 14,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
   transferSection: {
-    gap: 12,
+    gap: 10,
   },
   detailCard: {
     borderRadius: 12,
-    padding: 16,
+    padding: 14,
   },
   detailLabel: {
     fontSize: 13,
@@ -296,6 +397,11 @@ const styles = StyleSheet.create({
   },
   pollingText: {
     fontSize: 14,
+  },
+  bottomBar: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 8,
   },
   cancelBtn: {
     borderWidth: 1,
