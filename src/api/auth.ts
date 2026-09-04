@@ -238,3 +238,32 @@ export const setSupervisorPin = async (pin: string): Promise<void> => {
     throw new Error(getErrorMessage(res));
   }
 };
+
+export interface AuditLogEntry {
+  id: string;
+  user_id: string | null;
+  action: string;
+  details: Record<string, unknown> | null;
+  created_at: string | null;
+}
+
+export const getAuditLogs = async (opts?: {
+  action?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<AuditLogEntry[]> => {
+  const params: Record<string, string> = {};
+  if (opts?.action) params.action = opts.action;
+  if (opts?.limit) params.limit = String(opts.limit);
+  if (opts?.offset) params.offset = String(opts.offset);
+
+  const res = await apiClient.get<{ data: AuditLogEntry[] }>(`${URL}/audit`, {
+    params,
+  });
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? [];
+};
