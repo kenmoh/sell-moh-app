@@ -34,7 +34,6 @@ const DraggableCart = () => {
   const totalItems = useCartStore((s) => s.totalItems());
   const cartCount = useCartStore((s) => s.carts.length);
 
-  if (cartCount === 0) return null;
   const translateX = useSharedValue(SCREEN_WIDTH - FAB_SIZE - MARGIN);
   const translateY = useSharedValue(0);
   const contextX = useSharedValue(0);
@@ -65,6 +64,8 @@ const DraggableCart = () => {
       { translateY: translateY.value },
     ],
   }));
+
+  if (cartCount === 0) return null;
 
   return (
     <>
