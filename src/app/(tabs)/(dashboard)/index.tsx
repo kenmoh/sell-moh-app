@@ -1,4 +1,3 @@
-import AddExpenseSheet from "@/components/add-expense-sheet";
 import { Colors } from "@/constants/theme";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -319,18 +318,6 @@ const Dashboard = () => {
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
             EXPENSES TODAY
           </Text>
-          <Pressable
-            style={({ pressed }) => [
-              styles.addExpenseLink,
-              pressed && { opacity: 0.7 },
-            ]}
-            onPress={() => setAddExpenseVisible(true)}
-          >
-            <View style={styles.addExpensePlusCircle}>
-              <Lucide name="plus" size={12} color="#2563eb" />
-            </View>
-            <Text style={styles.addExpenseLinkText}>Add</Text>
-          </Pressable>
         </View>
 
         {/* Expense Summary Overview Card */}
@@ -529,7 +516,7 @@ const Dashboard = () => {
       </ScrollView>
 
       {/* ─── Floating Action Button ─── */}
-      <Pressable
+      {/* <Pressable
         style={({ pressed }) => [
           styles.fab,
           { bottom: insets.bottom + 24 },
@@ -544,7 +531,7 @@ const Dashboard = () => {
         visible={addExpenseVisible}
         onVisibleChange={setAddExpenseVisible}
         onAdd={handleAddExpense}
-      />
+      /> */}
     </View>
   );
 };

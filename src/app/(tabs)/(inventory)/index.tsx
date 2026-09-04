@@ -41,13 +41,21 @@ const HeaderNav: React.FC<{
   isOwner: boolean;
   currentStoreName: string;
   onOpenStoreSheet: () => void;
-}> = ({ totalCount, colors, insetsTop, isOwner, currentStoreName, onOpenStoreSheet }) => (
-  <View style={[styles.header, { paddingTop: insetsTop + 10 }]}>
+}> = ({
+  totalCount,
+  colors,
+  insetsTop,
+  isOwner,
+  currentStoreName,
+  onOpenStoreSheet,
+}) => (
+  <View style={[styles.header, { paddingVertical: 5 }]}>
     <View style={{ flex: 1 }}>
-      <Text style={[styles.headerTitle, { color: colors.text }]}>Inventory</Text>
       {isOwner ? (
         <Pressable onPress={onOpenStoreSheet} style={styles.storeSelector}>
-          <Text style={[styles.headerSubtitle, { color: colors.buttonPrimary }]}>
+          <Text
+            style={[styles.headerSubtitle, { color: colors.buttonPrimary }]}
+          >
             {currentStoreName}
           </Text>
           <Lucide name="chevron-down" size={14} color={colors.buttonPrimary} />
@@ -403,7 +411,9 @@ const InventoryScreen = () => {
   }, [mappedProducts, statusFilter]);
 
   const totalItems = totalFromServer;
-  const lowStockCount = mappedProducts.filter((i) => getStatus(i) === "Low").length;
+  const lowStockCount = mappedProducts.filter(
+    (i) => getStatus(i) === "Low",
+  ).length;
   const outOfStockCount = mappedProducts.filter(
     (i) => getStatus(i) === "Out",
   ).length;
@@ -564,7 +574,9 @@ const InventoryScreen = () => {
             <Text style={[styles.sheetTitle, { color: colors.text }]}>
               Select Store
             </Text>
-            <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.sheetSubtitle, { color: colors.textSecondary }]}
+            >
               Choose a store to view inventory
             </Text>
           </View>

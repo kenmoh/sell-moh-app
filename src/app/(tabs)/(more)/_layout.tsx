@@ -26,6 +26,12 @@ const MoreLayout = () => {
         <Stack.Screen name="staff-roles" options={{ headerShown: false }} />
         <Stack.Screen name="report" options={{ headerShown: false }} />
         <Stack.Screen name="notifications" options={{ headerShown: false }} />
+        <Stack.Screen name="profile" options={{}} />
+        <Stack.Screen name="open-carts" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="tenant-activity-logs"
+          options={{ title: "Activity Logs" }}
+        />
       </Stack>
     </AView>
   );

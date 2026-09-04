@@ -55,12 +55,17 @@ const more = () => {
       <MoreCard label="Store">
         <LinkItem
           label="Store Profile"
-          leadingIcon="user"
+          leadingIcon="building-2"
           onPress={() => router.push("/(tabs)/(more)/store-profile")}
         />
         <LinkItem
+          label="User Profile"
+          leadingIcon="user-circle"
+          onPress={() => router.push("/(tabs)/(more)/profile")}
+        />
+        <LinkItem
           label="Employees & Roles"
-          leadingIcon="users"
+          leadingIcon="users-round"
           onPress={() => router.push("/(tabs)/(more)/staff-roles")}
         />
         <LinkItem
@@ -116,7 +121,7 @@ const more = () => {
       <MoreCard label="Payments & Accounting">
         <LinkItem
           label="Accounting"
-          leadingIcon={"table"}
+          leadingIcon={"scale"}
           onPress={() => router.push("/(tabs)/(more)/accounting")}
         />
         <LinkItem label="Payment Methods" leadingIcon={"credit-card"} />
@@ -131,6 +136,18 @@ const more = () => {
           label="Reports"
           leadingIcon={"bar-chart"}
           onPress={() => router.push("/(tabs)/(more)/report")}
+        />
+      </MoreCard>
+      <MoreCard label="Logs">
+        <LinkItem
+          label="Activity Logs"
+          leadingIcon={"logs"}
+          onPress={() => router.push("/(tabs)/(more)/tenant-activity-logs")}
+        />
+        <LinkItem
+          label="Open Carts"
+          leadingIcon={"shopping-cart"}
+          onPress={() => router.push("/(tabs)/(more)/open-carts")}
         />
       </MoreCard>
       <MoreCard label="Account">

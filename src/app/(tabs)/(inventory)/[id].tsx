@@ -27,7 +27,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function getStockStatus(
   qty: number,
-  reorderPoint: number
+  reorderPoint: number,
 ): { label: string; color: string } {
   if (qty === 0) return { label: "Out of Stock", color: "#dc2626" };
   if (reorderPoint > 0 && qty <= reorderPoint)
@@ -67,7 +67,10 @@ function movementLabel(type: string): string {
 }
 
 const ProductDetails = () => {
-  const { id, storeId: storeIdParam } = useLocalSearchParams<{ id: string; storeId?: string }>();
+  const { id, storeId: storeIdParam } = useLocalSearchParams<{
+    id: string;
+    storeId?: string;
+  }>();
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
@@ -273,21 +276,31 @@ const ProductDetails = () => {
             <View
               style={[styles.detailsCard, { backgroundColor: colors.card }]}
             >
-              {([
-                {
-                  label: "Available",
-                  value: String(product.available),
-                  badge: stockStatus.label,
-                  badgeColor: stockStatus.color,
-                },
-                { label: "Total Qty", value: String(product.qty) },
-                { label: "Reserved", value: String(product.reserved_qty) },
-                {
-                  label: "Reorder Point",
-                  value: String(product.reorder_point),
-                },
-                { label: "Cost Price", value: `₦${(product.unit_cost ?? product.cost_price ?? 0).toLocaleString()}` },
-              ] as Array<{ label: string; value: string; badge?: string; badgeColor?: string }>).map((row, i, arr) => (
+              {(
+                [
+                  {
+                    label: "Available",
+                    value: String(product.available),
+                    badge: stockStatus.label,
+                    badgeColor: stockStatus.color,
+                  },
+                  { label: "Total Qty", value: String(product.qty) },
+                  { label: "Reserved", value: String(product.reserved_qty) },
+                  {
+                    label: "Reorder Point",
+                    value: String(product.reorder_point),
+                  },
+                  {
+                    label: "Cost Price",
+                    value: `₦${(product.unit_cost ?? product.cost_price ?? 0).toLocaleString()}`,
+                  },
+                ] as Array<{
+                  label: string;
+                  value: string;
+                  badge?: string;
+                  badgeColor?: string;
+                }>
+              ).map((row, i, arr) => (
                 <View
                   key={row.label}
                   style={[
@@ -306,7 +319,13 @@ const ProductDetails = () => {
                   >
                     {row.label}
                   </Text>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
                     <Text style={[styles.detailValue, { color: colors.text }]}>
                       {row.value}
                     </Text>
@@ -352,7 +371,7 @@ const ProductDetails = () => {
                   label: "Status",
                   value: product.status === "active" ? "Active" : "Inactive",
                 },
-                { label: "SKU", value: product.sku ?? "N/A" },
+                { label: "SKU", value: product.sku?.slice(0, 15) ?? "N/A" },
               ].map((row, i, arr) => (
                 <View
                   key={row.label}
@@ -416,72 +435,81 @@ const ProductDetails = () => {
                 <Text
                   style={[
                     styles.emptyText,
-                    { color: colors.textSecondary, paddingVertical: 16, textAlign: "center" },
+                    {
+                      color: colors.textSecondary,
+                      paddingVertical: 16,
+                      textAlign: "center",
+                    },
                   ]}
                 >
                   No stock history yet
                 </Text>
               ) : (
-                (product.history ?? []).map((entry: StockHistoryItem, i: number) => {
-                  const isPositive = entry.qty_change > 0;
-                  return (
-                    <View
-                      key={entry.id ?? i}
-                      style={[
-                        styles.historyRow,
-                        i < (product.history?.length ?? 0) - 1 && {
-                          borderBottomWidth: StyleSheet.hairlineWidth,
-                          borderBottomColor: colors.backgroundElement,
-                        },
-                      ]}
-                    >
-                      <View style={styles.historyLeft}>
-                        <Text
-                          style={[
-                            styles.historyDate,
-                            { color: colors.textSecondary },
-                          ]}
-                        >
-                          {formatHistoryDate(entry.created_at)}
-                        </Text>
-                        <Text
-                          style={[styles.historyAction, { color: colors.text }]}
-                        >
-                          {movementLabel(entry.movement_type)}
-                        </Text>
-                        {entry.notes ? (
+                (product.history ?? []).map(
+                  (entry: StockHistoryItem, i: number) => {
+                    const isPositive = entry.qty_change > 0;
+                    return (
+                      <View
+                        key={entry.id ?? i}
+                        style={[
+                          styles.historyRow,
+                          i < (product.history?.length ?? 0) - 1 && {
+                            borderBottomWidth: StyleSheet.hairlineWidth,
+                            borderBottomColor: colors.backgroundElement,
+                          },
+                        ]}
+                      >
+                        <View style={styles.historyLeft}>
                           <Text
                             style={[
-                              styles.historyNote,
+                              styles.historyDate,
                               { color: colors.textSecondary },
                             ]}
                           >
-                            {entry.notes}
+                            {formatHistoryDate(entry.created_at)}
                           </Text>
-                        ) : null}
+                          <Text
+                            style={[
+                              styles.historyAction,
+                              { color: colors.text },
+                            ]}
+                          >
+                            {movementLabel(entry.movement_type)}
+                          </Text>
+                          {entry.notes ? (
+                            <Text
+                              style={[
+                                styles.historyNote,
+                                { color: colors.textSecondary },
+                              ]}
+                            >
+                              {entry.notes}
+                            </Text>
+                          ) : null}
+                        </View>
+                        <View style={styles.historyRight}>
+                          <Text
+                            style={[
+                              styles.historyQty,
+                              { color: isPositive ? "#16a34a" : "#dc2626" },
+                            ]}
+                          >
+                            {isPositive ? "+" : ""}
+                            {entry.qty_change}
+                          </Text>
+                          <Text
+                            style={[
+                              styles.historyBalance,
+                              { color: colors.textSecondary },
+                            ]}
+                          >
+                            Bal: {entry.balance_after}
+                          </Text>
+                        </View>
                       </View>
-                      <View style={styles.historyRight}>
-                        <Text
-                          style={[
-                            styles.historyQty,
-                            { color: isPositive ? "#16a34a" : "#dc2626" },
-                          ]}
-                        >
-                          {isPositive ? "+" : ""}
-                          {entry.qty_change}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.historyBalance,
-                            { color: colors.textSecondary },
-                          ]}
-                        >
-                          Bal: {entry.balance_after}
-                        </Text>
-                      </View>
-                    </View>
-                  );
-                })
+                    );
+                  },
+                )
               )}
             </View>
           </View>

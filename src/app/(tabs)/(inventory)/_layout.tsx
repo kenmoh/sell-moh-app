@@ -50,7 +50,7 @@ const HeaderRight = ({ onPress }: { onPress: () => void }) => {
         alignItems: "center",
         gap: 1,
         paddingHorizontal: 10,
-        paddingVertical: 3.5,
+        paddingVertical: 7,
         backgroundColor: colors.buttonPrimary,
         borderRadius: 20,
         justifyContent: "center",
