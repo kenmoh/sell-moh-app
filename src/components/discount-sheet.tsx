@@ -11,7 +11,6 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -523,7 +522,7 @@ const ProductPickerSheet = ({
   const { data, isLoading } = useQuery({
     queryKey: ["products", storeId, search],
     queryFn: () => fetchProducts(storeId, { page_size: 100, search: search || undefined }),
-    enabled: visible && !!storeId,
+    enabled: visible && storeId.length > 0,
   });
 
   const products = data?.data ?? [];
@@ -556,13 +555,12 @@ const ProductPickerSheet = ({
       {isLoading ? (
         <ActivityIndicator color={colors.buttonPrimary} style={{ marginTop: 40 }} />
       ) : (
-        <FlatList
-          data={products}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
+        <View style={styles.pickerPillGrid}>
+          {products.map((item) => {
             const isSelected = selectedIds.includes(item.id);
             return (
               <Pressable
+                key={item.id}
                 style={[
                   styles.pickerPill,
                   {
@@ -586,15 +584,13 @@ const ProductPickerSheet = ({
                 </Text>
               </Pressable>
             );
-          }}
-          numColumns={2}
-          columnWrapperStyle={styles.pickerPillRow}
-          ListEmptyComponent={
+          })}
+          {products.length === 0 && (
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               No products found
             </Text>
-          }
-        />
+          )}
+        </View>
       )}
 
       <Pressable
@@ -620,9 +616,9 @@ const CategoryPickerSheet = ({
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
 
   const { data: categories, isLoading } = useQuery({
-    queryKey: ["categories", storeId],
+    queryKey: ["discount-categories", storeId],
     queryFn: () => fetchTenantCategories(storeId),
-    enabled: visible && !!storeId,
+    enabled: visible && storeId.length > 0,
   });
 
   return (
@@ -641,13 +637,12 @@ const CategoryPickerSheet = ({
       {isLoading ? (
         <ActivityIndicator color={colors.buttonPrimary} style={{ marginTop: 40 }} />
       ) : (
-        <FlatList
-          data={categories ?? []}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => {
+        <View style={styles.pickerPillGrid}>
+          {(categories ?? []).map((item) => {
             const isSelected = selectedIds.includes(item.id);
             return (
               <Pressable
+                key={item.id}
                 style={[
                   styles.pickerPill,
                   {
@@ -671,15 +666,13 @@ const CategoryPickerSheet = ({
                 </Text>
               </Pressable>
             );
-          }}
-          numColumns={2}
-          columnWrapperStyle={styles.pickerPillRow}
-          ListEmptyComponent={
+          })}
+          {(categories ?? []).length === 0 && (
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               No categories found
             </Text>
-          }
-        />
+          )}
+        </View>
       )}
 
       <Pressable
@@ -762,9 +755,12 @@ const styles = StyleSheet.create({
   deleteConfirmBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   pickerHeader: { marginBottom: 16 },
   searchContainer: { marginBottom: 12 },
-  pickerPillRow: { gap: 8, marginBottom: 8 },
+  pickerPillGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
   pickerPill: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
@@ -773,7 +769,7 @@ const styles = StyleSheet.create({
     borderRadius: 100,
     borderWidth: 1,
   },
-  pickerPillText: { fontSize: 14, fontWeight: "500", flexShrink: 1 },
+  pickerPillText: { fontSize: 14, fontWeight: "500" },
   okBtn: {
     borderRadius: 50,
     paddingVertical: 14,
