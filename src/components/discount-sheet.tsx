@@ -1,13 +1,16 @@
 import { createDiscount, deleteDiscount, updateDiscount } from "@/api/discount";
+import { fetchTenantCategories, fetchProducts } from "@/api/inventory";
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useSession } from "@/lib/ctx";
 import { Discount } from "@/types/discount";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -38,6 +41,8 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
+  const { user } = useSession();
+  const storeId = user?.store_id ?? "";
   const isEditing = !!discount;
 
   const [name, setName] = useState("");
@@ -49,6 +54,11 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const [showProductPicker, setShowProductPicker] = useState(false);
+  const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+
   useEffect(() => {
     if (discount) {
       setName(discount.name);
@@ -57,6 +67,8 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
       setBuyXGetYFreeQty(String(discount.buy_x_get_y_free_qty || 1));
       setScope(discount.scope);
       setMinOrder(discount.min_order > 0 ? String(discount.min_order) : "");
+      setSelectedProductIds(discount.product_ids ?? []);
+      setSelectedCategoryIds(discount.category_ids ?? []);
     } else {
       reset();
     }
@@ -72,6 +84,8 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
         scope: scope as any,
         min_order: parseFloat(minOrder) || 0,
         is_active: true,
+        product_ids: scope === "specific_products" ? selectedProductIds : [],
+        category_ids: scope === "specific_categories" ? selectedCategoryIds : [],
       };
       return discount
         ? updateDiscount(discount.id, payload)
@@ -102,6 +116,10 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
     setMinOrder("");
     setErrors({});
     setShowDeleteConfirm(false);
+    setSelectedProductIds([]);
+    setSelectedCategoryIds([]);
+    setShowProductPicker(false);
+    setShowCategoryPicker(false);
   };
 
   const handleSave = () => {
@@ -110,6 +128,12 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
     if (!value || parseFloat(value) <= 0) newErrors.value = "Enter a valid value";
     if (discountType === "buy_x_get_y" && (!buyXGetYFreeQty || parseInt(buyXGetYFreeQty) <= 0)) {
       newErrors.buyXGetYFreeQty = "Enter free quantity";
+    }
+    if (scope === "specific_products" && selectedProductIds.length === 0) {
+      newErrors.products = "Select at least one product";
+    }
+    if (scope === "specific_categories" && selectedCategoryIds.length === 0) {
+      newErrors.categories = "Select at least one category";
     }
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -267,7 +291,55 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
               );
             })}
           </View>
+          {errors.products && scope === "specific_products" && (
+            <Text style={styles.errorText}>{errors.products}</Text>
+          )}
+          {errors.categories && scope === "specific_categories" && (
+            <Text style={styles.errorText}>{errors.categories}</Text>
+          )}
         </View>
+
+        {/* Product Picker Trigger */}
+        {scope === "specific_products" && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              Products ({selectedProductIds.length} selected)
+            </Text>
+            <Pressable
+              style={[styles.pickerBtn, { backgroundColor: colors.backgroundElement }]}
+              onPress={() => setShowProductPicker(true)}
+            >
+              <Lucide name="package" size={16} color={colors.textSecondary} />
+              <Text style={[styles.pickerBtnText, { color: colors.textSecondary }]}>
+                {selectedProductIds.length > 0 ? "Change products" : "Select products"}
+              </Text>
+            </Pressable>
+            {errors.products && (
+              <Text style={styles.errorText}>{errors.products}</Text>
+            )}
+          </View>
+        )}
+
+        {/* Category Picker Trigger */}
+        {scope === "specific_categories" && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              Categories ({selectedCategoryIds.length} selected)
+            </Text>
+            <Pressable
+              style={[styles.pickerBtn, { backgroundColor: colors.backgroundElement }]}
+              onPress={() => setShowCategoryPicker(true)}
+            >
+              <Lucide name="layers" size={16} color={colors.textSecondary} />
+              <Text style={[styles.pickerBtnText, { color: colors.textSecondary }]}>
+                {selectedCategoryIds.length > 0 ? "Change categories" : "Select categories"}
+              </Text>
+            </Pressable>
+            {errors.categories && (
+              <Text style={styles.errorText}>{errors.categories}</Text>
+            )}
+          </View>
+        )}
 
         {/* Min Order */}
         <View style={styles.section}>
@@ -344,11 +416,216 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
           )}
         </>
       )}
+
+      {/* Product Picker */}
+      <ProductPickerSheet
+        visible={showProductPicker}
+        onVisibleChange={setShowProductPicker}
+        storeId={storeId}
+        selectedIds={selectedProductIds}
+        onToggle={(id) =>
+          setSelectedProductIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+          )
+        }
+      />
+
+      {/* Category Picker */}
+      <CategoryPickerSheet
+        visible={showCategoryPicker}
+        onVisibleChange={setShowCategoryPicker}
+        storeId={storeId}
+        selectedIds={selectedCategoryIds}
+        onToggle={(id) =>
+          setSelectedCategoryIds((prev) =>
+            prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+          )
+        }
+      />
     </AppBottomSheet>
   );
 };
 
 export default DiscountSheet;
+
+// ── Product Picker Sheet ─────────────────────────────────────────────────────
+
+type PickerProps = {
+  visible: boolean;
+  onVisibleChange: (v: boolean) => void;
+  storeId: string;
+  selectedIds: string[];
+  onToggle: (id: string) => void;
+};
+
+const ProductPickerSheet = ({
+  visible,
+  onVisibleChange,
+  storeId,
+  selectedIds,
+  onToggle,
+}: PickerProps) => {
+  const scheme = useColorScheme();
+  const colors = Colors[scheme === "dark" ? "dark" : "light"];
+  const [search, setSearch] = useState("");
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["products", storeId, search],
+    queryFn: () => fetchProducts(storeId, { page_size: 100, search: search || undefined }),
+    enabled: visible && !!storeId,
+  });
+
+  const products = data?.data ?? [];
+
+  return (
+    <AppBottomSheet
+      snapPoints={["70%", "90%"]}
+      visible={visible}
+      onVisibleChange={(v) => {
+        if (!v) setSearch("");
+        onVisibleChange(v);
+      }}
+    >
+      <View style={styles.pickerHeader}>
+        <Text style={[styles.title, { color: colors.text }]}>Select Products</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          {selectedIds.length} selected
+        </Text>
+      </View>
+
+      <View style={styles.searchContainer}>
+        <AppTextInput
+          placeholder="Search products..."
+          value={search}
+          onChangeText={setSearch}
+          leftIcon="search"
+        />
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator color={colors.buttonPrimary} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={products}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            const isSelected = selectedIds.includes(item.id);
+            return (
+              <Pressable
+                style={[
+                  styles.pickerItem,
+                  {
+                    backgroundColor: isSelected
+                      ? colors.buttonPrimary + "15"
+                      : colors.backgroundElement,
+                    borderColor: isSelected ? colors.buttonPrimary : "transparent",
+                  },
+                ]}
+                onPress={() => onToggle(item.id)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.pickerItemName, { color: colors.text }]}>
+                    {item.name}
+                  </Text>
+                  <Text style={[styles.pickerItemMeta, { color: colors.textSecondary }]}>
+                    ₦{item.selling_price.toLocaleString()}
+                  </Text>
+                </View>
+                {isSelected && (
+                  <Lucide name="check-circle" size={20} color={colors.buttonPrimary} />
+                )}
+              </Pressable>
+            );
+          }}
+          ListEmptyComponent={
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              No products found
+            </Text>
+          }
+        />
+      )}
+    </AppBottomSheet>
+  );
+};
+
+// ── Category Picker Sheet ────────────────────────────────────────────────────
+
+const CategoryPickerSheet = ({
+  visible,
+  onVisibleChange,
+  storeId,
+  selectedIds,
+  onToggle,
+}: PickerProps) => {
+  const scheme = useColorScheme();
+  const colors = Colors[scheme === "dark" ? "dark" : "light"];
+
+  const { data: categories, isLoading } = useQuery({
+    queryKey: ["categories", storeId],
+    queryFn: () => fetchTenantCategories(storeId),
+    enabled: visible && !!storeId,
+  });
+
+  return (
+    <AppBottomSheet
+      snapPoints={["60%", "80%"]}
+      visible={visible}
+      onVisibleChange={onVisibleChange}
+    >
+      <View style={styles.pickerHeader}>
+        <Text style={[styles.title, { color: colors.text }]}>Select Categories</Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          {selectedIds.length} selected
+        </Text>
+      </View>
+
+      {isLoading ? (
+        <ActivityIndicator color={colors.buttonPrimary} style={{ marginTop: 40 }} />
+      ) : (
+        <FlatList
+          data={categories ?? []}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => {
+            const isSelected = selectedIds.includes(item.id);
+            return (
+              <Pressable
+                style={[
+                  styles.pickerItem,
+                  {
+                    backgroundColor: isSelected
+                      ? colors.buttonPrimary + "15"
+                      : colors.backgroundElement,
+                    borderColor: isSelected ? colors.buttonPrimary : "transparent",
+                  },
+                ]}
+                onPress={() => onToggle(item.id)}
+              >
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.pickerItemName, { color: colors.text }]}>
+                    {item.name}
+                  </Text>
+                  {item.description && (
+                    <Text style={[styles.pickerItemMeta, { color: colors.textSecondary }]}>
+                      {item.description}
+                    </Text>
+                  )}
+                </View>
+                {isSelected && (
+                  <Lucide name="check-circle" size={20} color={colors.buttonPrimary} />
+                )}
+              </Pressable>
+            );
+          }}
+          ListEmptyComponent={
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              No categories found
+            </Text>
+          }
+        />
+      )}
+    </AppBottomSheet>
+  );
+};
 
 const styles = StyleSheet.create({
   header: { marginBottom: 16 },
@@ -382,6 +659,15 @@ const styles = StyleSheet.create({
   },
   chipText: { fontSize: 13, fontWeight: "600" },
   errorText: { fontSize: 12, color: "#DC2626", marginTop: -4 },
+  pickerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  pickerBtnText: { fontSize: 14, fontWeight: "500" },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
@@ -409,4 +695,17 @@ const styles = StyleSheet.create({
   deleteCancelText: { fontSize: 14, fontWeight: "600" },
   deleteConfirmBtn: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: "center" },
   deleteConfirmBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
+  pickerHeader: { marginBottom: 16 },
+  searchContainer: { marginBottom: 12 },
+  pickerItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 14,
+    borderRadius: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+  },
+  pickerItemName: { fontSize: 15, fontWeight: "600", marginBottom: 2 },
+  pickerItemMeta: { fontSize: 13 },
+  emptyText: { textAlign: "center", marginTop: 40, fontSize: 14 },
 });
