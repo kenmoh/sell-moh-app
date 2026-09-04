@@ -1266,6 +1266,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     },
     onSuccess: (result) => {
       if (result.type === "cash") {
+        clearCartById(activeCartId);
         setIsSuccess(true);
         return;
       }
@@ -1358,6 +1359,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     },
     onSuccess: (result) => {
       if (result.type === "cash") {
+        clearCartById(activeCartId);
         setIsSuccess(true);
         return;
       }
