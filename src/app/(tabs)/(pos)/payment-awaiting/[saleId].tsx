@@ -25,7 +25,7 @@ type PaymentAwaitingParams = {
   txRef?: string;
   accountNumber?: string;
   bankName?: string;
-  accountExpiration?: string;
+  expiryDate?: string;
 };
 
 export default function PaymentAwaitingScreen() {
@@ -44,7 +44,7 @@ export default function PaymentAwaitingScreen() {
     txRef,
     accountNumber,
     bankName,
-    accountExpiration,
+    expiryDate,
   } = params;
 
   const [copied, setCopied] = useState(false);
@@ -162,13 +162,13 @@ export default function PaymentAwaitingScreen() {
             </View>
 
             {/* Expiration */}
-            {accountExpiration ? (
+            {expiryDate ? (
               <View style={[styles.detailCard, { backgroundColor: colors.backgroundElement }]}>
                 <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>
                   Expires
                 </Text>
                 <Text style={[styles.detailValue, { color: colors.text }]}>
-                  {accountExpiration}
+                  {expiryDate}
                 </Text>
               </View>
             ) : null}

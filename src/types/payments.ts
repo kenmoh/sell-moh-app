@@ -60,11 +60,8 @@ export interface TransferPaymentResult {
   method: string;
   account_number: string | null;
   bank_name: string | null;
-  instructions: string | null;
   tx_ref: string | null;
-  transfer_reference: string | null;
-  account_expiration: string | null;
-  transfer_note: string | null;
+  expiry_date: string | null;
 }
 
 export interface SplitSuggestion {
@@ -159,5 +156,5 @@ export interface PendingPayment {
   account_number: string | null;
   bank_name: string | null;
   tx_ref: string | null;
-  account_expiration: string | null;
+  expiry_date: string | null;
 }

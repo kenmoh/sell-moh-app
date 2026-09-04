@@ -1320,7 +1320,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
             accountNumber: transferResult.account_number || "",
             bankName: transferResult.bank_name || "",
             txRef: transferResult.tx_ref || "",
-            accountExpiration: transferResult.account_expiration || "",
+            expiryDate: transferResult.expiry_date || "",
           },
         });
         return;
@@ -1377,7 +1377,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
               accountNumber: transferResult.account_number || "",
               bankName: transferResult.bank_name || "",
               txRef: transferResult.tx_ref || "",
-              accountExpiration: transferResult.account_expiration || "",
+              expiryDate: transferResult.expiry_date || "",
             },
           });
           return;
