@@ -56,7 +56,7 @@ import BottomSheet, {
   BottomSheetMethods,
   BottomSheetScrollView,
 } from "@expo/ui/community/bottom-sheet";
-import React, { Ref, useEffect, useRef } from "react";
+import React, { Ref, useCallback, useEffect, useRef } from "react";
 import { useColorScheme } from "react-native";
 
 export default function AppBottomSheet({
@@ -77,17 +77,35 @@ export default function AppBottomSheet({
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const internalRef = useRef<BottomSheet>(null);
+  const programmaticRef = useRef(false);
 
   useEffect(() => {
     if (visible === true) {
+      programmaticRef.current = true;
       internalRef.current?.present?.() ?? internalRef.current?.snapToIndex?.(0);
     } else if (visible === false) {
+      programmaticRef.current = true;
       internalRef.current?.dismiss?.() ?? internalRef.current?.close?.();
     }
   }, [visible]);
 
+  const handleClose = useCallback(() => {
+    if (programmaticRef.current) {
+      programmaticRef.current = false;
+      return;
+    }
+    onVisibleChange?.(false);
+  }, [onVisibleChange]);
+
+  const handleDismiss = useCallback(() => {
+    if (programmaticRef.current) {
+      programmaticRef.current = false;
+      return;
+    }
+    onVisibleChange?.(false);
+  }, [onVisibleChange]);
+
   return (
-    // <View style={{ flex: 1, backgroundColor: "red" }}>
     <BottomSheet
       ref={(node) => {
         (internalRef as any).current = node;
@@ -101,8 +119,8 @@ export default function AppBottomSheet({
       snapPoints={snapPoints}
       enableDynamicSizing={enableDynamicSizing}
       enablePanDownToClose
-      onClose={() => onVisibleChange?.(false)}
-      onDismiss={() => onVisibleChange?.(false)}
+      onClose={handleClose}
+      onDismiss={handleDismiss}
       backgroundStyle={{ backgroundColor: colors.card }}
     >
       <BottomSheetScrollView

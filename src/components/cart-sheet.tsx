@@ -1260,8 +1260,8 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
   const handleRemoveItem = (cartId: string, productId: string) => {
     const item = items.find((i) => i.product.id === productId);
-    if (!item?.itemId) return;
-    setPendingVoidItems([{ itemId: item.itemId, productId, maxQty: item.quantity }]);
+    if (!item) return;
+    setPendingVoidItems([{ itemId: item.itemId ?? "", productId, maxQty: item.quantity }]);
     setVoidPin("");
     setVoidQty("");
     setVoidPinVisible(true);
@@ -1270,8 +1270,8 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const handleQuantityChange = (cartId: string, productId: string, newQty: number) => {
     if (newQty <= 0) {
       const item = items.find((i) => i.product.id === productId);
-      if (item?.itemId) {
-        setPendingVoidItems([{ itemId: item.itemId, productId, maxQty: item.quantity }]);
+      if (item) {
+        setPendingVoidItems([{ itemId: item.itemId ?? "", productId, maxQty: item.quantity }]);
         setVoidPin("");
         setVoidQty("");
         setVoidPinVisible(true);
@@ -1295,7 +1295,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
         // Single item void (possibly partial qty)
         const voidedQty = voidQty.trim() ? Number(voidQty.trim()) : undefined;
         for (const item of pendingVoidItems) {
-          await voidCartItem(item.itemId, { supervisor_pin: pin, qty: voidedQty });
+          if (item.itemId) {
+            await voidCartItem(item.itemId, { supervisor_pin: pin, qty: voidedQty });
+          }
           if (voidedQty && voidedQty < item.maxQty) {
             // Partial void — update qty in Zustand
             useCartStore.setState((s) => ({
