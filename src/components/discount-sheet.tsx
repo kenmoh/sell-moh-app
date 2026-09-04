@@ -1,5 +1,6 @@
 import { createDiscount, deleteDiscount, updateDiscount } from "@/api/discount";
 import { fetchTenantCategories, fetchProducts } from "@/api/inventory";
+import { fetchTenantStores } from "@/api/store";
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
@@ -42,7 +43,7 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
   const { user } = useSession();
-  const storeId = user?.store_id ?? "";
+  const isOwner = user?.role === "owner";
   const isEditing = !!discount;
 
   const [name, setName] = useState("");
@@ -58,6 +59,21 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [showProductPicker, setShowProductPicker] = useState(false);
   const [showCategoryPicker, setShowCategoryPicker] = useState(false);
+
+  const [selectedStoreId, setSelectedStoreId] = useState(user?.store_id ?? "");
+  const activeStoreId = isOwner ? selectedStoreId : (user?.store_id ?? "");
+
+  const { data: stores } = useQuery({
+    queryKey: ["stores"],
+    queryFn: fetchTenantStores,
+    enabled: visible && isOwner,
+  });
+
+  useEffect(() => {
+    if (isOwner && stores && stores.length > 0 && !selectedStoreId) {
+      setSelectedStoreId(stores[0].id);
+    }
+  }, [isOwner, stores, selectedStoreId]);
 
   useEffect(() => {
     if (discount) {
@@ -164,6 +180,41 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        {/* Store Selector (owner only) */}
+        {isOwner && stores && stores.length > 0 && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              Store
+            </Text>
+            <View style={styles.chipRow}>
+              {stores.map((s) => {
+                const isActive = activeStoreId === s.id;
+                return (
+                  <Pressable
+                    key={s.id}
+                    style={[
+                      styles.chip,
+                      {
+                        backgroundColor: isActive ? colors.buttonPrimary : colors.backgroundElement,
+                      },
+                    ]}
+                    onPress={() => setSelectedStoreId(s.id)}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        { color: isActive ? "#fff" : colors.textSecondary },
+                      ]}
+                    >
+                      {s.name}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
         {/* Discount Type */}
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
@@ -421,7 +472,7 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
       <ProductPickerSheet
         visible={showProductPicker}
         onVisibleChange={setShowProductPicker}
-        storeId={storeId}
+        storeId={activeStoreId}
         selectedIds={selectedProductIds}
         onToggle={(id) =>
           setSelectedProductIds((prev) =>
@@ -434,7 +485,7 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
       <CategoryPickerSheet
         visible={showCategoryPicker}
         onVisibleChange={setShowCategoryPicker}
-        storeId={storeId}
+        storeId={activeStoreId}
         selectedIds={selectedCategoryIds}
         onToggle={(id) =>
           setSelectedCategoryIds((prev) =>
@@ -513,30 +564,31 @@ const ProductPickerSheet = ({
             return (
               <Pressable
                 style={[
-                  styles.pickerItem,
+                  styles.pickerPill,
                   {
-                    backgroundColor: isSelected
-                      ? colors.buttonPrimary + "15"
-                      : colors.backgroundElement,
-                    borderColor: isSelected ? colors.buttonPrimary : "transparent",
+                    backgroundColor: isSelected ? colors.buttonPrimary : colors.backgroundElement,
+                    borderColor: isSelected ? colors.buttonPrimary : colors.border,
                   },
                 ]}
                 onPress={() => onToggle(item.id)}
               >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.pickerItemName, { color: colors.text }]}>
-                    {item.name}
-                  </Text>
-                  <Text style={[styles.pickerItemMeta, { color: colors.textSecondary }]}>
-                    ₦{item.selling_price.toLocaleString()}
-                  </Text>
-                </View>
                 {isSelected && (
-                  <Lucide name="check-circle" size={20} color={colors.buttonPrimary} />
+                  <Lucide name="check" size={14} color="#fff" />
                 )}
+                <Text
+                  style={[
+                    styles.pickerPillText,
+                    { color: isSelected ? "#fff" : colors.text },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {item.name}
+                </Text>
               </Pressable>
             );
           }}
+          numColumns={2}
+          columnWrapperStyle={styles.pickerPillRow}
           ListEmptyComponent={
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               No products found
@@ -544,6 +596,13 @@ const ProductPickerSheet = ({
           }
         />
       )}
+
+      <Pressable
+        style={[styles.okBtn, { backgroundColor: colors.buttonPrimary }]}
+        onPress={() => onVisibleChange(false)}
+      >
+        <Text style={styles.okBtnText}>OK</Text>
+      </Pressable>
     </AppBottomSheet>
   );
 };
@@ -590,32 +649,31 @@ const CategoryPickerSheet = ({
             return (
               <Pressable
                 style={[
-                  styles.pickerItem,
+                  styles.pickerPill,
                   {
-                    backgroundColor: isSelected
-                      ? colors.buttonPrimary + "15"
-                      : colors.backgroundElement,
-                    borderColor: isSelected ? colors.buttonPrimary : "transparent",
+                    backgroundColor: isSelected ? colors.buttonPrimary : colors.backgroundElement,
+                    borderColor: isSelected ? colors.buttonPrimary : colors.border,
                   },
                 ]}
                 onPress={() => onToggle(item.id)}
               >
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.pickerItemName, { color: colors.text }]}>
-                    {item.name}
-                  </Text>
-                  {item.description && (
-                    <Text style={[styles.pickerItemMeta, { color: colors.textSecondary }]}>
-                      {item.description}
-                    </Text>
-                  )}
-                </View>
                 {isSelected && (
-                  <Lucide name="check-circle" size={20} color={colors.buttonPrimary} />
+                  <Lucide name="check" size={14} color="#fff" />
                 )}
+                <Text
+                  style={[
+                    styles.pickerPillText,
+                    { color: isSelected ? "#fff" : colors.text },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {item.name}
+                </Text>
               </Pressable>
             );
           }}
+          numColumns={2}
+          columnWrapperStyle={styles.pickerPillRow}
           ListEmptyComponent={
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               No categories found
@@ -623,6 +681,13 @@ const CategoryPickerSheet = ({
           }
         />
       )}
+
+      <Pressable
+        style={[styles.okBtn, { backgroundColor: colors.buttonPrimary }]}
+        onPress={() => onVisibleChange(false)}
+      >
+        <Text style={styles.okBtnText}>OK</Text>
+      </Pressable>
     </AppBottomSheet>
   );
 };
@@ -697,15 +762,24 @@ const styles = StyleSheet.create({
   deleteConfirmBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
   pickerHeader: { marginBottom: 16 },
   searchContainer: { marginBottom: 12 },
-  pickerItem: {
+  pickerPillRow: { gap: 8, marginBottom: 8 },
+  pickerPill: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
-    padding: 14,
-    borderRadius: 12,
-    marginBottom: 8,
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 100,
     borderWidth: 1,
   },
-  pickerItemName: { fontSize: 15, fontWeight: "600", marginBottom: 2 },
-  pickerItemMeta: { fontSize: 13 },
+  pickerPillText: { fontSize: 14, fontWeight: "500", flexShrink: 1 },
+  okBtn: {
+    borderRadius: 50,
+    paddingVertical: 14,
+    alignItems: "center",
+    marginTop: 12,
+  },
+  okBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   emptyText: { textAlign: "center", marginTop: 40, fontSize: 14 },
 });
