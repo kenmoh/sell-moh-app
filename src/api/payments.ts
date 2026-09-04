@@ -6,6 +6,7 @@ import {
   CashPaymentRequest,
   CashPaymentResult,
   PaymentStatusResponse,
+  PendingPayment,
   ResolvedAccount,
   SplitPaymentRequest,
   SplitPaymentResult,
@@ -191,6 +192,20 @@ export const getPaymentStatus = async (
 ): Promise<PaymentStatusResponse> => {
   const res = await apiClient.get<{ data: PaymentStatusResponse }>(
     `${URL}/status/${saleId}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
+// ── Pending Payments ──────────────────────────────────────────────────────
+
+export const getPendingPayments = async (): Promise<PendingPayment[]> => {
+  const res = await apiClient.get<{ data: PendingPayment[] }>(
+    `${URL}/pending`,
   );
 
   if (!res.ok) {

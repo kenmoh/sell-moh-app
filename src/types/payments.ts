@@ -147,3 +147,17 @@ export interface PaymentStatusResponse {
   total: number;
   intents: PaymentIntentStatus[];
 }
+
+export interface PendingPayment {
+  sale_id: string;
+  sale_number: string;
+  method: string;
+  amount: number;
+  created_at: string;
+  authorization_url: string | null;
+  qr_code_base64: string | null;
+  account_number: string | null;
+  bank_name: string | null;
+  tx_ref: string | null;
+  account_expiration: string | null;
+}

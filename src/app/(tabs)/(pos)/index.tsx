@@ -5,9 +5,11 @@ import AppBottomSheet from "@/components/bottom-sheet";
 import Card from "@/components/card";
 import DraggableCart from "@/components/draggable-cart";
 import ExpandableFAB from "@/components/expandable-fab";
+import PendingPaymentsSheet from "@/components/pending-payments-sheet";
 import SearchInput from "@/components/search-input";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
+import { usePendingPayments } from "@/hooks/usePendingPayments";
 import { useSession } from "@/lib/ctx";
 import { Product } from "@/types/product-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -43,10 +45,12 @@ const POSScreen = () => {
   const [activeCategory, setActiveCategory] = useState("");
   const [selectedStoreId, setSelectedStoreId] = useState(user?.store_id ?? "");
   const [storeSheetVisible, setStoreSheetVisible] = useState(false);
+  const [pendingSheetVisible, setPendingSheetVisible] = useState(false);
 
   const activeStoreId = isOwner ? selectedStoreId : (user?.store_id ?? "");
 
   const cartTotalItems = useCartStore((s) => s.totalItems());
+  const { count: pendingCount } = usePendingPayments();
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -201,6 +205,24 @@ const POSScreen = () => {
               </View>
 
               <View style={styles.headerActions}>
+                {pendingCount > 0 && (
+                  <Pressable
+                    onPress={() => setPendingSheetVisible(true)}
+                    style={[
+                      styles.scanIconButton,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: isDark ? "#282b32" : "#eef0f4",
+                        position: "relative",
+                      },
+                    ]}
+                  >
+                    <Lucide name="clock" size={20} color="#f59e0b" />
+                    <View style={[styles.pendingBadge, { backgroundColor: "#ef4444" }]}>
+                      <Text style={styles.pendingBadgeText}>{pendingCount}</Text>
+                    </View>
+                  </Pressable>
+                )}
                 <Pressable
                   onPress={() => router.push("/(tabs)/(pos)/scan")}
                   style={[
@@ -381,6 +403,12 @@ const POSScreen = () => {
       <DraggableCart />
       <ExpandableFAB />
 
+      {/* Pending Payments Sheet */}
+      <PendingPaymentsSheet
+        visible={pendingSheetVisible}
+        onVisibleChange={setPendingSheetVisible}
+      />
+
       {/* Store Selector Sheet (Owner only) */}
       {isOwner && (
         <AppBottomSheet
@@ -476,6 +504,22 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  pendingBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 4,
+  },
+  pendingBadgeText: {
+    color: "#fff",
+    fontSize: 10,
+    fontWeight: "700",
   },
   stickyControlsWrapper: {
     paddingTop: 4,
