@@ -32,7 +32,7 @@ export interface CreateEmployee {
   full_name: string;
   phone?: string | null;
   role: string;
-  store_id: string;
+  store_id: string | null;
   password: string;
 }
 

@@ -101,7 +101,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
       phone: result.data.phone || null,
       role: result.data.role,
       password: result.data.password,
-      store_id: "",
+      store_id: null,
     });
   };
 
