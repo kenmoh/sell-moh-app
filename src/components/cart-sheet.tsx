@@ -10,7 +10,7 @@ import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
 import { useSession } from "@/lib/ctx";
 import Lucide from "@react-native-vector-icons/lucide";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -1038,6 +1038,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
   const { user } = useSession();
   const router = useRouter();
+  const queryClient = useQueryClient();
 
   const carts = useCartStore((s) => s.carts);
   const activeCartId = useCartStore((s) => s.activeCartId);
@@ -1267,6 +1268,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     onSuccess: (result) => {
       if (result.type === "cash") {
         clearCartById(activeCartId);
+        queryClient.invalidateQueries({ queryKey: ["carts"] });
         setIsSuccess(true);
         return;
       }
@@ -1360,6 +1362,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     onSuccess: (result) => {
       if (result.type === "cash") {
         clearCartById(activeCartId);
+        queryClient.invalidateQueries({ queryKey: ["carts"] });
         setIsSuccess(true);
         return;
       }
@@ -1448,6 +1451,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
   const handleFinishSuccess = () => {
     clearCartById(activeCartId);
+    queryClient.invalidateQueries({ queryKey: ["carts"] });
     setIsSuccess(false);
     onVisibleChange(false);
   };
