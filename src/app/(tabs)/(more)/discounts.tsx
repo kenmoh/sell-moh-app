@@ -5,6 +5,7 @@ import { Colors } from "@/constants/theme";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Host, Switch } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
 import { useState, useCallback } from "react";
 import {
   ActivityIndicator,
@@ -375,9 +376,6 @@ const Discounts = () => {
               key={tab}
               style={[
                 styles.tab,
-                {
-                  borderBottomColor: isActive ? "#3b82f6" : "transparent",
-                },
               ]}
               onPress={() => setActiveTab(tab)}
             >
@@ -389,6 +387,12 @@ const Discounts = () => {
               >
                 {tab === "promotions" ? "Promotions" : "Coupons"}
               </Text>
+              {isActive && (
+                <Animated.View
+                  layout={LinearTransition.springify().damping(20).stiffness(200)}
+                  style={styles.activeTabIndicator}
+                />
+              )}
             </Pressable>
           );
         })}
@@ -443,7 +447,14 @@ const Discounts = () => {
           </ScrollView>
         )}
 
-        {renderContent()}
+        <Animated.View
+          key={activeTab}
+          entering={FadeIn.duration(200)}
+          exiting={FadeOut.duration(150)}
+          layout={LinearTransition.springify().damping(20).stiffness(200)}
+        >
+          {renderContent()}
+        </Animated.View>
       </ScrollView>
 
       <DiscountSheet
@@ -492,6 +503,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     borderBottomWidth: 2,
+    borderBottomColor: "transparent",
+  },
+  activeTabIndicator: {
+    position: "absolute",
+    bottom: -1,
+    left: "20%",
+    right: "20%",
+    height: 2,
+    backgroundColor: "#3b82f6",
+    borderRadius: 1,
   },
   tabText: { fontSize: 15, fontWeight: "600" },
   filterTabs: {
