@@ -12,6 +12,7 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withTiming,
+  withSpring,
 } from "react-native-reanimated";
 import { useState, useCallback } from "react";
 import {
@@ -30,6 +31,38 @@ import type { Discount, Coupon } from "@/types/discount";
 type FilterType = "All" | "Percentage" | "Fixed Amount" | "Buy X Get Y";
 
 type TabType = "promotions" | "coupons";
+
+const AnimatedPressable = ({
+  children,
+  onPress,
+  style,
+}: {
+  children: React.ReactNode;
+  onPress?: () => void;
+  style?: any;
+}) => {
+  const scale = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+
+  return (
+    <Animated.View style={[style, animatedStyle]}>
+      <Pressable
+        onPressIn={() => {
+          scale.value = withSpring(0.96, { damping: 15, stiffness: 400 });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+        }}
+        onPress={onPress}
+      >
+        {children}
+      </Pressable>
+    </Animated.View>
+  );
+};
 
 const filters: FilterType[] = ["All", "Percentage", "Fixed Amount", "Buy X Get Y"];
 
@@ -151,7 +184,7 @@ const Discounts = () => {
     const isValidityExpired = promo.end_date && new Date(promo.end_date) < new Date();
 
     return (
-      <Pressable
+      <AnimatedPressable
         key={promo.id}
         style={[
           styles.promoCard,
@@ -217,7 +250,7 @@ const Discounts = () => {
             </Host>
           )}
         </View>
-      </Pressable>
+      </AnimatedPressable>
     );
   };
 
@@ -226,7 +259,7 @@ const Discounts = () => {
     const isMaxed = coupon.max_uses > 0 && coupon.used_count >= coupon.max_uses;
 
     return (
-      <Pressable
+      <AnimatedPressable
         key={coupon.id}
         style={[
           styles.promoCard,
@@ -287,7 +320,7 @@ const Discounts = () => {
             </View>
           )}
         </View>
-      </Pressable>
+      </AnimatedPressable>
     );
   };
 
@@ -380,7 +413,7 @@ const Discounts = () => {
         <Text style={[styles.headerTitle, { color: colors.text }]}>
           Discounts & Coupons
         </Text>
-        <Pressable
+        <AnimatedPressable
           style={styles.addButton}
           onPress={() => {
             if (activeTab === "promotions") {
@@ -393,7 +426,7 @@ const Discounts = () => {
           }}
         >
           <Lucide name="plus" size={20} color="#fff" />
-        </Pressable>
+        </AnimatedPressable>
       </View>
 
       {/* Tabs */}
@@ -401,11 +434,9 @@ const Discounts = () => {
         {(["promotions", "coupons"] as TabType[]).map((tab) => {
           const isActive = tab === activeTab;
           return (
-            <Pressable
+            <AnimatedPressable
               key={tab}
-              style={[
-                styles.tab,
-              ]}
+              style={styles.tab}
               onPress={() => onTabChange(tab)}
             >
               <Text
@@ -422,7 +453,7 @@ const Discounts = () => {
                   style={styles.activeTabIndicator}
                 />
               )}
-            </Pressable>
+            </AnimatedPressable>
           );
         })}
       </View>
@@ -451,16 +482,17 @@ const Discounts = () => {
             {filters.map((f) => {
               const isActive = f === activeFilter;
               return (
-                <Pressable
+                <AnimatedPressable
                   key={f}
                   onPress={() => setActiveFilter(f)}
-                  style={[
-                    styles.filterPill,
-                    {
-                      backgroundColor: isActive ? "#3b82f6" : "transparent",
-                      borderColor: isActive ? "#3b82f6" : colors.backgroundElement,
-                    },
-                  ]}
+                  style={{
+                    backgroundColor: isActive ? "#3b82f6" : "transparent",
+                    borderColor: isActive ? "#3b82f6" : colors.backgroundElement,
+                    borderRadius: 100,
+                    borderWidth: 1,
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                  }}
                 >
                   <Text
                     style={[
@@ -470,7 +502,7 @@ const Discounts = () => {
                   >
                     {f}
                   </Text>
-                </Pressable>
+                </AnimatedPressable>
               );
             })}
           </ScrollView>
