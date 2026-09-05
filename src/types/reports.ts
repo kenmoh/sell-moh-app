@@ -1,21 +1,25 @@
 // ── Dashboard ──────────────────────────────────────────────────────────────
 
+export interface MetricDelta {
+  current: number;
+  previous: number;
+  change_pct: number;
+}
+
 export interface DashboardSummary {
-  total_revenue: number;
-  total_sales: number;
-  avg_order_value: number;
-  top_products: Array<{
+  revenue: MetricDelta;
+  sales_count: MetricDelta;
+  avg_order_value: MetricDelta;
+  top_product: {
     product_id: string;
     product_name: string;
     total_qty: number;
     total_revenue: number;
-  }>;
-  recent_sales: Array<{
-    id: string;
-    sale_number: string;
-    total: number;
-    created_at: string;
-  }>;
+  } | null;
+  low_stock_count: number;
+  active_users: number;
+  pending_documents: number;
+  payment_collection_rate: number;
 }
 
 // ── Sales Summary ──────────────────────────────────────────────────────────

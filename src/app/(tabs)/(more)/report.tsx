@@ -3,7 +3,6 @@ import {
   fetchInventoryAlerts,
   fetchPaymentMethods,
   fetchProfitLoss,
-  fetchTopProducts,
 } from "@/api/reports";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -45,15 +44,6 @@ const ReportsScreen = () => {
   });
 
   const {
-    data: topProducts = [],
-    isLoading: isLoadingTop,
-    refetch: refetchTop,
-  } = useQuery({
-    queryKey: ["reports-top-products"],
-    queryFn: () => fetchTopProducts(today, toDate),
-  });
-
-  const {
     data: paymentBreakdown,
     isLoading: isLoadingPay,
     refetch: refetchPay,
@@ -82,14 +72,12 @@ const ReportsScreen = () => {
 
   const isLoading =
     isLoadingDash ||
-    isLoadingTop ||
     isLoadingPay ||
     isLoadingPL ||
     isLoadingInv;
 
   const handleRefresh = () => {
     refetchDash();
-    refetchTop();
     refetchPay();
     refetchPL();
     refetchInv();
@@ -157,7 +145,7 @@ const ReportsScreen = () => {
               Revenue
             </Text>
             <Text style={[styles.statValue, { color: "#10b981" }]}>
-              ₦{dashboard?.total_revenue?.toLocaleString() ?? "0"}
+              ₦{dashboard?.revenue?.current?.toLocaleString() ?? "0"}
             </Text>
           </View>
 
@@ -182,7 +170,7 @@ const ReportsScreen = () => {
               Sales
             </Text>
             <Text style={[styles.statValue, { color: "#3b82f6" }]}>
-              {dashboard?.total_sales ?? 0}
+              {dashboard?.sales_count?.current ?? 0}
             </Text>
           </View>
 
@@ -207,7 +195,7 @@ const ReportsScreen = () => {
               Avg Order
             </Text>
             <Text style={[styles.statValue, { color: "#a855f7" }]}>
-              ₦{dashboard?.avg_order_value?.toLocaleString() ?? "0"}
+              ₦{dashboard?.avg_order_value?.current?.toLocaleString() ?? "0"}
             </Text>
           </View>
         </View>
@@ -282,11 +270,11 @@ const ReportsScreen = () => {
           </View>
         )}
 
-        {/* Top Products */}
-        {topProducts.length > 0 && (
+        {/* Top Product */}
+        {dashboard?.top_product && (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Top Products
+              Top Product
             </Text>
             <View
               style={[
@@ -297,68 +285,29 @@ const ReportsScreen = () => {
                 },
               ]}
             >
-              {topProducts.slice(0, 5).map((product, idx) => (
+              <View style={styles.productItem}>
                 <View
-                  key={product.product_id}
                   style={[
-                    styles.productItem,
-                    idx < topProducts.slice(0, 5).length - 1 && {
-                      borderBottomWidth: StyleSheet.hairlineWidth,
-                      borderBottomColor: isDark ? "#282b32" : "#eef0f4",
-                    },
+                    styles.rankBadge,
+                    { backgroundColor: "rgba(245,158,11,0.12)" },
                   ]}
                 >
-                  <View
-                    style={[
-                      styles.rankBadge,
-                      {
-                        backgroundColor:
-                          idx === 0
-                            ? "rgba(245,158,11,0.12)"
-                            : idx === 1
-                              ? "rgba(156,163,175,0.12)"
-                              : idx === 2
-                                ? "rgba(180,83,9,0.12)"
-                                : colors.backgroundElement,
-                      },
-                    ]}
+                  <Text style={[styles.rankText, { color: "#f59e0b" }]}>#1</Text>
+                </View>
+                <View style={styles.productInfo}>
+                  <Text style={[styles.productName, { color: colors.text }]}>
+                    {dashboard.top_product.product_name}
+                  </Text>
+                  <Text
+                    style={[styles.productQty, { color: colors.textSecondary }]}
                   >
-                    <Text
-                      style={[
-                        styles.rankText,
-                        {
-                          color:
-                            idx === 0
-                              ? "#f59e0b"
-                              : idx === 1
-                                ? "#9ca3af"
-                                : idx === 2
-                                  ? "#b45309"
-                                  : colors.textSecondary,
-                        },
-                      ]}
-                    >
-                      #{idx + 1}
-                    </Text>
-                  </View>
-                  <View style={styles.productInfo}>
-                    <Text style={[styles.productName, { color: colors.text }]}>
-                      {product.product_name}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.productQty,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      {product.total_qty} sold
-                    </Text>
-                  </View>
-                  <Text style={[styles.productRevenue, { color: "#10b981" }]}>
-                    ₦{product.total_revenue.toLocaleString()}
+                    {dashboard.top_product.total_qty} sold
                   </Text>
                 </View>
-              ))}
+                <Text style={[styles.productRevenue, { color: "#10b981" }]}>
+                  ₦{dashboard.top_product.total_revenue.toLocaleString()}
+                </Text>
+              </View>
             </View>
           </View>
         )}
