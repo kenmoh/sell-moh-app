@@ -5,7 +5,14 @@ import { Colors } from "@/constants/theme";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Host, Switch } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import Animated, { FadeIn, FadeOut, LinearTransition } from "react-native-reanimated";
+import Animated, {
+  FadeIn,
+  FadeOut,
+  LinearTransition,
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+} from "react-native-reanimated";
 import { useState, useCallback } from "react";
 import {
   ActivityIndicator,
@@ -63,6 +70,28 @@ const Discounts = () => {
   });
 
   const [refreshing, setRefreshing] = useState(false);
+
+  const contentOpacity = useSharedValue(1);
+  const contentTranslateY = useSharedValue(0);
+
+  const prevTab = useSharedValue(activeTab);
+
+  const onTabChange = useCallback((tab: TabType) => {
+    if (tab === prevTab.value) return;
+    contentOpacity.value = 0;
+    contentTranslateY.value = 8;
+    prevTab.value = tab;
+    requestAnimationFrame(() => {
+      contentOpacity.value = withTiming(1, { duration: 200 });
+      contentTranslateY.value = withTiming(0, { duration: 200 });
+    });
+    setActiveTab(tab);
+  }, [activeTab]);
+
+  const contentAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: contentOpacity.value,
+    transform: [{ translateY: contentTranslateY.value }],
+  }));
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -377,7 +406,7 @@ const Discounts = () => {
               style={[
                 styles.tab,
               ]}
-              onPress={() => setActiveTab(tab)}
+              onPress={() => onTabChange(tab)}
             >
               <Text
                 style={[
@@ -447,12 +476,7 @@ const Discounts = () => {
           </ScrollView>
         )}
 
-        <Animated.View
-          key={activeTab}
-          entering={FadeIn.duration(200)}
-          exiting={FadeOut.duration(150)}
-          layout={LinearTransition.springify().damping(20).stiffness(200)}
-        >
+        <Animated.View style={contentAnimatedStyle}>
           {renderContent()}
         </Animated.View>
       </ScrollView>
