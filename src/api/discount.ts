@@ -26,11 +26,17 @@ export const fetchDiscounts = async (
   params.append("page", String(page));
   params.append("page_size", String(pageSize));
   if (activeOnly) params.append("active_only", "true");
-  const res = await apiClient.get<{ data: PaginatedDiscounts }>(
+  const res = await apiClient.get(
     `${DISCOUNT_URL}?${params.toString()}`,
   );
   if (!res.ok) throw new Error(getErrorMessage(res));
-  return res.data?.data!;
+  const body = res.data as any;
+  return {
+    items: body.data ?? [],
+    total: body.total ?? 0,
+    page: body.page ?? page,
+    page_size: body.page_size ?? pageSize,
+  };
 };
 
 export const fetchDiscount = async (id: string): Promise<Discount> => {
@@ -81,11 +87,17 @@ export const fetchCoupons = async (
   const params = new URLSearchParams();
   params.append("page", String(page));
   params.append("page_size", String(pageSize));
-  const res = await apiClient.get<{ data: PaginatedCoupons }>(
+  const res = await apiClient.get(
     `${COUPON_URL}?${params.toString()}`,
   );
   if (!res.ok) throw new Error(getErrorMessage(res));
-  return res.data?.data!;
+  const body = res.data as any;
+  return {
+    items: body.data ?? [],
+    total: body.total ?? 0,
+    page: body.page ?? page,
+    page_size: body.page_size ?? pageSize,
+  };
 };
 
 export const fetchCoupon = async (id: string): Promise<Coupon> => {

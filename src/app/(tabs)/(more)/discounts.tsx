@@ -5,10 +5,11 @@ import { Colors } from "@/constants/theme";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Host, Switch } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -44,6 +45,7 @@ const Discounts = () => {
   const {
     data: discountsData,
     isLoading: discountsLoading,
+    refetch: refetchDiscounts,
   } = useQuery({
     queryKey: ["discounts"],
     queryFn: () => fetchDiscounts(),
@@ -53,10 +55,19 @@ const Discounts = () => {
   const {
     data: couponsData,
     isLoading: couponsLoading,
+    refetch: refetchCoupons,
   } = useQuery({
     queryKey: ["coupons"],
     queryFn: () => fetchCoupons(),
   });
+
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await Promise.all([refetchDiscounts(), refetchCoupons()]);
+    setRefreshing(false);
+  }, [refetchDiscounts, refetchCoupons]);
 
   // Toggle discount
   const { mutate: toggleDiscountMutation } = useMutation({
@@ -389,6 +400,13 @@ const Discounts = () => {
           paddingBottom: insets.bottom + 20,
           padding: 20,
         }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#3b82f6"
+          />
+        }
       >
         {activeTab === "promotions" && (
           <ScrollView
