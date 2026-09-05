@@ -1,5 +1,5 @@
 import { usePaymentStatus } from "@/hooks/usePaymentStatus";
-import { cancelPendingIntents } from "@/api/payments";
+import { cancelPendingIntents, confirmPayment } from "@/api/payments";
 import { ColorPalette, Colors } from "@/constants/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -53,14 +53,23 @@ export default function PaymentAwaitingScreen() {
 
   useEffect(() => {
     if (status?.status === "completed") {
-      Alert.alert("Payment Confirmed", "Payment received successfully!", [
-        {
-          text: "OK",
-          onPress: () => router.replace("/(tabs)/(pos)"),
-        },
-      ]);
+      confirmPayment({ intent_id: saleId }).then(() => {
+        Alert.alert("Payment Confirmed", "Payment received successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.replace("/(tabs)/(pos)"),
+          },
+        ]);
+      }).catch(() => {
+        Alert.alert("Payment Confirmed", "Payment received successfully!", [
+          {
+            text: "OK",
+            onPress: () => router.replace("/(tabs)/(pos)"),
+          },
+        ]);
+      });
     }
-  }, [status?.status, router]);
+  }, [status?.status, router, saleId]);
 
   const handleCopy = async (text: string) => {
     await Clipboard.setStringAsync(text);

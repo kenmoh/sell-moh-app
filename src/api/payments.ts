@@ -5,6 +5,10 @@ import {
   CardPaymentResult,
   CashPaymentRequest,
   CashPaymentResult,
+  ConfirmPaymentRequest,
+  ConfirmPaymentResult,
+  InitiatePaymentRequest,
+  InitiatePaymentResult,
   PaymentStatusResponse,
   PendingPayment,
   ResolvedAccount,
@@ -209,6 +213,38 @@ export const cancelPendingIntents = async (
   const res = await apiClient.post<{ data: { cancelled: number } }>(
     `${URL}/cancel-pending`,
     { sale_id: saleId },
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
+// ── Intent-First Checkout ────────────────────────────────────────────────
+
+export const initiatePayment = async (
+  data: InitiatePaymentRequest,
+): Promise<InitiatePaymentResult> => {
+  const res = await apiClient.post<{ data: InitiatePaymentResult }>(
+    `${URL}/initiate`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
+export const confirmPayment = async (
+  data: ConfirmPaymentRequest,
+): Promise<ConfirmPaymentResult> => {
+  const res = await apiClient.post<{ data: ConfirmPaymentResult }>(
+    `${URL}/confirm`,
+    data,
   );
 
   if (!res.ok) {

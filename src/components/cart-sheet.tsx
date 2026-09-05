@@ -1,9 +1,8 @@
 import { validateCoupon } from "@/api/discount";
-import { voidCartItem, getCart, clearCartItems, checkoutCart } from "@/api/cart";
+import { voidCartItem, getCart, clearCartItems } from "@/api/cart";
 import {
-  recordCashPayment,
-  initiateCardPayment,
-  initiateTransferPayment,
+  initiatePayment,
+  confirmPayment,
   recordSplitPayment,
 } from "@/api/payments";
 import { ColorPalette, Colors } from "@/constants/theme";
@@ -1229,41 +1228,32 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
   const { mutate: checkoutMutation, isPending: isCheckingOut } = useMutation({
     mutationFn: async (method: "cash" | "transfer" | "card") => {
-      const checkoutResult = await checkoutCart(activeCartId, {
+      const customerEmail = user?.email || "";
+
+      const intentResult = await initiatePayment({
+        cart_id: activeCartId,
+        method,
+        customer_email: customerEmail,
         customer_name: activeCart?.customerName || undefined,
         customer_phone: activeCart?.customerPhone || undefined,
         coupon_code: activeCart?.couponCode || undefined,
       });
 
-      const saleId = checkoutResult.sale_id;
-      const customerEmail = user?.email || "";
-
       if (method === "cash") {
-        await recordCashPayment({ sale_id: saleId, amount: finalTotal });
+        await confirmPayment({ intent_id: intentResult.intent_id });
         return { type: "cash" as const };
       }
 
-      if (method === "card") {
-        const [cardResult, transferResult] = await Promise.all([
-          initiateCardPayment({ sale_id: saleId, amount: finalTotal, customer_email: customerEmail }),
-          initiateTransferPayment({ sale_id: saleId, amount: finalTotal, customer_email: customerEmail }),
-        ]);
-        return {
-          type: "card" as const,
-          saleId,
-          cardResult,
-          transferResult,
-        };
-      }
-
-      // transfer
-      const transferResult = await initiateTransferPayment({
-        sale_id: saleId, amount: finalTotal, customer_email: customerEmail,
-      });
       return {
-        type: "transfer" as const,
-        saleId,
-        transferResult,
+        type: method as "card" | "transfer",
+        intentId: intentResult.intent_id,
+        amount: intentResult.amount,
+        txRef: intentResult.tx_ref,
+        paymentUrl: intentResult.payment_url,
+        qrCode: intentResult.qr_code_base64,
+        accountNumber: intentResult.account_number,
+        bankName: intentResult.bank_name,
+        expiryDate: intentResult.expiry_date,
       };
     },
     onSuccess: (result) => {
@@ -1281,36 +1271,20 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
       onVisibleChange(false);
 
-      if (result.type === "card") {
-        router.push({
-          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
-          params: {
-            saleId: result.saleId,
-            paymentId: result.cardResult.payment_id,
-            method: "card",
-            amount: String(finalTotal),
-            qrCode: result.cardResult.qr_code_base64 || "",
-            txRef: result.cardResult.tx_ref || "",
-            accountNumber: result.transferResult.account_number || "",
-            bankName: result.transferResult.bank_name || "",
-            expiryDate: result.transferResult.expiry_date || "",
-          },
-        });
-      } else {
-        router.push({
-          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
-          params: {
-            saleId: result.saleId,
-            paymentId: result.transferResult.payment_id,
-            method: "transfer",
-            amount: String(finalTotal),
-            accountNumber: result.transferResult.account_number || "",
-            bankName: result.transferResult.bank_name || "",
-            txRef: result.transferResult.tx_ref || "",
-            expiryDate: result.transferResult.expiry_date || "",
-          },
-        });
-      }
+      router.push({
+        pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
+        params: {
+          saleId: result.intentId,
+          paymentId: result.intentId,
+          method: result.type,
+          amount: String(result.amount),
+          qrCode: result.qrCode || "",
+          txRef: result.txRef || "",
+          accountNumber: result.accountNumber || "",
+          bankName: result.bankName || "",
+          expiryDate: result.expiryDate || "",
+        },
+      });
     },
     onError: (err: any) => {
       Alert.alert("Payment Failed", err?.message || "Something went wrong");
@@ -1319,14 +1293,20 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
   const { mutate: splitCheckoutMutation, isPending: isSplitCheckingOut } = useMutation({
     mutationFn: async () => {
-      const checkoutResult = await checkoutCart(activeCartId, {
+      const customerEmail = user?.email || "";
+
+      const intentResult = await initiatePayment({
+        cart_id: activeCartId,
+        method: "card",
+        customer_email: customerEmail,
         customer_name: activeCart?.customerName || undefined,
         customer_phone: activeCart?.customerPhone || undefined,
         coupon_code: activeCart?.couponCode || undefined,
       });
 
-      const saleId = checkoutResult.sale_id;
-      const customerEmail = user?.email || "";
+      const intentId = intentResult.intent_id;
+      const saleResult = await confirmPayment({ intent_id: intentId });
+      const saleId = saleResult.sale_id;
 
       await recordSplitPayment({
         sale_id: saleId,
@@ -1339,27 +1319,29 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       });
 
       if (numCard > 0) {
-        const [cardResult, transferResult] = await Promise.all([
-          initiateCardPayment({ sale_id: saleId, amount: numCard, customer_email: customerEmail }),
-          initiateTransferPayment({ sale_id: saleId, amount: numCard, customer_email: customerEmail }),
-        ]);
+        const cardIntent = await initiatePayment({
+          cart_id: activeCartId,
+          method: "card",
+          customer_email: customerEmail,
+          customer_name: activeCart?.customerName || undefined,
+        });
         return {
           type: "card" as const,
-          saleId,
-          cardResult,
-          transferResult,
+          intentId: cardIntent.intent_id,
           amount: numCard,
         };
       }
 
       if (numTransfer > 0) {
-        const transferResult = await initiateTransferPayment({
-          sale_id: saleId, amount: numTransfer, customer_email: customerEmail,
+        const trfIntent = await initiatePayment({
+          cart_id: activeCartId,
+          method: "transfer",
+          customer_email: customerEmail,
+          customer_name: activeCart?.customerName || undefined,
         });
         return {
           type: "transfer" as const,
-          saleId,
-          transferResult,
+          intentId: trfIntent.intent_id,
           amount: numTransfer,
         };
       }
@@ -1381,36 +1363,15 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
       onVisibleChange(false);
 
-      if (result.type === "card") {
-        router.push({
-          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
-          params: {
-            saleId: result.saleId,
-            paymentId: result.cardResult.payment_id,
-            method: "card",
-            amount: String(result.amount),
-            qrCode: result.cardResult.qr_code_base64 || "",
-            txRef: result.cardResult.tx_ref || "",
-            accountNumber: result.transferResult.account_number || "",
-            bankName: result.transferResult.bank_name || "",
-            expiryDate: result.transferResult.expiry_date || "",
-          },
-        });
-      } else {
-        router.push({
-          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
-          params: {
-            saleId: result.saleId,
-            paymentId: result.transferResult.payment_id,
-            method: "transfer",
-            amount: String(result.amount),
-            accountNumber: result.transferResult.account_number || "",
-            bankName: result.transferResult.bank_name || "",
-            txRef: result.transferResult.tx_ref || "",
-            expiryDate: result.transferResult.expiry_date || "",
-          },
-        });
-      }
+      router.push({
+        pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
+        params: {
+          saleId: result.intentId,
+          paymentId: result.intentId,
+          method: result.type,
+          amount: String(result.amount),
+        },
+      });
     },
     onError: (err: any) => {
       Alert.alert("Payment Failed", err?.message || "Something went wrong");

@@ -158,3 +158,40 @@ export interface PendingPayment {
   tx_ref: string | null;
   expiry_date: string | null;
 }
+
+// ── Intent-First Checkout ────────────────────────────────────────────────
+
+export interface InitiatePaymentRequest {
+  cart_id: string;
+  method: "card" | "transfer" | "cash";
+  customer_email: string;
+  customer_name?: string;
+  customer_phone?: string;
+  coupon_code?: string;
+  store_id?: string;
+}
+
+export interface InitiatePaymentResult {
+  intent_id: string;
+  amount: number;
+  tx_ref: string;
+  method: string;
+  status: string;
+  payment_url?: string;
+  qr_code_base64?: string;
+  account_number?: string;
+  bank_name?: string;
+  expiry_date?: string;
+}
+
+export interface ConfirmPaymentRequest {
+  intent_id: string;
+}
+
+export interface ConfirmPaymentResult {
+  sale_id: string;
+  sale_number: string;
+  total: number;
+  amount_paid: number;
+  status: string;
+}
