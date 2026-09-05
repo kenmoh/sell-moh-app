@@ -203,6 +203,21 @@ export const getPaymentStatus = async (
 
 // ── Pending Payments ──────────────────────────────────────────────────────
 
+export const cancelPendingIntents = async (
+  saleId: string,
+): Promise<{ cancelled: number }> => {
+  const res = await apiClient.post<{ data: { cancelled: number } }>(
+    `${URL}/cancel-pending`,
+    { sale_id: saleId },
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
 export const getPendingPayments = async (): Promise<PendingPayment[]> => {
   const res = await apiClient.get<{ data: PendingPayment[] }>(
     `${URL}/pending`,

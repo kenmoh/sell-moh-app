@@ -1268,8 +1268,13 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     },
     onSuccess: (result) => {
       if (result.type === "cash") {
-        clearCartById(activeCartId);
-        queryClient.invalidateQueries({ queryKey: ["carts"] });
+        setLastPayment({
+          cash: finalTotal,
+          transfer: 0,
+          card: 0,
+          total: finalTotal,
+          method: "cash",
+        });
         setIsSuccess(true);
         return;
       }
@@ -1363,8 +1368,13 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     },
     onSuccess: (result) => {
       if (result.type === "cash") {
-        clearCartById(activeCartId);
-        queryClient.invalidateQueries({ queryKey: ["carts"] });
+        setLastPayment({
+          cash: finalTotal,
+          transfer: 0,
+          card: 0,
+          total: finalTotal,
+          method: "cash",
+        });
         setIsSuccess(true);
         return;
       }

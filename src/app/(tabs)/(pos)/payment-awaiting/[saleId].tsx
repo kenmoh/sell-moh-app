@@ -1,4 +1,5 @@
 import { usePaymentStatus } from "@/hooks/usePaymentStatus";
+import { cancelPendingIntents } from "@/api/payments";
 import { ColorPalette, Colors } from "@/constants/theme";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Clipboard from "expo-clipboard";
@@ -292,7 +293,12 @@ export default function PaymentAwaitingScreen() {
       {/* Cancel button — fixed at bottom */}
       <View style={[styles.bottomBar, { backgroundColor: colors.background }]}>
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={async () => {
+            try {
+              await cancelPendingIntents(saleId);
+            } catch {}
+            router.back();
+          }}
           style={[styles.cancelBtn, { borderColor: colors.backgroundElement }]}
         >
           <Text style={[styles.cancelText, { color: colors.text }]}>
