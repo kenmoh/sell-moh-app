@@ -443,7 +443,7 @@ const Discounts = () => {
         {TABS.map((tab) => {
           const isActive = tab === activeTab;
           return (
-            <AnimatedPressable
+            <Pressable
               key={tab}
               style={styles.tab}
               onPress={() => onTabChange(tab)}
@@ -460,7 +460,7 @@ const Discounts = () => {
               >
                 {tab === "promotions" ? "Promotions" : "Coupons"}
               </Text>
-            </AnimatedPressable>
+            </Pressable>
           );
         })}
       </View>
