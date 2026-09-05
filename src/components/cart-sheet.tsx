@@ -1232,6 +1232,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       const checkoutResult = await checkoutCart(activeCartId, {
         customer_name: activeCart?.customerName || undefined,
         customer_phone: activeCart?.customerPhone || undefined,
+        coupon_code: activeCart?.couponCode || undefined,
       });
 
       const saleId = checkoutResult.sale_id;
@@ -1316,6 +1317,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       const checkoutResult = await checkoutCart(activeCartId, {
         customer_name: activeCart?.customerName || undefined,
         customer_phone: activeCart?.customerPhone || undefined,
+        coupon_code: activeCart?.couponCode || undefined,
       });
 
       const saleId = checkoutResult.sale_id;
