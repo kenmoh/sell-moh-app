@@ -6,15 +6,12 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Host, Switch } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import Animated, {
-  FadeIn,
-  FadeOut,
-  LinearTransition,
   useSharedValue,
   useAnimatedStyle,
-  withTiming,
   withSpring,
+  withTiming,
 } from "react-native-reanimated";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -48,7 +45,7 @@ const AnimatedPressable = ({
   }));
 
   return (
-    <Animated.View style={[style, animatedStyle]}>
+    <Animated.View style={animatedStyle}>
       <Pressable
         onPressIn={() => {
           scale.value = withSpring(0.96, { damping: 15, stiffness: 400 });
@@ -57,6 +54,7 @@ const AnimatedPressable = ({
           scale.value = withSpring(1, { damping: 15, stiffness: 400 });
         }}
         onPress={onPress}
+        style={style}
       >
         {children}
       </Pressable>
@@ -66,6 +64,8 @@ const AnimatedPressable = ({
 
 const filters: FilterType[] = ["All", "Percentage", "Fixed Amount", "Buy X Get Y"];
 
+const TABS: TabType[] = ["promotions", "coupons"];
+
 const Discounts = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
@@ -73,6 +73,7 @@ const Discounts = () => {
   const queryClient = useQueryClient();
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
   const [activeTab, setActiveTab] = useState<TabType>("promotions");
+  const [tabRowWidth, setTabRowWidth] = useState(0);
 
   // Discount sheet state
   const [showDiscountSheet, setShowDiscountSheet] = useState(false);
@@ -106,6 +107,7 @@ const Discounts = () => {
 
   const contentOpacity = useSharedValue(1);
   const contentTranslateY = useSharedValue(0);
+  const tabIndicatorX = useSharedValue(0);
 
   const prevTab = useSharedValue(activeTab);
 
@@ -114,27 +116,26 @@ const Discounts = () => {
     contentOpacity.value = 0;
     contentTranslateY.value = 8;
     prevTab.value = tab;
+    const idx = TABS.indexOf(tab);
+    tabIndicatorX.value = withSpring(idx * (tabRowWidth / 2) + (tabRowWidth / 4) - 45, { damping: 20, stiffness: 300 });
     requestAnimationFrame(() => {
       contentOpacity.value = withTiming(1, { duration: 200 });
       contentTranslateY.value = withTiming(0, { duration: 200 });
     });
     setActiveTab(tab);
-  }, [activeTab]);
+  }, [tabRowWidth]);
 
   const contentAnimatedStyle = useAnimatedStyle(() => ({
     opacity: contentOpacity.value,
     transform: [{ translateY: contentTranslateY.value }],
   }));
 
-  const onRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await Promise.all([refetchDiscounts(), refetchCoupons()]);
-    setRefreshing(false);
-  }, [refetchDiscounts, refetchCoupons]);
+  const indicatorAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: tabIndicatorX.value }],
+  }));
 
-  // Toggle discount
-  const { mutate: toggleDiscountMutation } = useMutation({
-    mutationFn: toggleDiscount,
+  const toggleDiscountMutation = useMutation({
+    mutationFn: (id: string) => toggleDiscount(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["discounts"] });
     },
@@ -143,35 +144,58 @@ const Discounts = () => {
   const discounts = discountsData?.items ?? [];
   const coupons = couponsData?.items ?? [];
 
-  const filteredDiscounts = discounts.filter((d) => {
-    if (activeFilter === "All") return true;
-    return d.discount_type === activeFilter.toLowerCase().replace(" ", "_");
-  });
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([refetchDiscounts(), refetchCoupons()]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refetchDiscounts, refetchCoupons]);
 
-  const activeDiscounts = filteredDiscounts.filter((d) => d.is_active);
-  const inactiveDiscounts = filteredDiscounts.filter((d) => !d.is_active);
-
-  const getDiscountLabel = (d: Discount) => {
-    if (d.discount_type === "percentage") return `${d.value}% OFF`;
-    if (d.discount_type === "fixed_amount") return `₦${d.value} OFF`;
-    return `Buy ${d.value} Get ${d.buy_x_get_y_free_qty} Free`;
+  const getDiscountColor = (type: string) => {
+    switch (type) {
+      case "percentage":
+        return "#3b82f6";
+      case "fixed_amount":
+        return "#10b981";
+      case "buy_x_get_y":
+        return "#f59e0b";
+      default:
+        return "#6b7280";
+    }
   };
 
   const getDiscountIcon = (type: string) => {
-    if (type === "percentage") return "percent";
-    if (type === "fixed_amount") return "banknote";
-    return "gift";
+    switch (type) {
+      case "percentage":
+        return "percent";
+      case "fixed_amount":
+        return "banknote";
+      case "buy_x_get_y":
+        return "gift";
+      default:
+        return "tag";
+    }
   };
 
-  const getDiscountColor = (type: string) => {
-    if (type === "percentage") return "#3b82f6";
-    if (type === "fixed_amount") return "#10b981";
-    return "#a855f7";
+  const getDiscountLabel = (promo: Discount) => {
+    switch (promo.discount_type) {
+      case "percentage":
+        return `${promo.value}% OFF`;
+      case "fixed_amount":
+        return `$${promo.value} OFF`;
+      case "buy_x_get_y":
+        return `Buy ${promo.buy_x_get_y_free_qty} Get ${promo.buy_x_get_y_free_qty}`;
+      default:
+        return `${promo.value} OFF`;
+    }
   };
 
-  const formatDate = (d: string | null) => {
-    if (!d) return null;
-    return new Date(d).toLocaleDateString("en-US", {
+  const formatDate = (dateStr: string | null | undefined) => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
@@ -227,25 +251,21 @@ const Discounts = () => {
               </Text>
             </View>
           )}
-          {promo.min_order > 0 && (
-            <View style={styles.validityRow}>
-              <Lucide name="shopping-cart" size={12} color="#9ca3af" />
-              <Text style={[styles.validityText, { color: colors.textSecondary }]}>
-                Min. order: ₦{promo.min_order.toLocaleString()}
-              </Text>
-            </View>
-          )}
         </View>
         <View style={styles.promoRight}>
-          {isValidityExpired || promo.is_active === false ? (
+          {!promo.is_active ? (
             <View style={styles.expiredBadge}>
               <Text style={styles.expiredBadgeText}>Inactive</Text>
+            </View>
+          ) : isValidityExpired ? (
+            <View style={styles.expiredBadge}>
+              <Text style={styles.expiredBadgeText}>Expired</Text>
             </View>
           ) : (
             <Host matchContents>
               <Switch
                 value={promo.is_active}
-                onValueChange={() => toggleDiscountMutation(promo.id)}
+                onValueChange={() => toggleDiscountMutation.mutate(promo.id)}
               />
             </Host>
           )}
@@ -287,32 +307,42 @@ const Discounts = () => {
           <Text style={[styles.promoDiscount, { color: "#f97316" }]}>
             {coupon.discount_type === "percentage"
               ? `${coupon.value}% OFF`
-              : `₦${coupon.value} OFF`}
+              : `$${coupon.value} OFF`}
+            {coupon.min_order > 0 && (
+              <Text style={[styles.promoDescription, { color: colors.textSecondary }]}>
+                {" "}
+                · Min. ${coupon.min_order}
+              </Text>
+            )}
           </Text>
           <View style={styles.validityRow}>
-            <Lucide name="repeat" size={12} color="#9ca3af" />
-            <Text style={[styles.validityText, { color: colors.textSecondary }]}>
-              {coupon.used_count}/{coupon.max_uses > 0 ? coupon.max_uses : "∞"} used
-            </Text>
-            {coupon.min_order > 0 && (
+            {coupon.expires_at && (
+              <>
+                <Lucide name="calendar" size={12} color="#9ca3af" />
+                <Text style={[styles.validityText, { color: colors.textSecondary }]}>
+                  Expires {formatDate(coupon.expires_at)}
+                </Text>
+              </>
+            )}
+            {coupon.max_uses > 0 && (
               <Text style={[styles.validityText, { color: colors.textSecondary }]}>
-                {" · "}Min: ₦{coupon.min_order.toLocaleString()}
+                {" · "}{coupon.used_count}/{coupon.max_uses} used
               </Text>
             )}
           </View>
-          {coupon.expires_at && (
-            <View style={styles.validityRow}>
-              <Lucide name="calendar" size={12} color="#9ca3af" />
-              <Text style={[styles.validityText, { color: isExpired ? "#ef4444" : colors.textSecondary }]}>
-                {isExpired ? "Expired" : `Expires ${formatDate(coupon.expires_at)}`}
-              </Text>
-            </View>
-          )}
         </View>
         <View style={styles.promoRight}>
-          {!coupon.is_active || isExpired || isMaxed ? (
+          {!coupon.is_active ? (
             <View style={styles.expiredBadge}>
               <Text style={styles.expiredBadgeText}>Inactive</Text>
+            </View>
+          ) : isExpired ? (
+            <View style={styles.expiredBadge}>
+              <Text style={styles.expiredBadgeText}>Expired</Text>
+            </View>
+          ) : isMaxed ? (
+            <View style={styles.expiredBadge}>
+              <Text style={styles.expiredBadgeText}>Maxed</Text>
             </View>
           ) : (
             <View style={styles.activeBadge}>
@@ -333,44 +363,36 @@ const Discounts = () => {
           </View>
         );
       }
+
+      const filteredDiscounts = discounts.filter((d) => {
+        if (activeFilter === "All") return true;
+        if (activeFilter === "Percentage") return d.discount_type === "percentage";
+        if (activeFilter === "Fixed Amount") return d.discount_type === "fixed_amount";
+        if (activeFilter === "Buy X Get Y") return d.discount_type === "buy_x_get_y";
+        return true;
+      });
+
+      if (filteredDiscounts.length === 0) {
+        return (
+          <View style={styles.emptyContainer}>
+            <Lucide name="tag" size={40} color={colors.textSecondary} />
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+              No promotions yet
+            </Text>
+            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+              Create your first promotion to get started
+            </Text>
+          </View>
+        );
+      }
+
       return (
-        <View style={{ gap: 20 }}>
-          {activeDiscounts.length > 0 && (
-            <View>
-              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-                ACTIVE PROMOTIONS ({activeDiscounts.length})
-              </Text>
-              <View style={styles.promoList}>
-                {activeDiscounts.map(renderPromoCard)}
-              </View>
-            </View>
-          )}
-          {inactiveDiscounts.length > 0 && (
-            <View>
-              <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-                INACTIVE ({inactiveDiscounts.length})
-              </Text>
-              <View style={styles.promoList}>
-                {inactiveDiscounts.map(renderPromoCard)}
-              </View>
-            </View>
-          )}
-          {discounts.length === 0 && (
-            <View style={styles.emptyContainer}>
-              <Lucide name="tag" size={48} color={colors.textSecondary} />
-              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-                No promotions yet
-              </Text>
-              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-                Create your first promotion to offer discounts
-              </Text>
-            </View>
-          )}
+        <View style={styles.promoList}>
+          {filteredDiscounts.map(renderPromoCard)}
         </View>
       );
     }
 
-    // Coupons tab
     if (couponsLoading) {
       return (
         <View style={styles.loadingContainer}>
@@ -378,29 +400,24 @@ const Discounts = () => {
         </View>
       );
     }
+
+    if (coupons.length === 0) {
+      return (
+        <View style={styles.emptyContainer}>
+          <Lucide name="ticket" size={40} color={colors.textSecondary} />
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No coupons yet
+          </Text>
+          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+            Create coupon codes for your customers
+          </Text>
+        </View>
+      );
+    }
+
     return (
-      <View style={{ gap: 20 }}>
-        {coupons.length > 0 && (
-          <View>
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-              ALL COUPONS ({coupons.length})
-            </Text>
-            <View style={styles.promoList}>
-              {coupons.map(renderCouponCard)}
-            </View>
-          </View>
-        )}
-        {coupons.length === 0 && (
-          <View style={styles.emptyContainer}>
-            <Lucide name="ticket" size={48} color={colors.textSecondary} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              No coupons yet
-            </Text>
-            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-              Create coupon codes customers can apply at checkout
-            </Text>
-          </View>
-        )}
+      <View style={styles.promoList}>
+        {coupons.map(renderCouponCard)}
       </View>
     );
   };
@@ -430,11 +447,11 @@ const Discounts = () => {
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabRow}>
-        {(["promotions", "coupons"] as TabType[]).map((tab) => {
+      <View style={styles.tabRow} onLayout={(e) => setTabRowWidth(e.nativeEvent.layout.width)}>
+        {TABS.map((tab) => {
           const isActive = tab === activeTab;
           return (
-            <AnimatedPressable
+            <Pressable
               key={tab}
               style={styles.tab}
               onPress={() => onTabChange(tab)}
@@ -447,15 +464,15 @@ const Discounts = () => {
               >
                 {tab === "promotions" ? "Promotions" : "Coupons"}
               </Text>
-              {isActive && (
-                <Animated.View
-                  layout={LinearTransition.springify().damping(20).stiffness(200)}
-                  style={styles.activeTabIndicator}
-                />
-              )}
-            </AnimatedPressable>
+            </Pressable>
           );
         })}
+        <Animated.View
+          style={[
+            styles.activeTabIndicator,
+            indicatorAnimatedStyle,
+          ]}
+        />
       </View>
 
       <ScrollView
@@ -530,27 +547,35 @@ const Discounts = () => {
 export default Discounts;
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: {
+    flex: 1,
+  },
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
     paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "rgba(0,0,0,0.05)",
   },
-  headerLeft: { width: 40 },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
+  headerLeft: {
+    width: 24,
+  },
+  headerTitle: {
+    fontSize: 17,
+    fontWeight: "600",
+  },
   addButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: "#3b82f6",
     alignItems: "center",
     justifyContent: "center",
   },
   tabRow: {
     flexDirection: "row",
-    paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0,0,0,0.05)",
   },
@@ -558,17 +583,15 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     paddingVertical: 12,
-    borderBottomWidth: 2,
-    borderBottomColor: "transparent",
   },
   activeTabIndicator: {
     position: "absolute",
-    bottom: -1,
-    left: "20%",
-    right: "20%",
-    height: 2,
+    bottom: 0,
+    left: 0,
+    width: 90,
+    height: 3,
     backgroundColor: "#3b82f6",
-    borderRadius: 1,
+    borderRadius: 1.5,
   },
   tabText: { fontSize: 15, fontWeight: "600" },
   filterTabs: {
