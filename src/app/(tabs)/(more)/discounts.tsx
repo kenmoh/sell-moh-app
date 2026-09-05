@@ -11,7 +11,7 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -73,7 +73,6 @@ const Discounts = () => {
   const queryClient = useQueryClient();
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
   const [activeTab, setActiveTab] = useState<TabType>("promotions");
-  const [tabRowWidth, setTabRowWidth] = useState(0);
 
   // Discount sheet state
   const [showDiscountSheet, setShowDiscountSheet] = useState(false);
@@ -107,7 +106,6 @@ const Discounts = () => {
 
   const contentOpacity = useSharedValue(1);
   const contentTranslateY = useSharedValue(0);
-  const tabIndicatorX = useSharedValue(0);
 
   const prevTab = useSharedValue(activeTab);
 
@@ -116,22 +114,16 @@ const Discounts = () => {
     contentOpacity.value = 0;
     contentTranslateY.value = 8;
     prevTab.value = tab;
-    const idx = TABS.indexOf(tab);
-    tabIndicatorX.value = withSpring(idx * (tabRowWidth / 2) + (tabRowWidth / 4) - 45, { damping: 20, stiffness: 300 });
     requestAnimationFrame(() => {
       contentOpacity.value = withTiming(1, { duration: 200 });
       contentTranslateY.value = withTiming(0, { duration: 200 });
     });
     setActiveTab(tab);
-  }, [tabRowWidth]);
+  }, []);
 
   const contentAnimatedStyle = useAnimatedStyle(() => ({
     opacity: contentOpacity.value,
     transform: [{ translateY: contentTranslateY.value }],
-  }));
-
-  const indicatorAnimatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: tabIndicatorX.value }],
   }));
 
   const toggleDiscountMutation = useMutation({
@@ -447,11 +439,11 @@ const Discounts = () => {
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabRow} onLayout={(e) => setTabRowWidth(e.nativeEvent.layout.width)}>
+      <View style={styles.tabRow}>
         {TABS.map((tab) => {
           const isActive = tab === activeTab;
           return (
-            <Pressable
+            <AnimatedPressable
               key={tab}
               style={styles.tab}
               onPress={() => onTabChange(tab)}
@@ -459,20 +451,18 @@ const Discounts = () => {
               <Text
                 style={[
                   styles.tabText,
-                  { color: isActive ? "#3b82f6" : colors.textSecondary },
+                  {
+                    color: isActive ? "#3b82f6" : colors.textSecondary,
+                    fontSize: isActive ? 17 : 15,
+                    fontWeight: isActive ? "700" : "500",
+                  },
                 ]}
               >
                 {tab === "promotions" ? "Promotions" : "Coupons"}
               </Text>
-            </Pressable>
+            </AnimatedPressable>
           );
         })}
-        <Animated.View
-          style={[
-            styles.activeTabIndicator,
-            indicatorAnimatedStyle,
-          ]}
-        />
       </View>
 
       <ScrollView
@@ -584,15 +574,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
   },
-  activeTabIndicator: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    width: 90,
-    height: 3,
-    backgroundColor: "#3b82f6",
-    borderRadius: 1.5,
-  },
+
   tabText: { fontSize: 15, fontWeight: "600" },
   filterTabs: {
     paddingHorizontal: 20,
