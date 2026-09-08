@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useCallback } from "react";
 import {
   ActivityIndicator,
   StyleSheet,
@@ -8,6 +8,7 @@ import {
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 import { Colors } from "@/constants/theme";
 import { useColorScheme } from "react-native";
 import { buildReceiptHtml } from "@/lib/receipt-html";
@@ -73,6 +74,16 @@ export default function ReceiptScreen() {
     if (!html) return;
     Print.printAsync({ html }).catch(() => {});
   };
+
+  const handleSavePdf = useCallback(async () => {
+    if (!html) return;
+    try {
+      const { uri } = await Print.printToFileAsync({ html });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
+      }
+    } catch {}
+  }, [html]);
 
   if (!receiptData) {
     return (
@@ -190,14 +201,24 @@ export default function ReceiptScreen() {
         </View>
       </View>
 
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={handlePrint}
-        style={[styles.printBtn, { backgroundColor: colors.buttonPrimary }]}
-      >
-        <Lucide name="printer" size={20} color="#fff" />
-        <Text style={styles.printBtnText}>Print Receipt</Text>
-      </TouchableOpacity>
+      <View style={styles.btnRow}>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handlePrint}
+          style={[styles.printBtn, { backgroundColor: colors.buttonPrimary }]}
+        >
+          <Lucide name="printer" size={20} color="#fff" />
+          <Text style={styles.printBtnText}>Print Receipt</Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleSavePdf}
+          style={[styles.printBtn, { backgroundColor: colors.backgroundElement }]}
+        >
+          <Lucide name="download" size={20} color={colors.text} />
+          <Text style={[styles.printBtnText, { color: colors.text }]}>Save PDF</Text>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
@@ -227,6 +248,10 @@ const styles = StyleSheet.create({
   receiptLabel: { fontSize: 13 },
   receiptValue: { fontSize: 13, fontWeight: "600" },
   divider: { borderTopWidth: 1, marginVertical: 10 },
+  btnRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
   printBtn: {
     flexDirection: "row",
     alignItems: "center",

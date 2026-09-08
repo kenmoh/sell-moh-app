@@ -10,7 +10,7 @@ import useCartStore, { CartItem } from "@/hooks/use-cart-store";
 import { useSession } from "@/lib/ctx";
 import Lucide from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -29,6 +29,7 @@ import AppBottomSheet from "./bottom-sheet";
 import type { ReceiptData } from "@/types/payments";
 import { buildReceiptHtml } from "@/lib/receipt-html";
 import * as Print from "expo-print";
+import * as Sharing from "expo-sharing";
 
 export type PaymentMethod = "cash" | "transfer" | "split" | "card";
 
@@ -80,6 +81,18 @@ export const CartSuccessView = ({
       () => {},
     );
   };
+
+  const handleSavePdf = useCallback(async () => {
+    if (!receipt.receiptData) return;
+    try {
+      const { uri } = await Print.printToFileAsync({
+        html: buildReceiptHtml(receipt.receiptData),
+      });
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
+      }
+    } catch {}
+  }, [receipt.receiptData]);
 
   return (
     <View style={styles.successContainer}>
@@ -174,6 +187,28 @@ export const CartSuccessView = ({
           <Lucide name="printer" size={18} color={colors.text} />
           <Text style={[styles.primaryButtonText, { color: colors.text }]}>
             Print Receipt
+          </Text>
+        </TouchableOpacity>
+      )}
+
+      {receipt.receiptData && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handleSavePdf}
+          style={[
+            styles.primaryButton,
+            {
+              backgroundColor: colors.sheet,
+              borderColor: colors.backgroundElement,
+              borderWidth: 1,
+              width: "100%",
+              marginBottom: 10,
+            },
+          ]}
+        >
+          <Lucide name="download" size={18} color={colors.text} />
+          <Text style={[styles.primaryButtonText, { color: colors.text }]}>
+            Save PDF
           </Text>
         </TouchableOpacity>
       )}
@@ -1104,6 +1139,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const updateQuantityInCart = useCartStore((s) => s.updateQuantityInCart);
   const removeItemFromCart = useCartStore((s) => s.removeItemFromCart);
   const clearCartById = useCartStore((s) => s.clearCartById);
+  const removeCart = useCartStore((s) => s.removeCart);
   const setCartCoupon = useCartStore((s) => s.setCartCoupon);
   const clearCartCoupon = useCartStore((s) => s.clearCartCoupon);
 
@@ -1491,7 +1527,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   };
 
   const handleFinishSuccess = () => {
-    clearCartById(activeCartId);
+    removeCart(activeCartId);
     queryClient.invalidateQueries({ queryKey: ["carts"] });
     setIsSuccess(false);
     onVisibleChange(false);

@@ -53,20 +53,34 @@ export default function PaymentAwaitingScreen() {
 
   useEffect(() => {
     if (status?.status === "completed") {
-      confirmPayment({ intent_id: saleId }).then(() => {
-        Alert.alert("Payment Confirmed", "Payment received successfully!", [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(tabs)/(pos)"),
-          },
-        ]);
+      confirmPayment({ intent_id: saleId }).then((result) => {
+        const r = result?.receipt;
+        if (r) {
+          router.replace({
+            pathname: "/(tabs)/(pos)/receipt",
+            params: {
+              receiptNumber: r.receipt_number,
+              businessName: r.business_name,
+              businessPhone: r.business_phone,
+              storeName: r.store_name,
+              storeAddress: r.store_address,
+              saleNumber: r.sale_number,
+              createdAt: r.created_at,
+              customerName: r.customer_name ?? "",
+              items: JSON.stringify(r.items),
+              subtotal: String(r.subtotal),
+              discount: String(r.discount),
+              tax: String(r.tax),
+              total: String(r.total),
+              amountPaid: String(r.amount_paid),
+              paymentMethod: r.payment_method,
+            },
+          });
+        } else {
+          router.replace("/(tabs)/(pos)");
+        }
       }).catch(() => {
-        Alert.alert("Payment Confirmed", "Payment received successfully!", [
-          {
-            text: "OK",
-            onPress: () => router.replace("/(tabs)/(pos)"),
-          },
-        ]);
+        router.replace("/(tabs)/(pos)");
       });
     }
   }, [status?.status, router, saleId]);

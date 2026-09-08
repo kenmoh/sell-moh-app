@@ -34,6 +34,7 @@ interface CartState {
     quantity: number,
   ) => void;
   clearCartById: (cartId: string) => void;
+  removeCart: (cartId: string) => void;
   setCartCoupon: (cartId: string, code: string | null, discountAmount?: number) => void;
   clearCartCoupon: (cartId: string) => void;
   addItem: (product: Product, quantity?: number, itemId?: string) => void;
@@ -129,6 +130,12 @@ const useCartStore = create<CartState>((set, get) => ({
       carts: state.carts.map((cart) =>
         cart.id === cartId ? { ...cart, items: [], couponCode: null, discountAmount: 0 } : cart,
       ),
+    })),
+
+  removeCart: (cartId) =>
+    set((state) => ({
+      carts: state.carts.filter((cart) => cart.id !== cartId),
+      activeCartId: state.activeCartId === cartId ? "" : state.activeCartId,
     })),
 
   setCartCoupon: (cartId, code, discountAmount = 0) =>

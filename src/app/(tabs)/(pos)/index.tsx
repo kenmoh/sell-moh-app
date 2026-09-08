@@ -14,7 +14,7 @@ import { usePendingPayments } from "@/hooks/usePendingPayments";
 import { useSession } from "@/lib/ctx";
 import { Product } from "@/types/product-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -38,6 +38,7 @@ const POSScreen = () => {
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
   const flatListRef = useRef<FlatList>(null);
   const { user } = useSession();
+  const queryClient = useQueryClient();
 
   const isOwner = user?.role?.toLowerCase() === "owner";
 
@@ -165,7 +166,10 @@ const POSScreen = () => {
         onEndReached={mappedProducts.length > 0 ? handleEndReached : undefined}
         onEndReachedThreshold={0.5}
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={() => {
+          refetch();
+          queryClient.invalidateQueries({ queryKey: ["carts"] });
+        }}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.background }}>
             {/* Top Branding & Header Row */}
@@ -293,7 +297,7 @@ const POSScreen = () => {
               const state = useCartStore.getState();
               const cartId = state.activeCartId;
               if (cartId && !cartId.startsWith("cart-")) {
-                addToCart(cartId, { product_id: item.id, qty: 1 })
+                addToCart(cartId, { product_id: item.id })
                   .then((res) => {
                     state.addItem(item, 1, res.id);
                   })
