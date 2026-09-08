@@ -250,7 +250,9 @@ function TokenRenderer({
                   }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: "700", color }}>
-                    {cell?.text ?? String(cell)}
+                    {cell?.tokens && cell.tokens.length > 0
+                      ? renderInlineTokens(cell.tokens, color, backgroundElement)
+                      : cell?.text ?? String(cell)}
                   </Text>
                 </View>
               ))}
@@ -274,7 +276,9 @@ function TokenRenderer({
                   }}
                 >
                   <Text style={{ fontSize: 13, color }}>
-                    {cell?.text ?? String(cell)}
+                    {cell?.tokens && cell.tokens.length > 0
+                      ? renderInlineTokens(cell.tokens, color, backgroundElement)
+                      : cell?.text ?? String(cell)}
                   </Text>
                 </View>
               ))}
