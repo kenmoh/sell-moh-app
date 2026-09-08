@@ -230,38 +230,34 @@ function TokenRenderer({
     case "table":
       return (
         <View style={{ marginBottom: 8 }}>
-          {token.header?.map((row: any[], ri: number) => (
-            <View key={`h${ri}`} style={{ flexDirection: "row" }}>
-              {row.map((cell: any, ci: number) => (
+          {token.header && (
+            <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: backgroundElement }}>
+              {(Array.isArray(token.header[0]) ? token.header[0] : token.header).map((cell: any, ci: number) => (
                 <View
                   key={ci}
                   style={{
                     flex: 1,
-                    borderBottomWidth: 1,
-                    borderBottomColor: backgroundElement,
                     padding: 6,
                   }}
                 >
                   <Text style={{ fontSize: 13, fontWeight: "700", color }}>
-                    {cell.text}
+                    {cell?.text ?? String(cell)}
                   </Text>
                 </View>
               ))}
             </View>
-          ))}
+          )}
           {token.rows?.map((row: any[], ri: number) => (
-            <View key={`r${ri}`} style={{ flexDirection: "row" }}>
+            <View key={`r${ri}`} style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: backgroundElement }}>
               {row.map((cell: any, ci: number) => (
                 <View
                   key={ci}
                   style={{
                     flex: 1,
-                    borderBottomWidth: 1,
-                    borderBottomColor: backgroundElement,
                     padding: 6,
                   }}
                 >
-                  <Text style={{ fontSize: 13, color }}>{cell.text}</Text>
+                  <Text style={{ fontSize: 13, color }}>{cell?.text ?? String(cell)}</Text>
                 </View>
               ))}
             </View>
@@ -670,8 +666,6 @@ const AIScreen = () => {
         onMetadata: (event) => {
           if (event.type === "metadata") {
             const data = event.data;
-            console.log("[AI metadata event]", JSON.stringify(data, null, 2));
-            console.log("[AI answer type]", typeof data.answer, data.answer);
             setMessages((prev) =>
               prev.map((m) =>
                 m.id === assistantId

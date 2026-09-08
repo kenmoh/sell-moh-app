@@ -142,7 +142,6 @@ function handleSSEEvent(
         callbacks.onToken?.(typeof parsed.text === "string" ? parsed.text : JSON.stringify(parsed.text) ?? "");
         break;
       case "metadata":
-        console.log("[SSE metadata]", JSON.stringify(parsed, null, 2));
         callbacks.onMetadata?.({
           type: "metadata",
           data: parsed.data ?? parsed,
