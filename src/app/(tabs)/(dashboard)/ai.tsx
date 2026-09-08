@@ -1047,7 +1047,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   messageBubbleWrapper: {
-    maxWidth: "78%",
+    maxWidth: "85%",
     gap: 6,
   },
 
