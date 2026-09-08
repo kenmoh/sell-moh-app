@@ -44,7 +44,6 @@ export const uploadBusinessLogo = async (
   const res = await apiClient.post<{ data: BusinessSettings }>(
     "/business/logo",
     formData as any,
-    { headers: { "Content-Type": "multipart/form-data" } },
   );
 
   if (!res.ok) {
