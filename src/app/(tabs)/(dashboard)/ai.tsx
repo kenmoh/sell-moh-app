@@ -358,6 +358,13 @@ function renderInlineTokens(
 
       case "text":
       default:
+        if (token.tokens && token.tokens.length > 0) {
+          return (
+            <Text key={i}>
+              {renderInlineTokens(token.tokens, color, backgroundElement)}
+            </Text>
+          );
+        }
         return <Text key={i}>{token.raw || token.text}</Text>;
     }
   });
@@ -1070,7 +1077,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   messageBubbleWrapper: {
-    maxWidth: "100%",
+    width: "100%",
     gap: 6,
   },
 
