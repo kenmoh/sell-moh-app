@@ -627,13 +627,13 @@ const AIScreen = () => {
       Keyboard.dismiss();
 
       const userMsg: Message = {
-        id: `user-${Date.now()}`,
+        id: `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
         role: "user",
         content: msg,
         createdAt: new Date(),
       };
 
-      const assistantId = `assistant-${Date.now()}`;
+      const assistantId = `assistant-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
       streamingIdRef.current = assistantId;
 
       const placeholderMsg: Message = {
@@ -742,12 +742,6 @@ const AIScreen = () => {
             isUser ? styles.messageRowUser : styles.messageRowAssistant,
           ]}
         >
-          {!isUser && (
-            <View style={[styles.aiAvatar, { backgroundColor: "#2563eb" }]}>
-              <Lucide name="sparkles" size={14} color="#ffffff" />
-            </View>
-          )}
-
           <View style={styles.messageBubbleWrapper}>
             <View
               style={[
@@ -796,12 +790,6 @@ const AIScreen = () => {
               </View>
             )}
           </View>
-
-          {isUser && (
-            <View style={[styles.userAvatar, { backgroundColor: "#10b981" }]}>
-              <Text style={styles.userAvatarText}>You</Text>
-            </View>
-          )}
         </View>
       );
     },
