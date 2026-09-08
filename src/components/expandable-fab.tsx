@@ -31,7 +31,11 @@ const FAB_SIZE = 56;
 const MARGIN = 16;
 const SUB_FAB_SIZE = 48;
 
-const ExpandableFAB = () => {
+interface ExpandableFABProps {
+  activeStoreId?: string;
+}
+
+const ExpandableFAB = ({ activeStoreId }: ExpandableFABProps) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
@@ -140,7 +144,7 @@ const ExpandableFAB = () => {
   const { mutate: quickCreateCart, isPending } = useMutation({
     mutationFn: () =>
       createCart({
-        store_id: user?.store_id ?? "",
+        store_id: activeStoreId || user?.store_id || "",
       }),
     onSuccess: (cart) => {
       useCartStore.setState((state) => ({
@@ -243,7 +247,7 @@ const ExpandableFAB = () => {
       <NewCartSheet
         visible={newCartSheetVisible}
         onVisibleChange={setNewCartSheetVisible}
-        storeId={user?.store_id ?? ""}
+        storeId={activeStoreId || user?.store_id || ""}
         onCartCreated={() => setCartSheetVisible(true)}
       />
       <CartPickerSheet

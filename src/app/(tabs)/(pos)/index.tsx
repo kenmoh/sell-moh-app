@@ -361,7 +361,7 @@ const POSScreen = () => {
 
       {/* Floating Action Controls */}
       <DraggableCart />
-      <ExpandableFAB />
+      <ExpandableFAB activeStoreId={activeStoreId} />
 
       {/* Pending Payments Sheet */}
       <PendingPaymentsSheet
