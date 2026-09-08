@@ -161,7 +161,7 @@ const NewCartSheet = ({
         )}
 
         <AppTextInput
-          placeholder="Customer name"
+          placeholder="Customer name (optional)"
           value={customerName}
           onChangeText={setCustomerName}
         />
@@ -179,7 +179,7 @@ const NewCartSheet = ({
             isPending && { opacity: 0.6 },
           ]}
           onPress={() => handleCreate()}
-          disabled={isPending || !customerName.trim()}
+          disabled={isPending}
         >
           {isPending ? (
             <ActivityIndicator color="#fff" size="small" />
