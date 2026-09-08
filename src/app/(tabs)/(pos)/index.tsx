@@ -146,6 +146,18 @@ const POSScreen = () => {
     [allProducts, categories],
   );
 
+  const carts = useCartStore((s) => s.carts);
+  const activeCartId = useCartStore((s) => s.activeCartId);
+
+  const cartQuantities = useMemo(() => {
+    const cart = carts.find((c) => c.id === activeCartId);
+    const map: Record<string, number> = {};
+    for (const item of cart?.items ?? []) {
+      map[item.product.id] = (map[item.product.id] ?? 0) + item.quantity;
+    }
+    return map;
+  }, [carts, activeCartId]);
+
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -296,6 +308,7 @@ const POSScreen = () => {
         renderItem={({ item }) => (
           <Card
             product={item}
+            cartQuantity={cartQuantities[item.id] ?? 0}
             onPress={() => {
               const state = useCartStore.getState();
               const cartId = state.activeCartId;

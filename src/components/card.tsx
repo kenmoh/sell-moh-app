@@ -12,9 +12,10 @@ import {
 interface CardProps {
   product: Product;
   onPress?: () => void;
+  cartQuantity?: number;
 }
 
-const Card = ({ product, onPress }: CardProps) => {
+const Card = ({ product, onPress, cartQuantity = 0 }: CardProps) => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
@@ -22,6 +23,7 @@ const Card = ({ product, onPress }: CardProps) => {
   const stock = product.in_stock ?? 0;
   const reorderPoint = product.reorder_point ?? 0;
   const isOutOfStock = stock <= 0;
+  const isAtStock = stock > 0 && cartQuantity >= stock;
   const isLowStock = reorderPoint > 0 && stock > 0 && stock <= reorderPoint;
 
   const stockBadgeColor = isOutOfStock
@@ -39,14 +41,14 @@ const Card = ({ product, onPress }: CardProps) => {
   return (
     <Pressable
       onPress={onPress}
-      disabled={isOutOfStock}
+      disabled={isOutOfStock || isAtStock}
       style={({ pressed }) => [
         styles.cardContainer,
         {
           backgroundColor: colors.card,
           borderColor: isDark ? "#262930" : "#edf0f5",
-          opacity: isOutOfStock ? 0.6 : pressed ? 0.9 : 1,
-          transform: [{ scale: pressed && !isOutOfStock ? 0.98 : 1 }],
+          opacity: isOutOfStock || isAtStock ? 0.6 : pressed ? 0.9 : 1,
+          transform: [{ scale: pressed && !isOutOfStock && !isAtStock ? 0.98 : 1 }],
         },
       ]}
     >
@@ -71,7 +73,7 @@ const Card = ({ product, onPress }: CardProps) => {
             style={[styles.stockDot, { backgroundColor: stockBadgeColor }]}
           />
           <Text style={[styles.stockText, { color: stockBadgeColor }]}>
-            {isOutOfStock ? "Out" : `${stock}`}
+            {isOutOfStock ? "Out" : isAtStock ? "Full" : `${stock}`}
           </Text>
         </View>
       </View>

@@ -384,9 +384,13 @@ export const CartItemRow = ({
           <TouchableOpacity
             activeOpacity={0.7}
             onPress={() => onQuantityChange(item.quantity + 1)}
+            disabled={item.quantity >= (item.product.in_stock ?? 0)}
             style={[
               styles.stepperBtn,
-              { backgroundColor: colors.backgroundElement },
+              {
+                backgroundColor: colors.backgroundElement,
+                opacity: item.quantity >= (item.product.in_stock ?? 0) ? 0.4 : 1,
+              },
             ]}
           >
             <Lucide name="plus" size={14} color={colors.text} />

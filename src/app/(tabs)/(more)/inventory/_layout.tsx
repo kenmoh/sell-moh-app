@@ -19,7 +19,7 @@ const InventoryLayout = () => {
         <Stack.Screen
           name="index"
           options={{
-            title: "Iventory",
+            title: "Inventory",
             headerShadowVisible: false,
             headerRight: () => (
               <HeaderRight
