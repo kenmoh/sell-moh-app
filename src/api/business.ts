@@ -1,5 +1,7 @@
-import { apiClient } from "./client";
+import { apiClient, BASE_URL } from "./client";
 import type { BusinessSettings, BusinessUpdate } from "@/types/business";
+import * as SecureStore from "expo-secure-store";
+import { Platform } from "react-native";
 
 const URL = "/business/settings";
 
@@ -9,6 +11,22 @@ const getErrorMessage = (res: any): string => {
   }
   return res.problem || "An unknown error occurred";
 };
+
+async function getAccessToken(): Promise<string | null> {
+  try {
+    let raw: string | null;
+    if (Platform.OS === "web") {
+      raw = localStorage.getItem("session");
+    } else {
+      raw = await SecureStore.getItemAsync("session");
+    }
+    if (!raw) return null;
+    const session = JSON.parse(raw);
+    return session?.accessToken ?? null;
+  } catch {
+    return null;
+  }
+}
 
 export const fetchBusinessSettings = async (): Promise<BusinessSettings> => {
   const res = await apiClient.get<{ data: BusinessSettings }>(URL);
@@ -41,14 +59,20 @@ export const uploadBusinessLogo = async (
     type: mimeType,
   } as any);
 
-  const res = await apiClient.post<{ data: BusinessSettings }>(
-    "/business/logo",
-    formData as any,
-  );
+  const token = await getAccessToken();
+  const res = await fetch(`${BASE_URL}/business/logo`, {
+    method: "POST",
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
 
   if (!res.ok) {
-    throw new Error(getErrorMessage(res));
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err?.detail || `Upload failed (${res.status})`);
   }
 
-  return res.data?.data!;
+  const json = await res.json();
+  return json.data as BusinessSettings;
 };
