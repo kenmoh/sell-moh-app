@@ -130,7 +130,7 @@ const StoresScreen = () => {
             <Lucide name="pencil" size={14} color={colors.textSecondary} />
           </Pressable>
         </View>
-        <View style={styles.storeCardFooter}>
+        <View style={[styles.storeCardFooter, { borderTopColor: isDark ? "#282b32" : "#eef0f4" }]}>
           <View style={styles.storeType}>
             <Lucide
               name={item.is_warehouse ? "package" : "shopping-bag"}
@@ -166,7 +166,7 @@ const StoresScreen = () => {
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top", "left", "right"]}
+      // edges={["top", "left", "right"]}
     >
       <Stack.Screen
         options={{
@@ -313,10 +313,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 14,
-    paddingTop: 12,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#e5e7eb",
   },
   editIconBtn: {
     width: 32,
