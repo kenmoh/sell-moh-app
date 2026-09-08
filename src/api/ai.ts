@@ -41,7 +41,7 @@ export const fetchConversations = async (
   pageSize = 20,
 ): Promise<{ items: ConversationListItem[]; total: number }> => {
   const res = await apiClient.get<{
-    data: ConversationListItem[];
+    data: { items: ConversationListItem[]; page: number; page_size: number };
     total: number;
   }>(`${URL}/conversations?page=${page}&page_size=${pageSize}`);
 
@@ -50,8 +50,8 @@ export const fetchConversations = async (
   }
 
   return {
-    items: res.data?.data ?? [],
-    total: res.data?.total ?? 0,
+    items: res.data?.data?.items ?? [],
+    total: res.data?.data?.items?.length ?? 0,
   };
 };
 
