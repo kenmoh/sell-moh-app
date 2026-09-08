@@ -18,15 +18,23 @@ export const fetchCustomers = async (
   params.append("page", String(page));
   params.append("page_size", String(pageSize));
   if (search) params.append("search", search);
-  const res = await apiClient.get<{ data: CustomerListResponse }>(
-    `${URL}?${params.toString()}`,
-  );
+  const res = await apiClient.get<{
+    data: Customer[];
+    total: number;
+    page: number;
+    page_size: number;
+  }>(`${URL}?${params.toString()}`);
 
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
   }
 
-  return res.data?.data!;
+  return {
+    items: res.data?.data ?? [],
+    total: res.data?.total ?? 0,
+    page: res.data?.page ?? 1,
+    page_size: res.data?.page_size ?? pageSize,
+  };
 };
 
 export const fetchCustomer = async (customerId: string): Promise<Customer> => {

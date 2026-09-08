@@ -35,7 +35,7 @@ const CustomersScreen = () => {
     queryFn: () => fetchCustomers(page, 50, search || undefined),
   });
 
-  const customers = useMemo(() => data ?? [], [data]);
+  const customers = useMemo(() => data?.items ?? [], [data]);
   const total = data?.total ?? 0;
 
   const handleOpenAdd = useCallback(() => {
