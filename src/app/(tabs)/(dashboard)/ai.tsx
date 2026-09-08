@@ -910,7 +910,7 @@ const AIScreen = () => {
           <FlatList
             ref={flatListRef}
             data={messages}
-            keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
             renderItem={renderMessage}
             contentContainerStyle={[
               styles.messagesList,
