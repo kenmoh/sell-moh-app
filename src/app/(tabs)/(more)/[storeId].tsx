@@ -381,6 +381,11 @@ const StoreDetailScreen = () => {
                     <Text style={[styles.stockDetail, { color: colors.textSecondary }]}>
                       Qty: {product.qty}
                     </Text>
+                    {product.committed_qty > 0 && (
+                      <Text style={[styles.stockDetail, { color: "#3b82f6" }]}>
+                        Sold: {product.committed_qty}
+                      </Text>
+                    )}
                     {product.reserved_qty > 0 && (
                       <Text style={[styles.stockDetail, { color: "#f59e0b" }]}>
                         Reserved: {product.reserved_qty}
