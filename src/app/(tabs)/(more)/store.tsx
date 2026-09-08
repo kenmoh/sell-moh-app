@@ -130,7 +130,12 @@ const StoresScreen = () => {
             <Lucide name="pencil" size={14} color={colors.textSecondary} />
           </Pressable>
         </View>
-        <View style={[styles.storeCardFooter, { borderTopColor: isDark ? "#282b32" : "#eef0f4" }]}>
+        <View
+          style={[
+            styles.storeCardFooter,
+            { borderTopColor: isDark ? "#282b32" : "#eef0f4" },
+          ]}
+        >
           <View style={styles.storeType}>
             <Lucide
               name={item.is_warehouse ? "package" : "shopping-bag"}
@@ -268,7 +273,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 12,
     paddingBottom: 12,
   },
   headerTitle: { fontSize: 24, fontWeight: "800", letterSpacing: -0.4 },

@@ -1,5 +1,5 @@
 import { validateCoupon } from "@/api/discount";
-import { voidCartItem, getCart, clearCartItems } from "@/api/cart";
+import { voidCartItem, getCart, clearCartItems, createCart } from "@/api/cart";
 import {
   initiatePayment,
   confirmPayment,
@@ -1526,10 +1526,36 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     }
   };
 
-  const handleFinishSuccess = () => {
+  const handleFinishSuccess = async () => {
     removeCart(activeCartId);
     queryClient.invalidateQueries({ queryKey: ["carts"] });
     setIsSuccess(false);
+
+    if (user?.store_id) {
+      try {
+        const res = await createCart({
+          store_id: user.store_id,
+          customer_name: "",
+          customer_phone: "",
+        });
+        const store = useCartStore.getState();
+        useCartStore.setState((state) => ({
+          carts: [
+            ...state.carts,
+            {
+              id: res.id,
+              name: "New Sale",
+              sessionId: res.session_id,
+              customerName: "",
+              customerPhone: "",
+              items: [],
+            },
+          ],
+          activeCartId: res.id,
+        }));
+      } catch {}
+    }
+
     onVisibleChange(false);
   };
 

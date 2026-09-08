@@ -1,5 +1,8 @@
 import { DataMessageResponse } from "@/types/auth";
-import { DocumentCreateRequest } from "@/types/document-types";
+import {
+  DocumentCreateRequest,
+  DocumentResponse,
+} from "@/types/document-types";
 import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
 
@@ -20,7 +23,7 @@ export const createDocument = async (data: DocumentCreateRequest) => {
 };
 
 export const getDocuments = async () => {
-  const res = await apiClient.get<DataMessageResponse>(`${DOCUMENT_URL}`);
+  const res = await apiClient.get<DocumentResponse>(`${DOCUMENT_URL}`);
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
   }
@@ -28,7 +31,7 @@ export const getDocuments = async () => {
 };
 
 export const getDocumentById = async (id: string) => {
-  const res = await apiClient.get<DataMessageResponse>(`${DOCUMENT_URL}/${id}`);
+  const res = await apiClient.get<DocumentResponse>(`${DOCUMENT_URL}/${id}`);
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
   }

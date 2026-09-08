@@ -146,6 +146,7 @@ export interface PaymentStatusResponse {
 }
 
 export interface PendingPayment {
+  intent_id: string;
   sale_id: string;
   sale_number: string;
   method: string;

@@ -6,6 +6,7 @@ import Card from "@/components/card";
 import DraggableCart from "@/components/draggable-cart";
 import ExpandableFAB from "@/components/expandable-fab";
 import PendingPaymentsSheet from "@/components/pending-payments-sheet";
+import NewCartSheet from "@/components/new-cart-sheet";
 import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
 import { ColorPalette, Colors } from "@/constants/theme";
@@ -19,6 +20,7 @@ import { router } from "expo-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   ScrollView,
@@ -48,6 +50,7 @@ const POSScreen = () => {
   const [selectedStoreId, setSelectedStoreId] = useState(user?.store_id ?? "");
   const [storeSheetVisible, setStoreSheetVisible] = useState(false);
   const [pendingSheetVisible, setPendingSheetVisible] = useState(false);
+  const [newCartSheetVisible, setNewCartSheetVisible] = useState(false);
 
   const activeStoreId = isOwner ? selectedStoreId : (user?.store_id ?? "");
 
@@ -296,15 +299,25 @@ const POSScreen = () => {
             onPress={() => {
               const state = useCartStore.getState();
               const cartId = state.activeCartId;
-              if (cartId && !cartId.startsWith("cart-")) {
-                addToCart(cartId, { product_id: item.id })
-                  .then((res) => {
-                    state.addItem(item, 1, res.id);
-                  })
-                  .catch(() => {});
-              } else {
-                state.addItem(item);
+              if (!cartId || cartId.startsWith("cart-")) {
+                Alert.alert(
+                  "No Cart Active",
+                  "Create a cart first before adding products. Tap the cart icon or the + button to get started.",
+                  [
+                    { text: "Cancel", style: "cancel" },
+                    {
+                      text: "Create Cart",
+                      onPress: () => setNewCartSheetVisible(true),
+                    },
+                  ],
+                );
+                return;
               }
+              addToCart(cartId, { product_id: item.id })
+                .then((res) => {
+                  state.addItem(item, 1, res.id);
+                })
+                .catch(() => {});
             }}
           />
         )}
@@ -429,6 +442,14 @@ const POSScreen = () => {
           )}
         </AppBottomSheet>
       )}
+
+      {/* New Cart Sheet */}
+      <NewCartSheet
+        visible={newCartSheetVisible}
+        onVisibleChange={setNewCartSheetVisible}
+        storeId={activeStoreId}
+        onCartCreated={() => {}}
+      />
     </SafeAreaView>
   );
 };

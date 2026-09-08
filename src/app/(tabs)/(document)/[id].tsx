@@ -1,14 +1,17 @@
+import { getDocumentById } from "@/api/document";
 import AppView from "@/components/app-view";
 import { Colors } from "@/constants/theme";
-import { DocumentResponse } from "@/types/document-types";
+import type { Document } from "@/types/document-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    useColorScheme,
-    View,
+  ActivityIndicator,
+  ScrollView,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -50,176 +53,6 @@ const typeConfig: Record<
   },
 };
 
-const MOCK_DOCS: Record<
-  string,
-  DocumentResponse & {
-    customer_name?: string;
-    items: {
-      description: string;
-      qty: number;
-      unit_price: number;
-      discount_pct?: number;
-      tax_rate?: number;
-    }[];
-  }
-> = {
-  "1": {
-    id: "1",
-    tenant_id: "t1",
-    doc_number: "INV-001",
-    doc_type: "invoice",
-    status: "paid",
-    subtotal: 170000,
-    discount: 8500,
-    tax: 12750,
-    total: 174250,
-    item_count: 2,
-    due_date: "2026-09-15",
-    customer_name: "John Doe",
-    items: [
-      {
-        description: "Samsung Galaxy A14 - Black, 128GB",
-        qty: 2,
-        unit_price: 85000,
-        discount_pct: 5,
-        tax_rate: 7.5,
-      },
-      {
-        description: "Screen Protector",
-        qty: 2,
-        unit_price: 2500,
-        tax_rate: 7.5,
-      },
-    ],
-  },
-  "2": {
-    id: "2",
-    tenant_id: "t1",
-    doc_number: "QUO-003",
-    doc_type: "quote",
-    status: "sent",
-    subtotal: 45000,
-    discount: 0,
-    tax: 3375,
-    total: 48375,
-    item_count: 3,
-    customer_name: "Acme Corp",
-    items: [
-      {
-        description: "Office Chair - Ergonomic",
-        qty: 3,
-        unit_price: 15000,
-        tax_rate: 7.5,
-      },
-    ],
-  },
-  "3": {
-    id: "3",
-    tenant_id: "t1",
-    doc_number: "REC-012",
-    doc_type: "receipt",
-    status: "paid",
-    subtotal: 12500,
-    discount: 0,
-    tax: 937,
-    total: 13437,
-    item_count: 1,
-    customer_name: "Jane Smith",
-    items: [
-      {
-        description: "Coca-Cola 50cl (Pack of 12)",
-        qty: 1,
-        unit_price: 12500,
-        tax_rate: 7.5,
-      },
-    ],
-  },
-  "4": {
-    id: "4",
-    tenant_id: "t1",
-    doc_number: "INV-002",
-    doc_type: "invoice",
-    status: "pending",
-    subtotal: 85000,
-    discount: 5000,
-    tax: 6000,
-    total: 86000,
-    item_count: 4,
-    due_date: "2026-09-30",
-    customer_name: "Bob Williams",
-    items: [
-      {
-        description: "Bluetooth Earbuds Pro",
-        qty: 1,
-        unit_price: 25000,
-        tax_rate: 7.5,
-      },
-      {
-        description: "Phone Case - Clear",
-        qty: 2,
-        unit_price: 3000,
-        tax_rate: 7.5,
-      },
-      {
-        description: "Charger Cable USB-C",
-        qty: 2,
-        unit_price: 5000,
-        discount_pct: 10,
-        tax_rate: 7.5,
-      },
-    ],
-  },
-  "5": {
-    id: "5",
-    tenant_id: "t1",
-    doc_number: "INV-003",
-    doc_type: "invoice",
-    status: "voided",
-    subtotal: 25000,
-    discount: 0,
-    tax: 1875,
-    total: 26875,
-    item_count: 1,
-    customer_name: "Void Customer",
-    items: [
-      {
-        description: "Dettol Antiseptic 250ml",
-        qty: 5,
-        unit_price: 5000,
-        tax_rate: 7.5,
-      },
-    ],
-  },
-  "6": {
-    id: "6",
-    tenant_id: "t1",
-    doc_number: "QUO-004",
-    doc_type: "quote",
-    status: "draft",
-    subtotal: 320000,
-    discount: 15000,
-    tax: 23250,
-    total: 330250,
-    item_count: 5,
-    customer_name: "Big Buyer Ltd",
-    items: [
-      {
-        description: "Golden Penny Semovita 5kg",
-        qty: 10,
-        unit_price: 8000,
-        tax_rate: 7.5,
-      },
-      {
-        description: "Indomie Chicken 70g (Carton)",
-        qty: 5,
-        unit_price: 24000,
-        discount_pct: 5,
-        tax_rate: 7.5,
-      },
-    ],
-  },
-};
-
 const formatCurrency = (n: number) => `₦${n.toLocaleString("en-NG")}`;
 
 const DocumentDetailScreen = () => {
@@ -228,8 +61,27 @@ const DocumentDetailScreen = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
 
-  const doc = MOCK_DOCS[id || "1"];
-  if (!doc) {
+  const { data, isLoading, isError } = useQuery({
+    queryKey: ["document", id],
+    queryFn: () => getDocumentById(id!),
+    enabled: !!id,
+  });
+
+  console.log(data);
+
+  const doc = data?.data as Document | undefined;
+
+  if (isLoading) {
+    return (
+      <AppView>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={colors.buttonPrimary} />
+        </View>
+      </AppView>
+    );
+  }
+
+  if (isError || !doc) {
     return (
       <AppView>
         <View style={styles.center}>
@@ -319,11 +171,11 @@ const DocumentDetailScreen = () => {
           ]}
         >
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Items ({doc.item_count})
+            Items ({doc.items?.length ?? doc.item_count})
           </Text>
           {doc.items.map((item, i) => (
             <View
-              key={i}
+              key={item.id}
               style={[
                 styles.itemRow,
                 i < doc.items.length - 1 && {
@@ -342,17 +194,13 @@ const DocumentDetailScreen = () => {
                 </Text>
               </View>
               <Text style={[styles.itemTotal, { color: colors.text }]}>
-                {formatCurrency(
-                  item.qty *
-                    item.unit_price *
-                    (1 - (item.discount_pct || 0) / 100),
-                )}
+                {formatCurrency(item.line_total)}
               </Text>
             </View>
           ))}
         </View>
 
-        {/* Totals */}
+        {/* Total */}
         <View
           style={[
             styles.section,
@@ -362,45 +210,7 @@ const DocumentDetailScreen = () => {
             },
           ]}
         >
-          <View style={styles.summaryRow}>
-            <Text
-              style={[styles.summaryLabel, { color: colors.textSecondary }]}
-            >
-              Subtotal
-            </Text>
-            <Text style={[styles.summaryValue, { color: colors.text }]}>
-              {formatCurrency(doc.subtotal)}
-            </Text>
-          </View>
-          {doc.discount > 0 && (
-            <View style={styles.summaryRow}>
-              <Text
-                style={[styles.summaryLabel, { color: colors.textSecondary }]}
-              >
-                Discount
-              </Text>
-              <Text style={[styles.summaryValue, { color: "#DC2626" }]}>
-                -{formatCurrency(doc.discount)}
-              </Text>
-            </View>
-          )}
-          <View style={styles.summaryRow}>
-            <Text
-              style={[styles.summaryLabel, { color: colors.textSecondary }]}
-            >
-              Tax
-            </Text>
-            <Text style={[styles.summaryValue, { color: colors.text }]}>
-              {formatCurrency(doc.tax)}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.summaryRow,
-              styles.totalSummary,
-              { borderTopColor: colors.backgroundSelected },
-            ]}
-          >
+          <View style={[styles.summaryRow, styles.totalSummary]}>
             <Text style={[styles.totalSummaryLabel, { color: colors.text }]}>
               Total
             </Text>
@@ -409,56 +219,6 @@ const DocumentDetailScreen = () => {
             </Text>
           </View>
         </View>
-
-        {/* Info */}
-        {(doc.due_date || doc.linked_sale_id) && (
-          <View
-            style={[
-              styles.section,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.backgroundSelected,
-              },
-            ]}
-          >
-            {doc.due_date && (
-              <View style={styles.infoRow}>
-                <Lucide
-                  name="calendar"
-                  size={16}
-                  color={colors.textSecondary}
-                />
-                <Text
-                  style={[styles.infoLabel, { color: colors.textSecondary }]}
-                >
-                  Due Date
-                </Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>
-                  {new Date(doc.due_date).toLocaleDateString("en-US", {
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </Text>
-              </View>
-            )}
-            {doc.linked_sale_id && (
-              <View style={styles.infoRow}>
-                <Lucide name="link" size={16} color={colors.textSecondary} />
-                <Text
-                  style={[styles.infoLabel, { color: colors.textSecondary }]}
-                >
-                  Linked Sale
-                </Text>
-                <Text
-                  style={[styles.infoValue, { color: colors.buttonPrimary }]}
-                >
-                  {doc.linked_sale_id}
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
       </ScrollView>
     </AppView>
   );

@@ -5,8 +5,8 @@ import SearchInput from "@/components/search-input";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
 import {
+  Document,
   DocumentCreateRequest,
-  DocumentResponse,
   DocumentType,
 } from "@/types/document-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -85,9 +85,9 @@ const DocumentListScreen = () => {
     queryFn: getDocuments,
   });
 
-  const documents: DocumentResponse[] = useMemo(() => {
+  const documents: Document[] = useMemo(() => {
     const raw = documentsResponse?.data;
-    if (Array.isArray(raw)) return raw as DocumentResponse[];
+    if (Array.isArray(raw)) return raw as Document[];
     return [];
   }, [documentsResponse]);
 
@@ -168,7 +168,7 @@ const DocumentListScreen = () => {
     </View>
   );
 
-  const renderDoc = ({ item }: { item: DocumentResponse }) => {
+  const renderDoc = ({ item }: { item: Document }) => {
     const type = typeConfig[item.doc_type];
     const status = statusConfig[item.status] || statusConfig.draft;
 
@@ -223,18 +223,15 @@ const DocumentListScreen = () => {
               {item.item_count} {item.item_count === 1 ? "item" : "items"}
             </Text>
           </View>
-          {item.due_date && (
-            <View style={styles.cardMeta}>
-              <Lucide name="calendar" size={12} color={colors.textSecondary} />
-              <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                Due{" "}
-                {new Date(item.due_date).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </Text>
-            </View>
-          )}
+          <View style={styles.cardMeta}>
+            <Lucide name="clock" size={12} color={colors.textSecondary} />
+            <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+              {new Date(item.created_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+            </Text>
+          </View>
         </View>
       </Pressable>
     );

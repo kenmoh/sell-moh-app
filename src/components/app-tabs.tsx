@@ -79,8 +79,8 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Icon sf="cart.fill" md={"home"} />
       </NativeTabs.Trigger>
 
-      <NativeTabs.Trigger name="(orders)">
-        <NativeTabs.Trigger.Label hidden>Orders</NativeTabs.Trigger.Label>
+      <NativeTabs.Trigger name="(sales)">
+        <NativeTabs.Trigger.Label hidden>Sales</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="list.bullet" md={"orders"} />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(dashboard)">

@@ -165,7 +165,9 @@ function TokenRenderer({
                 {token.ordered ? `${idx + 1}.` : "•"}
               </Text>
               <Text style={{ fontSize: 15, lineHeight: 22, color, flex: 1 }}>
-                {renderInlineTokens(item.tokens, color, backgroundElement)}
+                {item.tokens
+                  ? renderInlineTokens(item.tokens, color, backgroundElement)
+                  : item.text || ""}
               </Text>
             </View>
           ))}

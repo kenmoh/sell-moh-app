@@ -7,6 +7,7 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -231,7 +232,20 @@ export default function ScanScreen() {
                 <Button
                   label="Add to cart"
                   onPress={() => {
-                    useCartStore.getState().addItem(product, quantity);
+                    const state = useCartStore.getState();
+                    const cartId = state.activeCartId;
+                    if (!cartId || cartId.startsWith("cart-")) {
+                      Alert.alert(
+                        "No Cart Active",
+                        "Create a cart first before adding products.",
+                        [
+                          { text: "Cancel", style: "cancel" },
+                          { text: "OK" },
+                        ],
+                      );
+                      return;
+                    }
+                    state.addItem(product, quantity);
                     resetScanner();
                   }}
                 />

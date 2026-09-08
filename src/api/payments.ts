@@ -265,3 +265,26 @@ export const getPendingPayments = async (): Promise<PendingPayment[]> => {
 
   return res.data?.data!;
 };
+
+export const cancelIntent = async (intentId: string) => {
+  const res = await apiClient.post(`${URL}/cancel/${intentId}`);
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+  return res.data;
+};
+
+export const switchPaymentMethod = async (
+  intentId: string,
+  method: "card" | "transfer" | "cash",
+  customerEmail: string,
+) => {
+  const res = await apiClient.post<InitiatePaymentResult>(
+    `${URL}/switch-method/${intentId}`,
+    { method, customer_email: customerEmail },
+  );
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+  return res.data?.data!;
+};

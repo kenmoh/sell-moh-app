@@ -33,20 +33,35 @@ export interface DocumentCreateRequest {
   correlation_id?: string;
 }
 
-// Response from the API
-export interface DocumentResponse {
+interface DocumentItem {
   id: string;
-  tenant_id: string;
-  doc_number: string;
+  product_id: string;
+  description: string;
+  qty: number;
+  unit_price: number;
+  discount_pct: number;
+  tax_rate: number | null;
+  line_total: number;
+}
+
+export interface Document {
+  id: string;
   doc_type: DocumentType;
+  doc_number: string;
   status: string;
-  subtotal: number;
-  discount: number;
-  tax: number;
+  customer_name: string;
+  customer_email: string;
+  customer_phone: string;
   total: number;
   item_count: number;
-  due_date?: string;
-  linked_sale_id?: string;
+  items: DocumentItem[];
+  created_at: string;
+}
+
+// Response from the API
+export interface DocumentResponse {
+  message: string;
+  data: Document;
 }
 
 // // Example usage:
