@@ -16,7 +16,7 @@ const OrderLayout = () => {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="[id]" options={{ title: "Order Details" }} />
+        <Stack.Screen name="[id]" options={{ title: "Sale Details" }} />
       </Stack>
     </View>
   );

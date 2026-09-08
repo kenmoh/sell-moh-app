@@ -95,7 +95,13 @@ const DocumentDetailScreen = () => {
   const status = statusConfig[doc.status] || statusConfig.draft;
 
   return (
-    <AppView>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+        paddingHorizontal: 10,
+      }}
+    >
       <ScrollView
         contentContainerStyle={[
           styles.container,
@@ -207,6 +213,8 @@ const DocumentDetailScreen = () => {
             {
               backgroundColor: colors.card,
               borderColor: colors.backgroundSelected,
+              borderBottomEndRadius: 16,
+              borderBottomStartRadius: 16,
             },
           ]}
         >
@@ -220,7 +228,7 @@ const DocumentDetailScreen = () => {
           </View>
         </View>
       </ScrollView>
-    </AppView>
+    </View>
   );
 };
 
@@ -253,7 +261,9 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   identityCard: {
-    borderRadius: 16,
+    // borderRadius: 16,
+    borderTopEndRadius: 16,
+    borderTopStartRadius: 16,
     borderWidth: 1,
     padding: 16,
     gap: 12,
@@ -321,7 +331,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   section: {
-    borderRadius: 16,
     borderWidth: 1,
     padding: 16,
     gap: 12,

@@ -1,11 +1,10 @@
 import { getSaleById } from "@/api/sales";
 import { Colors, type ColorPalette } from "@/constants/theme";
-import { useQuery } from "@tanstack/react-query";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -88,7 +87,12 @@ const OrderDetails = () => {
 
   if (isLoading) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
         <ActivityIndicator color={colors.buttonPrimary} size="large" />
       </View>
     );
@@ -96,7 +100,12 @@ const OrderDetails = () => {
 
   if (!sale) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+      <View
+        style={[
+          styles.loadingContainer,
+          { backgroundColor: colors.background },
+        ]}
+      >
         <Text style={{ color: colors.textSecondary }}>Sale not found</Text>
       </View>
     );
@@ -290,6 +299,8 @@ const OrderDetails = () => {
             {
               backgroundColor: colors.card,
               borderColor: isDark ? "#262930" : "#eef0f4",
+              borderBottomEndRadius: 14,
+              borderBottomStartRadius: 14,
             },
           ]}
         >
@@ -449,7 +460,9 @@ const styles = StyleSheet.create({
   statusBanner: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 14,
+    // borderRadius: 14,
+    borderTopEndRadius: 14,
+    borderTopStartRadius: 14,
     padding: 16,
     gap: 14,
     borderWidth: 1,
@@ -476,7 +489,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   card: {
-    borderRadius: 14,
+    // borderRadius: 14,
     padding: 16,
     borderWidth: 1,
     shadowColor: "#000",

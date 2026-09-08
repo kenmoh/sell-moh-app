@@ -23,6 +23,7 @@ export interface SaleListItem {
   customer_name: string | null;
   total: number;
   amount_paid: number;
+  item_count: number;
   created_at: string | null;
 }
 

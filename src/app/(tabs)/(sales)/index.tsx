@@ -70,7 +70,7 @@ const SalesScreen = () => {
       id: s.id,
       orderNumber: s.sale_number,
       customer: s.customer_name || "Walk-in Customer",
-      itemCount: 0,
+      itemCount: s.item_count ?? 0,
       price: s.total,
       status: statusMap[s.status] ?? "Pending",
       date: formatDate(s.created_at),
