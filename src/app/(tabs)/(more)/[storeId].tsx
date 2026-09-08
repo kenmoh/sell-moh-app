@@ -358,7 +358,7 @@ const StoreDetailScreen = () => {
                     ₦{product.selling_price.toLocaleString()}
                   </Text>
                 </View>
-                <View style={styles.productFooter}>
+                <View style={[styles.productFooter, { borderTopColor: isDark ? "#282b32" : "#eef0f4" }]}>
                   <View style={styles.stockRow}>
                     <View
                       style={[
@@ -622,7 +622,6 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#e5e7eb",
   },
   stockRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   stockDot: { width: 8, height: 8, borderRadius: 4 },
