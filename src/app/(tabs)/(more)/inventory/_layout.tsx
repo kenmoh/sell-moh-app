@@ -23,7 +23,7 @@ const InventoryLayout = () => {
             headerShadowVisible: false,
             headerRight: () => (
               <HeaderRight
-                onPress={() => router.push("/(tabs)/(inventory)/add-product")}
+                onPress={() => router.push("/(more)/inventory/add-product")}
               />
             ),
           }}

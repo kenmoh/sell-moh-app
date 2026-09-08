@@ -1,4 +1,5 @@
 import OrderCard, { Order, OrderStatus } from "@/components/order-card";
+import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
 import { ColorPalette, Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -346,60 +347,16 @@ const OrdersScreen = () => {
                   contentContainerStyle={styles.pillsContainer}
                 >
                   {filterOptions.map((filter) => {
-                    const isActive = filter === activeFilter;
                     const count = getFilterCount(filter);
                     return (
-                      <Pressable
+                      <Pill
                         key={filter}
+                        label={filter}
+                        active={filter === activeFilter}
                         onPress={() => setActiveFilter(filter)}
-                        style={[
-                          styles.categoryPill,
-                          {
-                            backgroundColor: isActive
-                              ? "#3b82f6"
-                              : colors.backgroundElement,
-                          },
-                        ]}
-                      >
-                        <Text
-                          style={[
-                            styles.categoryPillText,
-                            {
-                              color: isActive
-                                ? "#ffffff"
-                                : colors.textSecondary,
-                              fontWeight: isActive ? "700" : "600",
-                            },
-                          ]}
-                        >
-                          {filter}
-                        </Text>
-                        <View
-                          style={[
-                            styles.pillBadge,
-                            {
-                              backgroundColor: isActive
-                                ? "rgba(255, 255, 255, 0.25)"
-                                : isDark
-                                  ? "#2d3038"
-                                  : "#e2e5eb",
-                            },
-                          ]}
-                        >
-                          <Text
-                            style={[
-                              styles.pillBadgeText,
-                              {
-                                color: isActive
-                                  ? "#ffffff"
-                                  : colors.textSecondary,
-                              },
-                            ]}
-                          >
-                            {count}
-                          </Text>
-                        </View>
-                      </Pressable>
+                        badge={count}
+                        color="#3b82f6"
+                      />
                     );
                   })}
                 </ScrollView>
@@ -537,27 +494,6 @@ const styles = StyleSheet.create({
   pillsContainer: {
     paddingHorizontal: 16,
     gap: 8,
-  },
-  categoryPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 100,
-    paddingLeft: 14,
-    paddingRight: 10,
-    paddingVertical: 7,
-  },
-  categoryPillText: {
-    fontSize: 13,
-  },
-  pillBadge: {
-    borderRadius: 100,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
-  },
-  pillBadgeText: {
-    fontSize: 11,
-    fontWeight: "700",
   },
   searchSection: {
     paddingHorizontal: 16,

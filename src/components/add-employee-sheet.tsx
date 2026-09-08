@@ -1,6 +1,7 @@
 import { createEmployee, fetchTenantRoles } from "@/api/auth";
 import { fetchTenantStores } from "@/api/store";
 import AppBottomSheet from "@/components/bottom-sheet";
+import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { CreateEmployee } from "@/types/auth";
@@ -185,32 +186,14 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
             />
           ) : (
             <View style={styles.roleRow}>
-              {rolesData?.map((r) => {
-                const isActive = role === r.name;
-                return (
-                  <Pressable
-                    key={r.id}
-                    style={[
-                      styles.rolePill,
-                      {
-                        backgroundColor: isActive
-                          ? colors.buttonPrimary
-                          : colors.backgroundElement,
-                      },
-                    ]}
-                    onPress={() => setRole(isActive ? "" : r.name)}
-                  >
-                    <Text
-                      style={[
-                        styles.rolePillText,
-                        { color: isActive ? "#fff" : colors.text },
-                      ]}
-                    >
-                      {r.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              {rolesData?.map((r) => (
+                <Pill
+                  key={r.id}
+                  label={r.name}
+                  active={role === r.name}
+                  onPress={() => setRole(role === r.name ? "" : r.name)}
+                />
+              ))}
             </View>
           )}
           {errors.role && (
@@ -231,32 +214,14 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
             />
           ) : (
             <View style={styles.roleRow}>
-              {storesData?.map((s) => {
-                const isActive = storeId === s.id;
-                return (
-                  <Pressable
-                    key={s.id}
-                    style={[
-                      styles.rolePill,
-                      {
-                        backgroundColor: isActive
-                          ? colors.buttonPrimary
-                          : colors.backgroundElement,
-                      },
-                    ]}
-                    onPress={() => setStoreId(isActive ? null : s.id)}
-                  >
-                    <Text
-                      style={[
-                        styles.rolePillText,
-                        { color: isActive ? "#fff" : colors.text },
-                      ]}
-                    >
-                      {s.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              {storesData?.map((s) => (
+                <Pill
+                  key={s.id}
+                  label={s.name}
+                  active={storeId === s.id}
+                  onPress={() => setStoreId(storeId === s.id ? null : s.id)}
+                />
+              ))}
             </View>
           )}
           {errors.storeId && (
@@ -338,15 +303,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-  },
-  rolePill: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  rolePillText: {
-    fontSize: 14,
-    fontWeight: "600",
   },
   errorText: {
     fontSize: 12,

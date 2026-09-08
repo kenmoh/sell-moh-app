@@ -24,11 +24,23 @@ export interface DashboardSummary {
 
 // ── Sales Summary ──────────────────────────────────────────────────────────
 
-export interface SalesSummary {
-  total_revenue: number;
-  total_sales: number;
+export interface SalesSummaryItem {
+  period: string;
+  revenue: number;
+  sales_count: number;
   avg_order_value: number;
-  period: Record<string, number>;
+  discount_total: number;
+  tax_total: number;
+}
+
+export interface SalesSummary {
+  items: SalesSummaryItem[];
+  totals: {
+    revenue: number;
+    sales_count: number;
+    discount_total: number;
+    tax_total: number;
+  };
 }
 
 // ── Top Products ───────────────────────────────────────────────────────────
@@ -36,8 +48,11 @@ export interface SalesSummary {
 export interface TopProduct {
   product_id: string;
   product_name: string;
-  total_qty: number;
-  total_revenue: number;
+  sku: string;
+  qty_sold: number;
+  revenue: number;
+  avg_selling_price: number;
+  margin_pct: number;
 }
 
 // ── Payment Breakdown ──────────────────────────────────────────────────────
@@ -52,11 +67,11 @@ export interface PaymentBreakdown {
 // ── Cashier Performance ────────────────────────────────────────────────────
 
 export interface CashierPerformanceItem {
-  cashier_id: string;
-  cashier_name: string | null;
-  total_sales: number;
+  user_id: string;
+  sales_count: number;
   total_revenue: number;
-  avg_order_value: number;
+  avg_transaction: number;
+  void_count: number;
 }
 
 // ── Inventory Alerts ───────────────────────────────────────────────────────
@@ -97,22 +112,46 @@ export interface ProfitLossResult {
 
 // ── Customer Insights ──────────────────────────────────────────────────────
 
-export interface CustomerInsightsResult {
-  total_customers: number;
-  repeat_customers: number;
+export interface CustomerInsightsSummary {
+  unique_customers: number;
+  new_customers: number;
+  returning_customers: number;
+  avg_customer_value: number;
+  repeat_purchase_rate: number;
+}
+
+export interface TopCustomer {
+  customer_name: string;
+  total_purchases: number;
+  total_revenue: number;
   avg_order_value: number;
-  top_customers: Array<{
-    customer_name: string;
-    total_orders: number;
-    total_spent: number;
-  }>;
+  last_purchase: string;
+}
+
+export interface CustomerInsightsResult {
+  summary: CustomerInsightsSummary;
+  top_customers: TopCustomer[];
 }
 
 // ── Document Summary ───────────────────────────────────────────────────────
 
+export interface DocumentSummaryStats {
+  total_documents: number;
+  total_amount: number;
+  paid: number;
+  paid_amount: number;
+  overdue: number;
+  overdue_amount: number;
+  collection_rate: number;
+}
+
+export interface AgingBucket {
+  bucket: string;
+  count: number;
+  amount: number;
+}
+
 export interface DocumentSummaryResult {
-  total_invoices: number;
-  total_quotes: number;
-  total_receipts: number;
-  outstanding_amount: number;
+  summary: DocumentSummaryStats;
+  aging: AgingBucket[];
 }

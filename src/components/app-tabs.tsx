@@ -7,7 +7,7 @@ import { useMemo } from "react";
 
 const staticPathList = [
   "/scan*",
-  "/report",
+  "/report*",
   "/accounting",
   "/customers",
   "/notifications",
@@ -24,10 +24,10 @@ const staticPathList = [
 
 // literal segment patterns, matched against useSegments()
 const dynamicSegmentList = [
-  ["(inventory)", "[id]"],
+  ["(document)", "[id]"],
   ["(orders)", "[id]"],
   ["(more)", "[storeId]"],
-  ["(more)", "document", "[id]"],
+  ["(more)", "inventory", "[id]"],
   ["(more)", "open-carts", "[id]"],
 ];
 
@@ -87,9 +87,9 @@ export default function AppTabs() {
         <NativeTabs.Trigger.Label hidden>Dashboard</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="chart.bar.fill" md={"bar_chart"} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="(inventory)">
-        <NativeTabs.Trigger.Label hidden>Inventory</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="shippingbox" md={"inventory_2"} />
+      <NativeTabs.Trigger name="(document)">
+        <NativeTabs.Trigger.Label hidden>Document</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Icon sf="document" md={"edit_document"} />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(more)">
         <NativeTabs.Trigger.Label hidden>More</NativeTabs.Trigger.Label>

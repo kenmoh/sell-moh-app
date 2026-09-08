@@ -1,6 +1,7 @@
 import { Colors } from "@/constants/theme";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
   Pressable,
@@ -141,6 +142,7 @@ const Dashboard = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
+  const router = useRouter();
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [addExpenseVisible, setAddExpenseVisible] = useState(false);
@@ -195,11 +197,16 @@ const Dashboard = () => {
               Dashboard
             </Text>
           </View>
-          <View style={styles.avatarContainer}>
-            <View style={[styles.avatar, { backgroundColor: "#2563eb" }]}>
-              <Text style={styles.avatarText}>AO</Text>
-            </View>
-          </View>
+          <Pressable
+            onPress={() => router.push("/(tabs)/(dashboard)/ai")}
+            style={({ pressed }) => [
+              styles.aiBtn,
+              { backgroundColor: "rgba(37,99,235,0.1)" },
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Lucide name="sparkles" size={20} color="#2563eb" />
+          </Pressable>
         </View>
 
         {/* ─── Date Selector Pill ─── */}
@@ -558,26 +565,12 @@ const styles = StyleSheet.create({
     marginTop: 2,
     letterSpacing: -0.5,
   },
-  avatarContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatar: {
+  aiBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#2563eb",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  avatarText: {
-    color: "#ffffff",
-    fontSize: 14,
-    fontWeight: "700",
   },
 
   /* ─── Date Selector ─── */

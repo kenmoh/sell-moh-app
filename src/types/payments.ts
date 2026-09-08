@@ -188,10 +188,41 @@ export interface ConfirmPaymentRequest {
   intent_id: string;
 }
 
+export interface ReceiptItem {
+  product_name: string;
+  qty: number;
+  unit_price: number;
+  discount_pct: number;
+  tax_rate: number | null;
+  line_total: number;
+}
+
+export interface ReceiptData {
+  receipt_number: string;
+  business_name: string;
+  business_phone: string;
+  business_address: string;
+  logo_url: string;
+  store_name: string;
+  store_address: string;
+  sale_number: string;
+  created_at: string;
+  customer_name: string | null;
+  items: ReceiptItem[];
+  subtotal: number;
+  discount: number;
+  tax: number;
+  total: number;
+  amount_paid: number;
+  payment_method: string;
+}
+
 export interface ConfirmPaymentResult {
   sale_id: string;
   sale_number: string;
   total: number;
   amount_paid: number;
   status: string;
+  payment?: Record<string, unknown>;
+  receipt?: ReceiptData;
 }

@@ -13,6 +13,7 @@ export interface CartCreatedResponse {
   store_id: string | null;
   status: string;
   customer_name: string;
+  customer_phone: string;
   resumed: boolean;
 }
 

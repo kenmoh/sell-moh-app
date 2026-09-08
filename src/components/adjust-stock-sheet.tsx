@@ -1,5 +1,6 @@
 import { adjustProduct } from "@/api/inventory";
 import AppBottomSheet from "@/components/bottom-sheet";
+import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
@@ -198,35 +199,14 @@ const AdjustStockSheet = ({
           {reasons.map(({ label, icon }) => {
             const isSelected = selectedReason === label;
             return (
-              <Pressable
+              <Pill
                 key={label}
-                style={[
-                  styles.chip,
-                  {
-                    backgroundColor: isSelected
-                      ? colors.buttonPrimary
-                      : colors.backgroundElement,
-                    borderColor: isSelected
-                      ? colors.buttonPrimary
-                      : colors.backgroundSelected,
-                  },
-                ]}
+                label={label}
+                active={isSelected}
                 onPress={() => setSelectedReason(isSelected ? "" : label)}
-              >
-                <Lucide
-                  name={icon}
-                  size={14}
-                  color={isSelected ? "#fff" : colors.textSecondary}
-                />
-                <Text
-                  style={[
-                    styles.chipText,
-                    { color: isSelected ? "#fff" : colors.text },
-                  ]}
-                >
-                  {label}
-                </Text>
-              </Pressable>
+                icon={icon}
+                color={colors.buttonPrimary}
+              />
             );
           })}
         </View>
@@ -320,19 +300,6 @@ const styles = StyleSheet.create({
   chipRow: {
     flexDirection: "row",
     gap: 8,
-  },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 100,
-    borderWidth: 1,
-  },
-  chipText: {
-    fontSize: 13,
-    fontWeight: "600",
   },
   errorText: {
     fontSize: 12,

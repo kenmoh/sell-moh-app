@@ -1,8 +1,14 @@
-import AddDocumentSheet from "@/components/add-document-sheet";
 import { createDocument, getDocuments } from "@/api/document";
+import AddDocumentSheet from "@/components/add-document-sheet";
+import Pill from "@/components/pill";
+import SearchInput from "@/components/search-input";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
-import { DocumentCreateRequest, DocumentResponse, DocumentType } from "@/types/document-types";
+import {
+  DocumentCreateRequest,
+  DocumentResponse,
+  DocumentType,
+} from "@/types/document-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
@@ -14,7 +20,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   useColorScheme,
   View,
 } from "react-native";
@@ -25,6 +30,7 @@ const DOC_TYPES: { label: string; value: DocumentType | "all" }[] = [
   { label: "Invoice", value: "invoice" },
   { label: "Quote", value: "quote" },
   { label: "Receipt", value: "receipt" },
+  { label: "Purchase Order", value: "purchase_order" },
 ];
 
 const statusConfig: Record<string, { color: string; bg: string }> = {
@@ -69,7 +75,12 @@ const DocumentListScreen = () => {
   const queryClient = useQueryClient();
   const { user } = useSession();
 
-  const { data: documentsResponse, isPending, isRefetching, refetch } = useQuery({
+  const {
+    data: documentsResponse,
+    isPending,
+    isRefetching,
+    refetch,
+  } = useQuery({
     queryKey: ["documents"],
     queryFn: getDocuments,
   });
@@ -128,27 +139,17 @@ const DocumentListScreen = () => {
   );
 
   const renderStickyHeader = () => (
-    <View style={[styles.stickyWrap, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.searchRow,
-          { backgroundColor: colors.backgroundElement },
-        ]}
-      >
-        <Lucide name="search" size={16} color={colors.textSecondary} />
-        <TextInput
-          style={[styles.searchInput, { color: colors.text }]}
-          placeholder="Search documents..."
-          placeholderTextColor={colors.textSecondary}
-          value={search}
-          onChangeText={setSearch}
-        />
-        {search.length > 0 && (
-          <Pressable onPress={() => setSearch("")}>
-            <Lucide name="x" size={16} color={colors.textSecondary} />
-          </Pressable>
-        )}
-      </View>
+    <View
+      style={[
+        styles.stickyWrap,
+        { backgroundColor: colors.background, gap: 10 },
+      ]}
+    >
+      <SearchInput
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search documents..."
+      />
 
       <FlatList
         horizontal
@@ -156,34 +157,13 @@ const DocumentListScreen = () => {
         data={DOC_TYPES}
         keyExtractor={(item) => item.value}
         contentContainerStyle={styles.filterRow}
-        renderItem={({ item }) => {
-          const isActive = activeType === item.value;
-          return (
-            <Pressable
-              style={[
-                styles.filterPill,
-                {
-                  backgroundColor: isActive
-                    ? colors.buttonPrimary
-                    : colors.backgroundElement,
-                },
-              ]}
-              onPress={() => setActiveType(item.value)}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  {
-                    color: isActive ? "#fff" : colors.textSecondary,
-                    fontWeight: isActive ? "700" : "600",
-                  },
-                ]}
-              >
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        }}
+        renderItem={({ item }) => (
+          <Pill
+            label={item.label}
+            active={activeType === item.value}
+            onPress={() => setActiveType(item.value)}
+          />
+        )}
       />
     </View>
   );
@@ -201,7 +181,14 @@ const DocumentListScreen = () => {
             borderColor: colors.backgroundSelected,
           },
         ]}
-        onPress={() => router.push(`/(tabs)/(more)/document/${item.id}`)}
+        onPress={() =>
+          router.push({
+            pathname: "/(tabs)/(document)/[id]",
+            params: {
+              id: item.id,
+            },
+          })
+        }
       >
         <View style={styles.cardTop}>
           <View style={[styles.typeBadge, { backgroundColor: type.bg }]}>
@@ -277,7 +264,7 @@ const DocumentListScreen = () => {
         onRefresh={refetch}
         contentContainerStyle={[
           styles.list,
-          { paddingBottom: insets.bottom + 20 },
+          // { paddingBottom: insets.bottom + 20 },
         ]}
         ListEmptyComponent={
           isPending ? (
@@ -286,7 +273,11 @@ const DocumentListScreen = () => {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Lucide name="file-x" size={48} color={colors.backgroundSelected} />
+              <Lucide
+                name="file-x"
+                size={48}
+                color={colors.backgroundSelected}
+              />
               <Text style={[styles.emptyTitle, { color: colors.text }]}>
                 No documents found
               </Text>
@@ -338,30 +329,10 @@ const styles = StyleSheet.create({
   stickyWrap: {
     paddingBottom: 10,
   },
-  searchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 50,
-    marginBottom: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-  },
   filterRow: {
     gap: 8,
   },
-  filterPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  filterText: {
-    fontSize: 13,
-  },
+
   list: {
     gap: 10,
   },

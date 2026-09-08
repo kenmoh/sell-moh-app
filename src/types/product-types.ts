@@ -12,6 +12,8 @@ export interface Product {
   category?: Category;
   in_stock: number;
   reorder_point?: number;
+  tax_id?: string;
+  tax_rate?: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

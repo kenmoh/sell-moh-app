@@ -1,6 +1,7 @@
 import { fetchTenantRoles } from "@/api/auth";
 import AddEmployeeSheet from "@/components/add-employee-sheet";
 import AddRoleSheet from "@/components/add-role-sheet";
+import SearchInput from "@/components/search-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +12,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   useColorScheme,
   View,
 } from "react-native";
@@ -231,21 +231,11 @@ const StaffRoles = () => {
                   { backgroundColor: colors.background },
                 ]}
               >
-                <View
-                  style={[
-                    styles.searchBar,
-                    { backgroundColor: colors.backgroundElement },
-                  ]}
-                >
-                  <Lucide name="search" size={18} color={colors.textSecondary} />
-                  <TextInput
-                    value={search}
-                    onChangeText={setSearch}
-                    placeholder="Search staff..."
-                    placeholderTextColor={colors.textSecondary}
-                    style={[styles.searchInput, { color: colors.text }]}
-                  />
-                </View>
+                <SearchInput
+                  value={search}
+                  onChangeText={setSearch}
+                  placeholder="Search staff..."
+                />
                 <Text
                   style={[styles.sectionLabel, { color: colors.textSecondary }]}
                 >
@@ -419,16 +409,6 @@ const styles = StyleSheet.create({
   stickyControlsWrapper: {
     paddingBottom: 10,
   },
-  searchBar: {
-    flexDirection: "row",
-    borderRadius: 25,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    gap: 8,
-    marginBottom: 12,
-    alignItems: "center",
-  },
-  searchInput: { flex: 1, fontSize: 14, padding: 0 },
   sectionLabel: {
     fontSize: 12,
     fontWeight: "600",

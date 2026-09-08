@@ -1,8 +1,7 @@
 import { Colors } from "@/constants/theme";
-import { SymbolView } from "expo-symbols";
+import { Lucide } from "@react-native-vector-icons/lucide";
 import React from "react";
 import {
-  Platform,
   Pressable,
   StyleProp,
   StyleSheet,
@@ -14,12 +13,10 @@ import {
 } from "react-native";
 
 export interface SearchInputProps extends TextInputProps {
-  /** Optional custom style for the outer input container */
   containerStyle?: StyleProp<ViewStyle>;
-  /** Optional callback triggered when the clear button is pressed */
   onClear?: () => void;
-  /** Whether to hide the leading search icon */
   hideSearchIcon?: boolean;
+  height?: number;
 }
 
 export const SearchInput = React.forwardRef<TextInput, SearchInputProps>(
@@ -27,18 +24,19 @@ export const SearchInput = React.forwardRef<TextInput, SearchInputProps>(
     {
       value,
       onChangeText,
-      placeholder = "Search products...",
+      placeholder = "Search...",
       containerStyle,
       style,
       onClear,
       hideSearchIcon = false,
       returnKeyType = "search",
+      height = 45,
       ...restProps
     },
     ref,
   ) => {
     const scheme = useColorScheme();
-    const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+    const colors = Colors[scheme === "dark" ? "dark" : "light"];
 
     const handleClear = () => {
       onChangeText?.("");
@@ -53,15 +51,16 @@ export const SearchInput = React.forwardRef<TextInput, SearchInputProps>(
           styles.container,
           {
             backgroundColor: colors.textInput,
+            height,
           },
           containerStyle,
         ]}
       >
         {!hideSearchIcon && (
-          <SymbolView
-            name="magnifyingglass"
-            size={18}
-            tintColor={colors.textSecondary}
+          <Lucide
+            name="search"
+            size={16}
+            color={colors.placeholder}
             style={styles.searchIcon}
           />
         )}
@@ -71,9 +70,7 @@ export const SearchInput = React.forwardRef<TextInput, SearchInputProps>(
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={"#aaa"}
-          selectionColor="#7c3aed"
-          cursorColor="#7c3aed"
+          placeholderTextColor={colors.placeholder}
           returnKeyType={returnKeyType}
           style={[
             styles.input,
@@ -91,11 +88,7 @@ export const SearchInput = React.forwardRef<TextInput, SearchInputProps>(
             hitSlop={8}
             style={styles.clearButton}
           >
-            <SymbolView
-              name="xmark.circle.fill"
-              size={18}
-              tintColor={colors.textSecondary}
-            />
+            <Lucide name="x" size={16} color={colors.placeholder} />
           </Pressable>
         )}
       </View>
@@ -111,18 +104,17 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: Platform.OS === "ios" ? 12 : 6,
-    minHeight: 48,
+    borderRadius: 100,
+    paddingHorizontal: 14,
     width: "100%",
+    // marginBottom: 10,
   },
   searchIcon: {
-    marginRight: 10,
+    marginRight: 8,
   },
   input: {
     flex: 1,
-    fontSize: 15,
+    fontSize: 14,
     padding: 0,
   },
   clearButton: {

@@ -1,14 +1,20 @@
 import { getPinStatus, setSupervisorPin } from "@/api/auth";
+import {
+  fetchBusinessSettings,
+  updateBusinessSettings,
+  uploadBusinessLogo,
+} from "@/api/business";
 import AppBottomSheet from "@/components/bottom-sheet";
-import AppView from "@/components/app-view";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import * as ImagePicker from "expo-image-picker";
 import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -30,9 +36,19 @@ const ProfileScreen = () => {
   const [pinInput, setPinInput] = useState("");
   const [pinConfirm, setPinConfirm] = useState("");
 
+  const [bizSheetVisible, setBizSheetVisible] = useState(false);
+  const [bizName, setBizName] = useState("");
+  const [bizPhone, setBizPhone] = useState("");
+  const [bizAddress, setBizAddress] = useState("");
+
   const { data: pinData, error: pinError } = useQuery({
     queryKey: ["pin-status"],
     queryFn: getPinStatus,
+  });
+
+  const { data: bizData } = useQuery({
+    queryKey: ["business-settings"],
+    queryFn: fetchBusinessSettings,
   });
 
   const { mutate: savePin, isPending: isSavingPin } = useMutation({
@@ -49,15 +65,39 @@ const ProfileScreen = () => {
     },
   });
 
-  const initials = user?.full_name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2) || "??";
+  const { mutate: saveBiz, isPending: isSavingBiz } = useMutation({
+    mutationFn: () =>
+      updateBusinessSettings({
+        name: bizName.trim() || undefined,
+        phone: bizPhone.trim() || undefined,
+        address: bizAddress.trim() || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["business-settings"] });
+      setBizSheetVisible(false);
+      Alert.alert("Success", "Business profile updated");
+    },
+    onError: (e: any) => {
+      Alert.alert("Error", e?.message || "Failed to update business profile");
+    },
+  });
+
+  const initials =
+    user?.full_name
+      ?.split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2) || "??";
 
   const daysUntilExpiry = pinData?.expires_at
-    ? Math.max(0, Math.ceil((new Date(pinData.expires_at).getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    ? Math.max(
+        0,
+        Math.ceil(
+          (new Date(pinData.expires_at).getTime() - Date.now()) /
+            (1000 * 60 * 60 * 24),
+        ),
+      )
     : null;
 
   const handleSavePin = () => {
@@ -72,8 +112,49 @@ const ProfileScreen = () => {
     savePin(pinInput);
   };
 
+  const openBizSheet = () => {
+    setBizName(bizData?.name || "");
+    setBizPhone(bizData?.phone || "");
+    setBizAddress(bizData?.address || "");
+    setBizSheetVisible(true);
+  };
+
+  const { mutate: uploadLogo, isPending: isUploadingLogo } = useMutation({
+    mutationFn: (uri: string) => uploadBusinessLogo(uri),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["business-settings"] });
+      Alert.alert("Success", "Logo updated");
+    },
+    onError: (e: any) => {
+      Alert.alert("Error", e?.message || "Failed to upload logo");
+    },
+  });
+
+  const handlePickLogo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Please grant photo library access");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      uploadLogo(result.assets[0].uri);
+    }
+  };
+
   return (
-    <AppView>
+    <View
+      style={{
+        flex: 1,
+        backgroundColor: colors.background,
+        paddingHorizontal: 10,
+      }}
+    >
       <ScrollView
         contentContainerStyle={{
           paddingBottom: insets.bottom + 20,
@@ -82,21 +163,35 @@ const ProfileScreen = () => {
         showsVerticalScrollIndicator={false}
       >
         {/* Avatar + Name */}
-        <View style={[styles.avatarSection, { alignItems: "center" }]}>
-          <View style={[styles.avatar, { backgroundColor: colors.buttonPrimary }]}>
+        <View
+          style={[
+            styles.avatarSection,
+            { alignItems: "center", flexDirection: "row" },
+          ]}
+        >
+          <View
+            style={[styles.avatar, { backgroundColor: colors.buttonPrimary }]}
+          >
             {user?.avatar_url ? (
               <Text style={styles.avatarText}>{initials}</Text>
             ) : (
               <Text style={styles.avatarText}>{initials}</Text>
             )}
           </View>
-          <Text style={[styles.name, { color: colors.text }]}>
-            {user?.full_name || "Unknown User"}
-          </Text>
-          <View style={[styles.roleBadge, { backgroundColor: colors.backgroundElement }]}>
-            <Text style={[styles.roleText, { color: colors.textSecondary }]}>
-              {user?.role?.replace("_", " ")?.toUpperCase() || "USER"}
+          <View>
+            <Text style={[styles.name, { color: colors.text }]}>
+              {user?.full_name || "Unknown User"}
             </Text>
+            <View
+              style={[
+                styles.roleBadge,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
+              <Text style={[styles.roleText, { color: colors.textSecondary }]}>
+                {user?.role?.replace("_", " ")?.toUpperCase() || "USER"}
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -105,12 +200,26 @@ const ProfileScreen = () => {
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
             ACCOUNT
           </Text>
-          <InfoRow icon="mail" label="Email" value={user?.email} colors={colors} />
-          <InfoRow icon="shield" label="Status" value={user?.status} colors={colors} />
+          <InfoRow
+            icon="mail"
+            label="Email"
+            value={user?.email}
+            colors={colors}
+          />
+          <InfoRow
+            icon="shield"
+            label="Status"
+            value={user?.status}
+            colors={colors}
+          />
           <InfoRow
             icon="clock"
             label="Last Login"
-            value={user?.last_login_at ? formatRelativeTime(user.last_login_at) : "Never"}
+            value={
+              user?.last_login_at
+                ? formatRelativeTime(user.last_login_at)
+                : "Never"
+            }
             colors={colors}
           />
           <InfoRow
@@ -119,6 +228,77 @@ const ProfileScreen = () => {
             value={user?.auto_create_cart ? "Enabled" : "Disabled"}
             colors={colors}
           />
+        </View>
+
+        {/* Business Settings */}
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            BUSINESS
+          </Text>
+
+          <Pressable
+            onPress={handlePickLogo}
+            style={styles.logoRow}
+          >
+            {bizData?.logo_url ? (
+              <Image
+                source={{ uri: bizData.logo_url }}
+                style={styles.logoImage}
+              />
+            ) : (
+              <View style={[styles.logoPlaceholder, { backgroundColor: colors.backgroundElement }]}>
+                {isUploadingLogo ? (
+                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                ) : (
+                  <Lucide name="image-plus" size={24} color={colors.textSecondary} />
+                )}
+              </View>
+            )}
+            <View>
+              <Text style={[styles.pinLabel, { color: colors.text }]}>
+                Business Logo
+              </Text>
+              <Text style={[styles.pinStatus, { color: colors.textSecondary }]}>
+                {isUploadingLogo ? "Uploading..." : "Tap to change"}
+              </Text>
+            </View>
+            <Lucide name="chevron-right" size={20} color="#aaa" />
+          </Pressable>
+
+          <InfoRow
+            icon="building-2"
+            label="Name"
+            value={bizData?.name}
+            colors={colors}
+          />
+          <InfoRow
+            icon="phone"
+            label="Phone"
+            value={bizData?.phone}
+            colors={colors}
+          />
+          <InfoRow
+            icon="map-pin"
+            label="Address"
+            value={bizData?.address}
+            colors={colors}
+          />
+          <InfoRow
+            icon="coins"
+            label="Currency"
+            value={bizData?.currency || "NGN"}
+            colors={colors}
+          />
+
+          <Pressable onPress={openBizSheet} style={styles.pinRow}>
+            <View style={styles.pinRowLeft}>
+              <Lucide name="pencil" size={16} color="#aaa" />
+              <Text style={[styles.pinLabel, { color: colors.buttonPrimary }]}>
+                Edit Business Details
+              </Text>
+            </View>
+            <Lucide name="chevron-right" size={20} color="#aaa" />
+          </Pressable>
         </View>
 
         {/* Security */}
@@ -141,7 +321,12 @@ const ProfileScreen = () => {
                 <Text style={[styles.pinLabel, { color: colors.text }]}>
                   Supervisor PIN
                 </Text>
-                <Text style={[styles.pinStatus, { color: pinError ? "#e74c3c" : colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.pinStatus,
+                    { color: pinError ? "#e74c3c" : colors.textSecondary },
+                  ]}
+                >
                   {pinError
                     ? "Unable to load"
                     : pinData?.has_pin
@@ -172,7 +357,10 @@ const ProfileScreen = () => {
 
         <View style={{ gap: 12, marginTop: 16 }}>
           <TextInput
-            style={[styles.pinInput, { color: colors.text, borderColor: colors.backgroundElement }]}
+            style={[
+              styles.pinInput,
+              { color: colors.text, borderColor: colors.backgroundElement },
+            ]}
             placeholder="Enter PIN"
             placeholderTextColor={colors.textSecondary}
             value={pinInput}
@@ -183,7 +371,10 @@ const ProfileScreen = () => {
             autoFocus
           />
           <TextInput
-            style={[styles.pinInput, { color: colors.text, borderColor: colors.backgroundElement }]}
+            style={[
+              styles.pinInput,
+              { color: colors.text, borderColor: colors.backgroundElement },
+            ]}
             placeholder="Confirm PIN"
             placeholderTextColor={colors.textSecondary}
             value={pinConfirm}
@@ -214,7 +405,70 @@ const ProfileScreen = () => {
           </Pressable>
         </View>
       </AppBottomSheet>
-    </AppView>
+
+      {/* Business Settings Sheet */}
+      <AppBottomSheet
+        visible={bizSheetVisible}
+        onVisibleChange={setBizSheetVisible}
+        snapPoints={["60%"]}
+      >
+        <Text style={[styles.sheetTitle, { color: colors.text }]}>
+          Business Details
+        </Text>
+        <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+          Update your business name, phone, and address
+        </Text>
+
+        <View style={{ gap: 12, marginTop: 16 }}>
+          <TextInput
+            style={[
+              styles.bizInput,
+              { color: colors.text, borderColor: colors.backgroundElement },
+            ]}
+            placeholder="Business Name"
+            placeholderTextColor={colors.textSecondary}
+            value={bizName}
+            onChangeText={setBizName}
+          />
+          <TextInput
+            style={[
+              styles.bizInput,
+              { color: colors.text, borderColor: colors.backgroundElement },
+            ]}
+            placeholder="Phone Number"
+            placeholderTextColor={colors.textSecondary}
+            value={bizPhone}
+            onChangeText={setBizPhone}
+            keyboardType="phone-pad"
+          />
+          <TextInput
+            style={[
+              styles.bizInput,
+              { color: colors.text, borderColor: colors.backgroundElement },
+            ]}
+            placeholder="Business Address"
+            placeholderTextColor={colors.textSecondary}
+            value={bizAddress}
+            onChangeText={setBizAddress}
+          />
+
+          <Pressable
+            onPress={() => saveBiz()}
+            disabled={isSavingBiz}
+            style={[
+              styles.saveBtn,
+              { backgroundColor: colors.buttonPrimary },
+            ]}
+          >
+            {isSavingBiz ? (
+              <ActivityIndicator color="#fff" size="small" />
+            ) : (
+              <Text style={styles.saveBtnText}>Save Changes</Text>
+            )}
+          </Pressable>
+        </View>
+      </AppBottomSheet>
+    </View>
   );
 };
 
@@ -268,6 +522,23 @@ const styles = StyleSheet.create({
   },
   avatarText: { color: "#fff", fontSize: 28, fontWeight: "700" },
   name: { fontSize: 20, fontWeight: "700" },
+  logoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  logoImage: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
+  logoPlaceholder: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   roleBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
@@ -312,6 +583,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     letterSpacing: 4,
     textAlign: "center",
+  },
+  bizInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
   },
   saveBtn: {
     borderRadius: 12,

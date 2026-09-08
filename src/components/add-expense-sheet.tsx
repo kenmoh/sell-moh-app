@@ -1,4 +1,5 @@
 import AppBottomSheet from "@/components/bottom-sheet";
+import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -84,36 +85,16 @@ const AddExpenseSheet = ({ visible, onVisibleChange, onAdd }: Props) => {
         Category
       </Text>
       <Pressable style={styles.chipRow}>
-        {categories.map((cat) => {
-          const isSelected = selectedCategory === cat.id;
-          return (
-            <Pressable
-              key={cat.id}
-              style={[
-                styles.chip,
-                {
-                  backgroundColor: isSelected ? cat.color : cat.bg,
-                  borderColor: isSelected ? cat.color : "transparent",
-                },
-              ]}
-              onPress={() => setSelectedCategory(isSelected ? "" : cat.id)}
-            >
-              <Lucide
-                name={cat.icon as any}
-                size={14}
-                color={isSelected ? "#fff" : cat.color}
-              />
-              <Text
-                style={[
-                  styles.chipText,
-                  { color: isSelected ? "#fff" : cat.color },
-                ]}
-              >
-                {cat.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+        {categories.map((cat) => (
+          <Pill
+            key={cat.id}
+            label={cat.label}
+            active={selectedCategory === cat.id}
+            onPress={() => setSelectedCategory(selectedCategory === cat.id ? "" : cat.id)}
+            icon={cat.icon as any}
+            color={cat.color}
+          />
+        ))}
       </Pressable>
 
       {/* Amount */}
@@ -162,16 +143,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, marginBottom: 4 },
   label: { fontSize: 12, fontWeight: "600", letterSpacing: 0.8, marginTop: 4 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 100,
-    borderWidth: 1,
-  },
-  chipText: { fontSize: 12, fontWeight: "600" },
   confirmButton: {
     flexDirection: "row",
     alignItems: "center",

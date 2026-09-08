@@ -1,5 +1,6 @@
 import { createRole, getPermissions } from "@/api/auth";
 import AppBottomSheet from "@/components/bottom-sheet";
+import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { CreateRole } from "@/types/auth";
@@ -133,32 +134,14 @@ const AddRoleSheet = ({ visible, onVisibleChange }: Props) => {
             Rank
           </Text>
           <View style={styles.rankRow}>
-            {RANK_OPTIONS.map((r) => {
-              const isActive = rank === r;
-              return (
-                <Pressable
-                  key={r}
-                  style={[
-                    styles.rankPill,
-                    {
-                      backgroundColor: isActive
-                        ? colors.buttonPrimary
-                        : colors.backgroundElement,
-                    },
-                  ]}
-                  onPress={() => setRank(isActive ? 0 : r)}
-                >
-                  <Text
-                    style={[
-                      styles.rankPillText,
-                      { color: isActive ? "#fff" : colors.text },
-                    ]}
-                  >
-                    {r}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {RANK_OPTIONS.map((r) => (
+              <Pill
+                key={r}
+                label={String(r)}
+                active={rank === r}
+                onPress={() => setRank(rank === r ? 0 : r)}
+              />
+            ))}
           </View>
         </View>
 
@@ -294,15 +277,6 @@ const styles = StyleSheet.create({
   rankRow: {
     flexDirection: "row",
     gap: 8,
-  },
-  rankPill: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-  },
-  rankPillText: {
-    fontSize: 14,
-    fontWeight: "600",
   },
   permissionsList: {
     flexDirection: "row",

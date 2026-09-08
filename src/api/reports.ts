@@ -131,15 +131,17 @@ export const fetchCustomerInsights = async (
   return res.data?.data!;
 };
 
-export const fetchDocumentSummary =
-  async (): Promise<DocumentSummaryResult> => {
-    const res = await apiClient.get<{ data: DocumentSummaryResult }>(
-      `${URL}/document-summary`,
-    );
+export const fetchDocumentSummary = async (
+  fromDate: string,
+  toDate: string,
+): Promise<DocumentSummaryResult> => {
+  const res = await apiClient.get<{ data: DocumentSummaryResult }>(
+    `${URL}/document-summary?from_date=${fromDate}&to_date=${toDate}`,
+  );
 
-    if (!res.ok) {
-      throw new Error(getErrorMessage(res));
-    }
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
 
-    return res.data?.data!;
-  };
+  return res.data?.data!;
+};

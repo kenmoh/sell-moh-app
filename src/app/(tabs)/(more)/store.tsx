@@ -4,7 +4,7 @@ import StoreSheet from "@/components/store-sheet";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -91,7 +91,11 @@ const StoresScreen = () => {
           <View
             style={[
               styles.storeIcon,
-              { backgroundColor: item.is_warehouse ? "rgba(168,85,247,0.12)" : "rgba(59,130,246,0.12)" },
+              {
+                backgroundColor: item.is_warehouse
+                  ? "rgba(168,85,247,0.12)"
+                  : "rgba(59,130,246,0.12)",
+              },
             ]}
           >
             <Lucide
@@ -133,7 +137,9 @@ const StoresScreen = () => {
               size={12}
               color={colors.textSecondary}
             />
-            <Text style={[styles.storeTypeText, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.storeTypeText, { color: colors.textSecondary }]}
+            >
               {item.is_warehouse ? "Warehouse" : "Retail Store"}
             </Text>
           </View>
@@ -162,6 +168,18 @@ const StoresScreen = () => {
       style={[styles.container, { backgroundColor: colors.background }]}
       edges={["top", "left", "right"]}
     >
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable
+              style={[styles.addBtn, { backgroundColor: colors.buttonPrimary }]}
+              onPress={handleOpenAdd}
+            >
+              <Lucide name="plus" size={20} color="#fff" />
+            </Pressable>
+          ),
+        }}
+      />
       <FlatList
         data={filteredStores}
         keyExtractor={(item) => item.id}
@@ -171,9 +189,6 @@ const StoresScreen = () => {
           <View style={{ backgroundColor: colors.background }}>
             <View style={styles.headerTitleRow}>
               <View>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>
-                  Stores
-                </Text>
                 <Text
                   style={[
                     styles.headerSubtitle,
@@ -183,12 +198,6 @@ const StoresScreen = () => {
                   {stores.length} store{stores.length !== 1 ? "s" : ""} total
                 </Text>
               </View>
-              <Pressable
-                style={[styles.addBtn, { backgroundColor: colors.buttonPrimary }]}
-                onPress={handleOpenAdd}
-              >
-                <Lucide name="plus" size={20} color="#fff" />
-              </Pressable>
             </View>
             <View style={styles.searchSection}>
               <SearchInput
@@ -218,10 +227,7 @@ const StoresScreen = () => {
               No Stores Found
             </Text>
             <Text
-              style={[
-                styles.emptySubtitle,
-                { color: colors.textSecondary },
-              ]}
+              style={[styles.emptySubtitle, { color: colors.textSecondary }]}
             >
               {search
                 ? `No stores matching "${search}"`
@@ -229,7 +235,10 @@ const StoresScreen = () => {
             </Text>
             {!search && (
               <Pressable
-                style={[styles.emptyBtn, { backgroundColor: colors.buttonPrimary }]}
+                style={[
+                  styles.emptyBtn,
+                  { backgroundColor: colors.buttonPrimary },
+                ]}
                 onPress={handleOpenAdd}
               >
                 <Lucide name="plus" size={16} color="#fff" />

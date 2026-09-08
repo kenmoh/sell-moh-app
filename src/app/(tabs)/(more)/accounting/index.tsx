@@ -1,17 +1,21 @@
 import {
   createExpense,
   fetchExpenses,
+  fetchExpenseSummary,
   fetchFinancialDashboard,
   fetchPayables,
   fetchReceivables,
 } from "@/api/accounting";
+import AccountingContextMenu from "@/components/accounting-context-menu";
 import AddExpenseSheet from "@/components/add-expense-sheet";
 import AddPayableSheet from "@/components/add-payable-sheet";
 import AddReceivableSheet from "@/components/add-receivable-sheet";
+import Pill from "@/components/pill";
 import RecordPaymentSheet from "@/components/record-payment-sheet";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -37,6 +41,7 @@ const AccountingScreen = () => {
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const [activeTab, setActiveTab] = useState<Tab>("receivables");
   const [showAddReceivable, setShowAddReceivable] = useState(false);
@@ -85,6 +90,14 @@ const AccountingScreen = () => {
     queryFn: () => fetchExpenses(),
   });
 
+  const {
+    data: expenseSummary = {},
+    isLoading: isLoadingSummary,
+  } = useQuery({
+    queryKey: ["expense-summary"],
+    queryFn: () => fetchExpenseSummary(),
+  });
+
   const isLoading =
     isLoadingDashboard || isLoadingAR || isLoadingAP || isLoadingExpenses;
   const isRefetching = isRefetchingAR || isRefetchingAP || isRefetchingExpenses;
@@ -100,6 +113,7 @@ const AccountingScreen = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
       queryClient.invalidateQueries({ queryKey: ["financial-dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["expense-summary"] });
       setShowAddExpense(false);
     },
   });
@@ -131,6 +145,48 @@ const AccountingScreen = () => {
         return expenses;
     }
   }, [activeTab, receivables, payables, expenses]);
+
+  const menuItems = useMemo(
+    () => [
+      {
+        key: "chart-of-accounts",
+        label: "Chart of Accounts",
+        icon: "book-open",
+        onPress: () => router.push("/(tabs)/(more)/accounting/chart-of-accounts"),
+      },
+      {
+        key: "journals",
+        label: "Journal Entries",
+        icon: "file-text",
+        onPress: () => router.push("/(tabs)/(more)/accounting/journals"),
+      },
+      {
+        key: "trial-balance",
+        label: "Trial Balance",
+        icon: "scale",
+        onPress: () => router.push("/(tabs)/(more)/accounting/trial-balance"),
+      },
+      {
+        key: "profit-loss",
+        label: "Profit & Loss",
+        icon: "trending-up",
+        onPress: () => router.push("/(tabs)/(more)/accounting/profit-and-loss"),
+      },
+      {
+        key: "balance-sheet",
+        label: "Balance Sheet",
+        icon: "landmark",
+        onPress: () => router.push("/(tabs)/(more)/accounting/balance-sheet"),
+      },
+      {
+        key: "cash-flow",
+        label: "Cash Flow",
+        icon: "banknote",
+        onPress: () => router.push("/(tabs)/(more)/accounting/cash-flow"),
+      },
+    ],
+    [router],
+  );
 
   const renderItem = useCallback(
     ({ item }: { item: any }) => {
@@ -368,6 +424,15 @@ const AccountingScreen = () => {
     );
   }
 
+  const expenseSummaryEntries = Object.entries(expenseSummary).sort(
+    (a, b) => b[1] - a[1],
+  );
+  const topExpenseCategories = expenseSummaryEntries.slice(0, 3);
+  const totalExpenseSummary = expenseSummaryEntries.reduce(
+    (sum, [, val]) => sum + val,
+    0,
+  );
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: colors.background }]}
@@ -395,6 +460,7 @@ const AccountingScreen = () => {
                   Financial overview
                 </Text>
               </View>
+              <AccountingContextMenu items={menuItems} />
             </View>
 
             {/* Dashboard Card */}
@@ -468,82 +534,73 @@ const AccountingScreen = () => {
 
             {/* Tabs */}
             <View style={styles.tabRow}>
-              {tabs.map((tab) => {
-                const isActive = activeTab === tab.key;
-                return (
-                  <Pressable
-                    key={tab.key}
-                    style={[
-                      styles.tab,
-                      {
-                        backgroundColor: isActive
-                          ? colors.buttonPrimary
-                          : colors.backgroundElement,
-                      },
-                    ]}
-                    onPress={() => setActiveTab(tab.key)}
-                  >
-                    <Text
+              {tabs.map((tab) => (
+                <Pill
+                  key={tab.key}
+                  label={tab.label}
+                  active={activeTab === tab.key}
+                  onPress={() => setActiveTab(tab.key)}
+                  badge={
+                    tab.key === "receivables"
+                      ? receivables.length
+                      : tab.key === "payables"
+                        ? payables.length
+                        : undefined
+                  }
+                />
+              ))}
+            </View>
+
+            {/* Expense Summary (collapsible, only on expenses tab) */}
+            {activeTab === "expenses" && topExpenseCategories.length > 0 && (
+              <View
+                style={[
+                  styles.summaryCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: isDark ? "#282b32" : "#eef0f4",
+                  },
+                ]}
+              >
+                <View style={styles.summaryHeader}>
+                  <View style={styles.summaryHeaderLeft}>
+                    <View
                       style={[
-                        styles.tabText,
-                        {
-                          color: isActive ? "#fff" : colors.textSecondary,
-                          fontWeight: isActive ? "700" : "600",
-                        },
+                        styles.summaryIcon,
+                        { backgroundColor: "rgba(239,68,68,0.12)" },
                       ]}
                     >
-                      {tab.label}
+                      <Lucide name="pie-chart" size={14} color="#ef4444" />
+                    </View>
+                    <Text style={[styles.summaryTitle, { color: colors.text }]}>
+                      Expense Summary
                     </Text>
-                    {tab.key === "receivables" && (
-                      <View
+                  </View>
+                  <Text style={[styles.summaryTotal, { color: "#ef4444" }]}>
+                    ₦{totalExpenseSummary.toLocaleString()}
+                  </Text>
+                </View>
+                <View style={styles.summaryItems}>
+                  {topExpenseCategories.map(([category, amount]) => (
+                    <View key={category} style={styles.summaryItem}>
+                      <Text
                         style={[
-                          styles.tabBadge,
-                          {
-                            backgroundColor: isActive
-                              ? "rgba(255,255,255,0.25)"
-                              : isDark
-                                ? "#2d3038"
-                                : "#e2e5eb",
-                          },
+                          styles.summaryItemLabel,
+                          { color: colors.textSecondary },
                         ]}
                       >
-                        <Text
-                          style={[
-                            styles.tabBadgeText,
-                            { color: isActive ? "#fff" : colors.textSecondary },
-                          ]}
-                        >
-                          {receivables.length}
-                        </Text>
-                      </View>
-                    )}
-                    {tab.key === "payables" && (
-                      <View
-                        style={[
-                          styles.tabBadge,
-                          {
-                            backgroundColor: isActive
-                              ? "rgba(255,255,255,0.25)"
-                              : isDark
-                                ? "#2d3038"
-                                : "#e2e5eb",
-                          },
-                        ]}
+                        {category}
+                      </Text>
+                      <Text
+                        style={[styles.summaryItemAmount, { color: colors.text }]}
                       >
-                        <Text
-                          style={[
-                            styles.tabBadgeText,
-                            { color: isActive ? "#fff" : colors.textSecondary },
-                          ]}
-                        >
-                          {payables.length}
-                        </Text>
-                      </View>
-                    )}
-                  </Pressable>
-                );
-              })}
-            </View>
+                        ₦{amount.toLocaleString()}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              </View>
+            )}
 
             {/* Add Button */}
             <View style={styles.addSection}>
@@ -681,23 +738,41 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 12,
   },
-  tab: {
-    // flex: 1,
+  summaryCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  summaryHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
+  summaryHeaderLeft: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
+  },
+  summaryIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    alignItems: "center",
     justifyContent: "center",
-    gap: 4,
-    borderRadius: 100,
-    paddingVertical: 10,
-    paddingHorizontal: 12.5,
   },
-  tabText: { fontSize: 13 },
-  tabBadge: {
-    borderRadius: 100,
-    paddingHorizontal: 7,
-    paddingVertical: 2,
+  summaryTitle: { fontSize: 14, fontWeight: "700" },
+  summaryTotal: { fontSize: 14, fontWeight: "800" },
+  summaryItems: { gap: 6 },
+  summaryItem: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
-  tabBadgeText: { fontSize: 11, fontWeight: "700" },
+  summaryItemLabel: { fontSize: 13 },
+  summaryItemAmount: { fontSize: 13, fontWeight: "600" },
   addSection: {
     paddingHorizontal: 16,
     marginBottom: 8,

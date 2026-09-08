@@ -12,7 +12,11 @@ const POSLayout = () => {
       >
         <Stack.Screen name="index" />
         <Stack.Screen name="scan" options={{ headerShown: false }} />
-        <Stack.Screen name="payment-awaiting/[saleId]" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="payment-awaiting/[saleId]"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen name="receipt" options={{ headerShown: false }} />
       </Stack>
     </AView>
   );

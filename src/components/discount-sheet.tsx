@@ -2,6 +2,7 @@ import { createDiscount, deleteDiscount, updateDiscount } from "@/api/discount";
 import { fetchTenantCategories, fetchProducts } from "@/api/inventory";
 import { fetchTenantStores } from "@/api/store";
 import AppBottomSheet from "@/components/bottom-sheet";
+import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
@@ -189,25 +190,13 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
               {stores.map((s) => {
                 const isActive = activeStoreId === s.id;
                 return (
-                  <Pressable
+                  <Pill
                     key={s.id}
-                    style={[
-                      styles.chip,
-                      {
-                        backgroundColor: isActive ? colors.buttonPrimary : colors.backgroundElement,
-                      },
-                    ]}
+                    label={s.name}
+                    active={isActive}
                     onPress={() => setSelectedStoreId(s.id)}
-                  >
-                    <Text
-                      style={[
-                        styles.chipText,
-                        { color: isActive ? "#fff" : colors.textSecondary },
-                      ]}
-                    >
-                      {s.name}
-                    </Text>
-                  </Pressable>
+                    color={colors.buttonPrimary}
+                  />
                 );
               })}
             </View>
@@ -319,25 +308,13 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
             {SCOPE_OPTIONS.map((s) => {
               const isActive = scope === s.key;
               return (
-                <Pressable
+                <Pill
                   key={s.key}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: isActive ? colors.buttonPrimary : colors.backgroundElement,
-                    },
-                  ]}
+                  label={s.label}
+                  active={isActive}
                   onPress={() => setScope(s.key)}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      { color: isActive ? "#fff" : colors.textSecondary },
-                    ]}
-                  >
-                    {s.label}
-                  </Text>
-                </Pressable>
+                  color={colors.buttonPrimary}
+                />
               );
             })}
           </View>
@@ -559,30 +536,14 @@ const ProductPickerSheet = ({
           {products.map((item) => {
             const isSelected = selectedIds.includes(item.id);
             return (
-              <Pressable
+              <Pill
                 key={item.id}
-                style={[
-                  styles.pickerPill,
-                  {
-                    backgroundColor: isSelected ? colors.buttonPrimary : colors.backgroundElement,
-                    borderColor: isSelected ? colors.buttonPrimary : colors.border,
-                  },
-                ]}
+                label={item.name}
+                active={isSelected}
                 onPress={() => onToggle(item.id)}
-              >
-                {isSelected && (
-                  <Lucide name="check" size={14} color="#fff" />
-                )}
-                <Text
-                  style={[
-                    styles.pickerPillText,
-                    { color: isSelected ? "#fff" : colors.text },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.name}
-                </Text>
-              </Pressable>
+                icon={isSelected ? "check" : undefined}
+                color={colors.buttonPrimary}
+              />
             );
           })}
           {products.length === 0 && (
@@ -641,30 +602,14 @@ const CategoryPickerSheet = ({
           {(categories ?? []).map((item) => {
             const isSelected = selectedIds.includes(item.id);
             return (
-              <Pressable
+              <Pill
                 key={item.id}
-                style={[
-                  styles.pickerPill,
-                  {
-                    backgroundColor: isSelected ? colors.buttonPrimary : colors.backgroundElement,
-                    borderColor: isSelected ? colors.buttonPrimary : colors.border,
-                  },
-                ]}
+                label={item.name}
+                active={isSelected}
                 onPress={() => onToggle(item.id)}
-              >
-                {isSelected && (
-                  <Lucide name="check" size={14} color="#fff" />
-                )}
-                <Text
-                  style={[
-                    styles.pickerPillText,
-                    { color: isSelected ? "#fff" : colors.text },
-                  ]}
-                  numberOfLines={1}
-                >
-                  {item.name}
-                </Text>
-              </Pressable>
+                icon={isSelected ? "check" : undefined}
+                color={colors.buttonPrimary}
+              />
             );
           })}
           {(categories ?? []).length === 0 && (
@@ -710,12 +655,6 @@ const styles = StyleSheet.create({
   },
   typeBtnText: { fontSize: 13, fontWeight: "700" },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 100,
-  },
-  chipText: { fontSize: 13, fontWeight: "600" },
   errorText: { fontSize: 12, color: "#DC2626", marginTop: -4 },
   pickerBtn: {
     flexDirection: "row",
@@ -760,16 +699,6 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     gap: 8,
   },
-  pickerPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 100,
-    borderWidth: 1,
-  },
-  pickerPillText: { fontSize: 14, fontWeight: "500" },
   okBtn: {
     borderRadius: 50,
     paddingVertical: 14,

@@ -6,6 +6,7 @@ import InventoryCard, {
   InventoryItem,
   StatusType,
 } from "@/components/inventory-card";
+import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
 import { ColorPalette, Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
@@ -195,55 +196,21 @@ const CategoryFilter: React.FC<{
     showsHorizontalScrollIndicator={false}
     contentContainerStyle={styles.categoriesContainer}
   >
-    <Pressable
+    <Pill
+      label="All"
+      active={activeCategory === ""}
       onPress={() => onSelectCategory("")}
-      style={[
-        styles.categoryPill,
-        {
-          backgroundColor:
-            activeCategory === "" ? "#2563eb" : colors.backgroundElement,
-        },
-      ]}
-    >
-      <Text
-        style={[
-          styles.categoryPillText,
-          {
-            color: activeCategory === "" ? "#ffffff" : colors.textSecondary,
-            fontWeight: activeCategory === "" ? "700" : "600",
-          },
-        ]}
-      >
-        All
-      </Text>
-    </Pressable>
-    {categoriesList.map((cat) => {
-      const isActive = cat.id === activeCategory;
-      return (
-        <Pressable
-          key={cat.id}
-          onPress={() => onSelectCategory(isActive ? "" : cat.id)}
-          style={[
-            styles.categoryPill,
-            {
-              backgroundColor: isActive ? "#2563eb" : colors.backgroundElement,
-            },
-          ]}
-        >
-          <Text
-            style={[
-              styles.categoryPillText,
-              {
-                color: isActive ? "#ffffff" : colors.textSecondary,
-                fontWeight: isActive ? "700" : "600",
-              },
-            ]}
-          >
-            {cat.name}
-          </Text>
-        </Pressable>
-      );
-    })}
+      color="#2563eb"
+    />
+    {categoriesList.map((cat) => (
+      <Pill
+        key={cat.id}
+        label={cat.name}
+        active={cat.id === activeCategory}
+        onPress={() => onSelectCategory(cat.id === activeCategory ? "" : cat.id)}
+        color="#2563eb"
+      />
+    ))}
   </ScrollView>
 );
 
@@ -428,7 +395,7 @@ const InventoryScreen = () => {
 
   const handleCardPress = (item: InventoryItem) => {
     router.push({
-      pathname: "/(tabs)/(inventory)/[id]",
+      pathname: "/(tabs)/(more)/inventory/[id]",
       params: { id: item.id, storeId: activeStoreId },
     });
   };
@@ -676,12 +643,6 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingTop: 4,
   },
-  categoryPill: {
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  categoryPillText: { fontSize: 13 },
   searchSection: {
     paddingHorizontal: 16,
     paddingTop: 8,

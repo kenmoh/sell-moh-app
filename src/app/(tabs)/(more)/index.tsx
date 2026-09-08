@@ -90,6 +90,14 @@ const more = () => {
         />
       </MoreCard>
 
+      <MoreCard label="Inventory">
+        <LinkItem
+          label="Inventory"
+          leadingIcon={"logs"}
+          onPress={() => router.push("/(tabs)/(more)/inventory")}
+        />
+      </MoreCard>
+
       <MoreCard label="POS">
         <View style={styles.settingRow}>
           <View style={styles.settingLeft}>
@@ -124,14 +132,12 @@ const more = () => {
           leadingIcon={"scale"}
           onPress={() => router.push("/(tabs)/(more)/accounting")}
         />
-        <LinkItem label="Payment Methods" leadingIcon={"credit-card"} />
-        <LinkItem label="Tax Settings" leadingIcon={"coins"} />
         <LinkItem
-          label="Documments"
-          docType="Receipt | Invoce | Quote"
-          leadingIcon={"printer"}
-          onPress={() => router.push("/(tabs)/(more)/document")}
+          label="Tax Settings"
+          leadingIcon={"coins"}
+          onPress={() => router.push("/(tabs)/(more)/tax-settings")}
         />
+
         <LinkItem
           label="Reports"
           leadingIcon={"bar-chart"}
@@ -152,7 +158,7 @@ const more = () => {
       </MoreCard>
       <MoreCard label="Account">
         <LinkItem
-          label="Notification"
+          label="Notifications"
           leadingIcon="bell"
           onPress={() => router.push("/(tabs)/(more)/notifications")}
         />

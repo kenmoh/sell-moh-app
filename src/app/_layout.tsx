@@ -1,9 +1,11 @@
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { SessionProvider, useSession } from "@/lib/ctx";
+import { registerForPushNotifications } from "@/lib/push-notifications";
 import { SplashScreenController } from "@/lib/splash";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import { useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NavigationBar } from "expo-navigation-bar";
@@ -14,12 +16,14 @@ const queryClient = new QueryClient();
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <QueryClientProvider client={queryClient}>
-        <SessionProvider>
-          <SplashScreenController />
-          <RootNavigator />
-        </SessionProvider>
-      </QueryClientProvider>
+      <KeyboardProvider>
+        <QueryClientProvider client={queryClient}>
+          <SessionProvider>
+            <SplashScreenController />
+            <RootNavigator />
+          </SessionProvider>
+        </QueryClientProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }
@@ -39,6 +43,12 @@ function RootNavigator() {
       <NavigationBar style="light" />;
     }
   }, [dark]);
+
+  useEffect(() => {
+    if (session) {
+      registerForPushNotifications();
+    }
+  }, [session]);
 
   return (
     <ThemeProvider value={dark ? DarkTheme : DefaultTheme}>

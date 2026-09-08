@@ -1,17 +1,14 @@
 import { fetchCoupons, fetchDiscounts, toggleDiscount } from "@/api/discount";
 import CouponSheet from "@/components/coupon-sheet";
 import DiscountSheet from "@/components/discount-sheet";
+import Pill from "@/components/pill";
 import { Colors } from "@/constants/theme";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Coupon, Discount } from "@/types/discount";
 import { Host, Switch } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-  withTiming,
-} from "react-native-reanimated";
-import { useState, useCallback } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Stack } from "expo-router";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -22,47 +19,23 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import type { Discount, Coupon } from "@/types/discount";
 
 type FilterType = "All" | "Percentage" | "Fixed Amount" | "Buy X Get Y";
 
 type TabType = "promotions" | "coupons";
 
-const AnimatedPressable = ({
-  children,
-  onPress,
-  style,
-}: {
-  children: React.ReactNode;
-  onPress?: () => void;
-  style?: any;
-}) => {
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-  }));
-
-  return (
-    <Animated.View style={animatedStyle}>
-      <Pressable
-        onPressIn={() => {
-          scale.value = withSpring(0.96, { damping: 15, stiffness: 400 });
-        }}
-        onPressOut={() => {
-          scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-        }}
-        onPress={onPress}
-        style={style}
-      >
-        {children}
-      </Pressable>
-    </Animated.View>
-  );
-};
-
-const filters: FilterType[] = ["All", "Percentage", "Fixed Amount", "Buy X Get Y"];
+const filters: FilterType[] = [
+  "All",
+  "Percentage",
+  "Fixed Amount",
+  "Buy X Get Y",
+];
 
 const TABS: TabType[] = ["promotions", "coupons"];
 
@@ -76,7 +49,9 @@ const Discounts = () => {
 
   // Discount sheet state
   const [showDiscountSheet, setShowDiscountSheet] = useState(false);
-  const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(null);
+  const [selectedDiscount, setSelectedDiscount] = useState<Discount | null>(
+    null,
+  );
 
   // Coupon sheet state
   const [showCouponSheet, setShowCouponSheet] = useState(false);
@@ -197,10 +172,11 @@ const Discounts = () => {
   const renderPromoCard = (promo: Discount) => {
     const color = getDiscountColor(promo.discount_type);
     const icon = getDiscountIcon(promo.discount_type);
-    const isValidityExpired = promo.end_date && new Date(promo.end_date) < new Date();
+    const isValidityExpired =
+      promo.end_date && new Date(promo.end_date) < new Date();
 
     return (
-      <AnimatedPressable
+      <Pressable
         key={promo.id}
         style={[
           styles.promoCard,
@@ -227,7 +203,9 @@ const Discounts = () => {
           </Text>
           <Text style={[styles.promoDiscount, { color }]}>
             {getDiscountLabel(promo)}{" "}
-            <Text style={[styles.promoDescription, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.promoDescription, { color: colors.textSecondary }]}
+            >
               {promo.scope === "all"
                 ? "all items"
                 : promo.scope === "specific_products"
@@ -238,8 +216,11 @@ const Discounts = () => {
           {(promo.start_date || promo.end_date) && (
             <View style={styles.validityRow}>
               <Lucide name="calendar" size={12} color="#9ca3af" />
-              <Text style={[styles.validityText, { color: colors.textSecondary }]}>
-                {formatDate(promo.start_date) ?? "Ongoing"} – {formatDate(promo.end_date) ?? "No end"}
+              <Text
+                style={[styles.validityText, { color: colors.textSecondary }]}
+              >
+                {formatDate(promo.start_date) ?? "Ongoing"} –{" "}
+                {formatDate(promo.end_date) ?? "No end"}
               </Text>
             </View>
           )}
@@ -262,16 +243,17 @@ const Discounts = () => {
             </Host>
           )}
         </View>
-      </AnimatedPressable>
+      </Pressable>
     );
   };
 
   const renderCouponCard = (coupon: Coupon) => {
-    const isExpired = coupon.expires_at && new Date(coupon.expires_at) < new Date();
+    const isExpired =
+      coupon.expires_at && new Date(coupon.expires_at) < new Date();
     const isMaxed = coupon.max_uses > 0 && coupon.used_count >= coupon.max_uses;
 
     return (
-      <AnimatedPressable
+      <Pressable
         key={coupon.id}
         style={[
           styles.promoCard,
@@ -301,7 +283,12 @@ const Discounts = () => {
               ? `${coupon.value}% OFF`
               : `$${coupon.value} OFF`}
             {coupon.min_order > 0 && (
-              <Text style={[styles.promoDescription, { color: colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.promoDescription,
+                  { color: colors.textSecondary },
+                ]}
+              >
                 {" "}
                 · Min. ${coupon.min_order}
               </Text>
@@ -311,14 +298,19 @@ const Discounts = () => {
             {coupon.expires_at && (
               <>
                 <Lucide name="calendar" size={12} color="#9ca3af" />
-                <Text style={[styles.validityText, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.validityText, { color: colors.textSecondary }]}
+                >
                   Expires {formatDate(coupon.expires_at)}
                 </Text>
               </>
             )}
             {coupon.max_uses > 0 && (
-              <Text style={[styles.validityText, { color: colors.textSecondary }]}>
-                {" · "}{coupon.used_count}/{coupon.max_uses} used
+              <Text
+                style={[styles.validityText, { color: colors.textSecondary }]}
+              >
+                {" · "}
+                {coupon.used_count}/{coupon.max_uses} used
               </Text>
             )}
           </View>
@@ -342,7 +334,7 @@ const Discounts = () => {
             </View>
           )}
         </View>
-      </AnimatedPressable>
+      </Pressable>
     );
   };
 
@@ -358,9 +350,12 @@ const Discounts = () => {
 
       const filteredDiscounts = discounts.filter((d) => {
         if (activeFilter === "All") return true;
-        if (activeFilter === "Percentage") return d.discount_type === "percentage";
-        if (activeFilter === "Fixed Amount") return d.discount_type === "fixed_amount";
-        if (activeFilter === "Buy X Get Y") return d.discount_type === "buy_x_get_y";
+        if (activeFilter === "Percentage")
+          return d.discount_type === "percentage";
+        if (activeFilter === "Fixed Amount")
+          return d.discount_type === "fixed_amount";
+        if (activeFilter === "Buy X Get Y")
+          return d.discount_type === "buy_x_get_y";
         return true;
       });
 
@@ -371,7 +366,9 @@ const Discounts = () => {
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
               No promotions yet
             </Text>
-            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.emptySubtext, { color: colors.textSecondary }]}
+            >
               Create your first promotion to get started
             </Text>
           </View>
@@ -408,35 +405,32 @@ const Discounts = () => {
     }
 
     return (
-      <View style={styles.promoList}>
-        {coupons.map(renderCouponCard)}
-      </View>
+      <View style={styles.promoList}>{coupons.map(renderCouponCard)}</View>
     );
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
-        <View style={styles.headerLeft} />
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Discounts & Coupons
-        </Text>
-        <AnimatedPressable
-          style={styles.addButton}
-          onPress={() => {
-            if (activeTab === "promotions") {
-              setSelectedDiscount(null);
-              setShowDiscountSheet(true);
-            } else {
-              setSelectedCoupon(null);
-              setShowCouponSheet(true);
-            }
-          }}
-        >
-          <Lucide name="plus" size={20} color="#fff" />
-        </AnimatedPressable>
-      </View>
+      <Stack.Screen
+        options={{
+          headerRight: () => (
+            <Pressable
+              style={styles.addButton}
+              onPress={() => {
+                if (activeTab === "promotions") {
+                  setSelectedDiscount(null);
+                  setShowDiscountSheet(true);
+                } else {
+                  setSelectedCoupon(null);
+                  setShowCouponSheet(true);
+                }
+              }}
+            >
+              <Lucide name="plus" size={20} color="#fff" />
+            </Pressable>
+          ),
+        }}
+      />
 
       {/* Tabs */}
       <View style={styles.tabRow}>
@@ -486,32 +480,15 @@ const Discounts = () => {
             contentContainerStyle={styles.filterTabs}
             style={{ marginHorizontal: -20, marginBottom: 16 }}
           >
-            {filters.map((f) => {
-              const isActive = f === activeFilter;
-              return (
-                <AnimatedPressable
-                  key={f}
-                  onPress={() => setActiveFilter(f)}
-                  style={{
-                    backgroundColor: isActive ? "#3b82f6" : "transparent",
-                    borderColor: isActive ? "#3b82f6" : colors.backgroundElement,
-                    borderRadius: 100,
-                    borderWidth: 1,
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.filterText,
-                      { color: isActive ? "#fff" : colors.textSecondary },
-                    ]}
-                  >
-                    {f}
-                  </Text>
-                </AnimatedPressable>
-              );
-            })}
+            {filters.map((f) => (
+              <Pill
+                key={f}
+                label={f}
+                active={f === activeFilter}
+                onPress={() => setActiveFilter(f)}
+                color="#3b82f6"
+              />
+            ))}
           </ScrollView>
         )}
 
@@ -580,13 +557,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     gap: 8,
   },
-  filterPill: {
-    borderRadius: 100,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderWidth: 1,
-  },
-  filterText: { fontSize: 13, fontWeight: "600" },
   sectionLabel: {
     fontSize: 12,
     fontWeight: "600",

@@ -78,7 +78,7 @@ const ProductDetails = () => {
   const [storeId, setStoreId] = useState(storeIdParam ?? user?.store_id ?? "");
   const [adjustVisible, setAdjustVisible] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
-  const [qrSize, setQrSize] = useState<"small" | "medium" | "large">("large");
+  const [qrSize, setQrSize] = useState<"small" | "medium" | "large">("small");
   const [qrBoxSize, setQrBoxSize] = useState("");
 
   const { data: storesData } = useQuery({
@@ -540,10 +540,10 @@ const ProductDetails = () => {
             const active = qrSize === s;
             const label =
               s === "small"
-                ? "Small (320px)"
+                ? "Small (180px)"
                 : s === "medium"
-                  ? "Medium (530px)"
-                  : "Large (1060px)";
+                  ? "Medium (250px)"
+                  : "Large (300px)";
             return (
               <Pressable
                 key={s}

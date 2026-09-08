@@ -1,8 +1,7 @@
 import { AuditLogEntry, getAuditLogs } from "@/api/auth";
-import AppView from "@/components/app-view";
 import { Colors } from "@/constants/theme";
-import { useQuery } from "@tanstack/react-query";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useQuery } from "@tanstack/react-query";
 import {
   ActivityIndicator,
   FlatList,
@@ -43,7 +42,12 @@ const TenantActivityLogs = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
 
-  const { data: logs, isPending, refetch, isRefetching } = useQuery({
+  const {
+    data: logs,
+    isPending,
+    refetch,
+    isRefetching,
+  } = useQuery({
     queryKey: ["audit-logs"],
     queryFn: () => getAuditLogs({ limit: 100 }),
   });
@@ -82,11 +86,16 @@ const TenantActivityLogs = () => {
       <View
         style={[
           styles.logCard,
-          { backgroundColor: colors.card, borderColor: colors.backgroundElement },
+          {
+            backgroundColor: colors.card,
+            borderColor: colors.backgroundElement,
+          },
         ]}
       >
         <View style={styles.logHeader}>
-          <View style={[styles.iconBadge, { backgroundColor: config.color + "20" }]}>
+          <View
+            style={[styles.iconBadge, { backgroundColor: config.color + "20" }]}
+          >
             <Lucide name={config.icon as any} size={18} color={config.color} />
           </View>
           <View style={{ flex: 1 }}>
@@ -102,21 +111,55 @@ const TenantActivityLogs = () => {
         <View style={styles.detailsContainer}>
           {item.action === "cart_void_approved" && (
             <>
-              <DetailRow label="Product" value={String(details.product_name ?? "—")} colors={colors} />
-              <DetailRow label="Qty Voided" value={String(details.qty_voided ?? "—")} colors={colors} />
-              <DetailRow label="Qty Remaining" value={String(details.qty_remaining ?? "—")} colors={colors} />
-              <DetailRow label="Unit Price" value={details.unit_price ? `₦${Number(details.unit_price).toLocaleString()}` : "—"} colors={colors} />
+              <DetailRow
+                label="Product"
+                value={String(details.product_name ?? "—")}
+                colors={colors}
+              />
+              <DetailRow
+                label="Qty Voided"
+                value={String(details.qty_voided ?? "—")}
+                colors={colors}
+              />
+              <DetailRow
+                label="Qty Remaining"
+                value={String(details.qty_remaining ?? "—")}
+                colors={colors}
+              />
+              <DetailRow
+                label="Unit Price"
+                value={
+                  details.unit_price
+                    ? `₦${Number(details.unit_price).toLocaleString()}`
+                    : "—"
+                }
+                colors={colors}
+              />
             </>
           )}
           {item.action === "cart_cleared" && (
             <>
-              <DetailRow label="Items Cleared" value={String(details.items_cleared ?? "—")} colors={colors} />
+              <DetailRow
+                label="Items Cleared"
+                value={String(details.items_cleared ?? "—")}
+                colors={colors}
+              />
             </>
           )}
           {item.action === "cart_item_deleted" && (
             <>
-              <DetailRow label="Product" value={String(details.product_name ?? details.product_id ?? "—")} colors={colors} />
-              <DetailRow label="Quantity" value={String(details.qty ?? "—")} colors={colors} />
+              <DetailRow
+                label="Product"
+                value={String(
+                  details.product_name ?? details.product_id ?? "—",
+                )}
+                colors={colors}
+              />
+              <DetailRow
+                label="Quantity"
+                value={String(details.qty ?? "—")}
+                colors={colors}
+              />
             </>
           )}
         </View>
@@ -125,7 +168,7 @@ const TenantActivityLogs = () => {
   };
 
   return (
-    <AppView>
+    <View style={{ flex: 1, backgroundColor: colors.background, padding: 10 }}>
       {isPending ? (
         <ActivityIndicator
           color={colors.buttonPrimary}
@@ -133,7 +176,11 @@ const TenantActivityLogs = () => {
         />
       ) : tenantLogs.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Lucide name="clipboard-list" size={48} color={colors.textSecondary} />
+          <Lucide
+            name="clipboard-list"
+            size={48}
+            color={colors.textSecondary}
+          />
           <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
             No activity logs yet
           </Text>
@@ -149,7 +196,7 @@ const TenantActivityLogs = () => {
           refreshing={isRefetching}
         />
       )}
-    </AppView>
+    </View>
   );
 };
 

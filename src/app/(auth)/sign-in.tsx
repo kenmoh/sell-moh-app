@@ -1,8 +1,10 @@
-import { login } from "@/api/auth";
+import { login, socialSignIn } from "@/api/auth";
 import AppView from "@/components/app-view";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
+import { useGoogleAuth } from "@/lib/google-auth";
+import { useAppleAuth } from "@/lib/apple-auth";
 import { LoginResponseData } from "@/types/auth";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -38,6 +40,19 @@ const SignIn = () => {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<SignInField, string>>>({});
 
+  const googleAuth = useGoogleAuth(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "");
+  const appleAuth = useAppleAuth();
+
+  const handleSocialSignIn = async (provider: "google" | "apple", idToken: string) => {
+    try {
+      const res = await socialSignIn({ id_token: idToken, provider });
+      const data = res.data as LoginResponseData;
+      signIn(data.tokens.access_token, data.tokens.refresh_token, data.user);
+      router.replace("/(tabs)/(pos)");
+    } catch (err: any) {
+      Alert.alert("Sign In Failed", err.message || "Social sign-in failed");
+    }
+  };
   const handleSignIn = async () => {
     const result = signInSchema.safeParse({ email, password });
     if (!result.success) {
@@ -196,12 +211,26 @@ const SignIn = () => {
         <View style={styles.socialRow}>
           <TouchableOpacity
             activeOpacity={0.7}
+            onPress={async () => {
+              await googleAuth.promptAsync();
+              if (googleAuth.idToken) {
+                handleSocialSignIn("google", googleAuth.idToken);
+              }
+              if (googleAuth.error) {
+                Alert.alert("Google Sign-In", googleAuth.error);
+              }
+            }}
+            disabled={googleAuth.isLoading}
             style={[
               styles.socialButton,
               { backgroundColor: colors.backgroundElement },
             ]}
           >
-            <Text style={styles.socialIcon}>G</Text>
+            {googleAuth.isLoading ? (
+              <ActivityIndicator size="small" color={colors.text} />
+            ) : (
+              <Text style={styles.socialIcon}>G</Text>
+            )}
             <Text style={[styles.socialLabel, { color: colors.text }]}>
               Google
             </Text>
@@ -209,12 +238,26 @@ const SignIn = () => {
 
           <TouchableOpacity
             activeOpacity={0.7}
+            onPress={async () => {
+              await appleAuth.promptAsync();
+              if (appleAuth.idToken) {
+                handleSocialSignIn("apple", appleAuth.idToken);
+              }
+              if (appleAuth.error) {
+                Alert.alert("Apple Sign-In", appleAuth.error);
+              }
+            }}
+            disabled={appleAuth.isLoading}
             style={[
               styles.socialButton,
               { backgroundColor: colors.backgroundElement },
             ]}
           >
-            <Text style={styles.socialIcon}></Text>
+            {appleAuth.isLoading ? (
+              <ActivityIndicator size="small" color={colors.text} />
+            ) : (
+              <Text style={styles.socialIcon}></Text>
+            )}
             <Text style={[styles.socialLabel, { color: colors.text }]}>
               Apple
             </Text>

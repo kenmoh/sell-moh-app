@@ -26,6 +26,10 @@ import Animated, { FadeIn, FadeOut, Layout } from "react-native-reanimated";
 import { useRouter } from "expo-router";
 import AppBottomSheet from "./bottom-sheet";
 
+import type { ReceiptData } from "@/types/payments";
+import { buildReceiptHtml } from "@/lib/receipt-html";
+import * as Print from "expo-print";
+
 export type PaymentMethod = "cash" | "transfer" | "split" | "card";
 
 export interface PaymentReceipt {
@@ -34,6 +38,7 @@ export interface PaymentReceipt {
   card: number;
   total: number;
   method: PaymentMethod;
+  receiptData?: ReceiptData;
 }
 
 interface CartSheetProps {
@@ -56,6 +61,26 @@ export const CartSuccessView = ({
   colors,
   onFinish,
 }: CartSuccessViewProps) => {
+  const [hasPrinted, setHasPrinted] = useState(false);
+
+  useEffect(() => {
+    if (!receipt.receiptData || hasPrinted) return;
+    const timer = setTimeout(() => {
+      Print.printAsync({ html: buildReceiptHtml(receipt.receiptData!) }).catch(
+        () => {},
+      );
+      setHasPrinted(true);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [receipt.receiptData, hasPrinted]);
+
+  const handlePrint = () => {
+    if (!receipt.receiptData) return;
+    Print.printAsync({ html: buildReceiptHtml(receipt.receiptData) }).catch(
+      () => {},
+    );
+  };
+
   return (
     <View style={styles.successContainer}>
       <View style={styles.successBadge}>
@@ -130,6 +155,28 @@ export const CartSuccessView = ({
           </View>
         )}
       </View>
+
+      {receipt.receiptData && (
+        <TouchableOpacity
+          activeOpacity={0.8}
+          onPress={handlePrint}
+          style={[
+            styles.primaryButton,
+            {
+              backgroundColor: colors.sheet,
+              borderColor: colors.backgroundElement,
+              borderWidth: 1,
+              width: "100%",
+              marginBottom: 10,
+            },
+          ]}
+        >
+          <Lucide name="printer" size={18} color={colors.text} />
+          <Text style={[styles.primaryButtonText, { color: colors.text }]}>
+            Print Receipt
+          </Text>
+        </TouchableOpacity>
+      )}
 
       <TouchableOpacity
         activeOpacity={0.8}
@@ -660,6 +707,7 @@ interface CartSummaryCardProps {
   totalItemsCount: number;
   totalPrice: number;
   discountAmount: number;
+  taxAmount: number;
   couponCode: string | null;
   colors: ColorPalette;
 }
@@ -668,10 +716,11 @@ export const CartSummaryCard = ({
   totalItemsCount,
   totalPrice,
   discountAmount,
+  taxAmount,
   couponCode,
   colors,
 }: CartSummaryCardProps) => {
-  const finalTotal = Math.max(0, totalPrice - discountAmount);
+  const finalTotal = Math.max(0, totalPrice - discountAmount + taxAmount);
 
   return (
     <View
@@ -698,6 +747,14 @@ export const CartSummaryCard = ({
           </Text>
           <Text style={{ color: "#10b981", fontWeight: "600" }}>
             -₦{discountAmount.toLocaleString()}
+          </Text>
+        </View>
+      )}
+      {taxAmount > 0 && (
+        <View style={styles.summaryRow}>
+          <Text style={{ color: colors.textSecondary }}>Tax (VAT)</Text>
+          <Text style={{ color: colors.text, fontWeight: "600" }}>
+            ₦{taxAmount.toLocaleString()}
           </Text>
         </View>
       )}
@@ -918,6 +975,7 @@ interface CartPaymentSectionProps {
   totalPrice: number;
   totalItemsCount: number;
   discountAmount: number;
+  taxAmount: number;
   couponCode: string | null;
   paymentMethod: PaymentMethod;
   cashInput: string;
@@ -946,6 +1004,7 @@ export const CartPaymentSection = ({
   totalPrice,
   totalItemsCount,
   discountAmount,
+  taxAmount,
   couponCode,
   paymentMethod,
   cashInput,
@@ -1007,6 +1066,7 @@ export const CartPaymentSection = ({
         totalItemsCount={totalItemsCount}
         totalPrice={totalPrice}
         discountAmount={discountAmount}
+        taxAmount={taxAmount}
         couponCode={couponCode}
         colors={colors}
       />
@@ -1058,7 +1118,11 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     0,
   );
   const totalItemsCount = items.reduce((sum, i) => sum + i.quantity, 0);
-  const finalTotal = Math.max(0, totalPrice - discountAmount);
+  const taxAmount = items.reduce(
+    (sum, i) => sum + (i.product.tax_rate ? i.product.price * i.quantity * (i.product.tax_rate / 100) : 0),
+    0,
+  );
+  const finalTotal = Math.max(0, totalPrice - discountAmount + taxAmount);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [cashInput, setCashInput] = useState<string>("");
@@ -1240,8 +1304,8 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       });
 
       if (method === "cash") {
-        await confirmPayment({ intent_id: intentResult.intent_id });
-        return { type: "cash" as const };
+        const saleResult = await confirmPayment({ intent_id: intentResult.intent_id });
+        return { type: "cash" as const, receipt: saleResult.receipt };
       }
 
       return {
@@ -1264,6 +1328,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
           card: 0,
           total: finalTotal,
           method: "cash",
+          receiptData: result.receipt,
         });
         setIsSuccess(true);
         return;
@@ -1329,6 +1394,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
           type: "card" as const,
           intentId: cardIntent.intent_id,
           amount: numCard,
+          receipt: saleResult.receipt,
         };
       }
 
@@ -1343,10 +1409,11 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
           type: "transfer" as const,
           intentId: trfIntent.intent_id,
           amount: numTransfer,
+          receipt: saleResult.receipt,
         };
       }
 
-      return { type: "cash" as const };
+      return { type: "cash" as const, receipt: saleResult.receipt };
     },
     onSuccess: (result) => {
       if (result.type === "cash") {
@@ -1355,7 +1422,8 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
           transfer: 0,
           card: 0,
           total: finalTotal,
-          method: "cash",
+          method: "split",
+          receiptData: result.receipt,
         });
         setIsSuccess(true);
         return;
@@ -1564,6 +1632,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
                 totalPrice={totalPrice}
                 totalItemsCount={totalItemsCount}
                 discountAmount={discountAmount}
+                taxAmount={taxAmount}
                 couponCode={couponCode}
                 paymentMethod={paymentMethod}
                 cashInput={cashInput}

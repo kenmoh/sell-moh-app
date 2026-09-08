@@ -1,12 +1,19 @@
 import {
+  fetchCashierPerformance,
+  fetchCustomerInsights,
   fetchDashboard,
+  fetchDocumentSummary,
   fetchInventoryAlerts,
   fetchPaymentMethods,
   fetchProfitLoss,
+  fetchSalesSummary,
+  fetchTopProducts,
 } from "@/api/reports";
+import AccountingContextMenu from "@/components/accounting-context-menu";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useMemo } from "react";
 import {
   ActivityIndicator,
@@ -25,6 +32,7 @@ const ReportsScreen = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
+  const router = useRouter();
 
   const today = useMemo(() => {
     const d = new Date();
@@ -70,18 +78,88 @@ const ReportsScreen = () => {
     queryFn: fetchInventoryAlerts,
   });
 
+  const {
+    data: salesSummary,
+    isLoading: isLoadingSales,
+    refetch: refetchSales,
+  } = useQuery({
+    queryKey: ["reports-sales-summary"],
+    queryFn: () => fetchSalesSummary(today, toDate),
+  });
+
+  const {
+    data: topProducts,
+    isLoading: isLoadingProducts,
+    refetch: refetchProducts,
+  } = useQuery({
+    queryKey: ["reports-top-products"],
+    queryFn: () => fetchTopProducts(today, toDate, 10),
+  });
+
+  const {
+    data: cashierPerf,
+    isLoading: isLoadingCashiers,
+    refetch: refetchCashiers,
+  } = useQuery({
+    queryKey: ["reports-cashier-performance"],
+    queryFn: () => fetchCashierPerformance(today, toDate),
+  });
+
+  const {
+    data: customerInsights,
+    isLoading: isLoadingCustomers,
+    refetch: refetchCustomers,
+  } = useQuery({
+    queryKey: ["reports-customer-insights"],
+    queryFn: () => fetchCustomerInsights(today, toDate),
+  });
+
+  const {
+    data: docSummary,
+    isLoading: isLoadingDocs,
+    refetch: refetchDocs,
+  } = useQuery({
+    queryKey: ["reports-document-summary"],
+    queryFn: () => fetchDocumentSummary(today, toDate),
+  });
+
   const isLoading =
     isLoadingDash ||
     isLoadingPay ||
     isLoadingPL ||
-    isLoadingInv;
+    isLoadingInv ||
+    isLoadingSales ||
+    isLoadingProducts ||
+    isLoadingCashiers ||
+    isLoadingCustomers ||
+    isLoadingDocs;
 
   const handleRefresh = () => {
     refetchDash();
     refetchPay();
     refetchPL();
     refetchInv();
+    refetchSales();
+    refetchProducts();
+    refetchCashiers();
+    refetchCustomers();
+    refetchDocs();
   };
+
+  const menuItems = [
+    {
+      key: "products",
+      label: "Top Products",
+      icon: "award",
+      onPress: () => router.push("/(tabs)/(more)/report/products"),
+    },
+    {
+      key: "cashiers",
+      label: "Cashier Performance",
+      icon: "users",
+      onPress: () => router.push("/(tabs)/(more)/report/cashiers"),
+    },
+  ];
 
   if (isLoading) {
     return (
@@ -120,6 +198,7 @@ const ReportsScreen = () => {
               Last {REPORT_DAYS} days
             </Text>
           </View>
+          <AccountingContextMenu items={menuItems} />
         </View>
 
         {/* Dashboard Stats */}
@@ -200,6 +279,68 @@ const ReportsScreen = () => {
           </View>
         </View>
 
+        {/* Sales Summary Preview */}
+        {salesSummary && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Sales Summary
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: isDark ? "#282b32" : "#eef0f4",
+                },
+              ]}
+            >
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Total Revenue
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: "#10b981" }]}>
+                    ₦{salesSummary?.totals?.revenue.toLocaleString()}
+                  </Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Total Sales
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: "#3b82f6" }]}>
+                    {salesSummary.totals.sales_count}
+                  </Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Discounts
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: "#f59e0b" }]}>
+                    ₦{salesSummary.totals.discount_total.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Payment Breakdown */}
         {paymentBreakdown && (
           <View style={styles.section}>
@@ -270,12 +411,14 @@ const ReportsScreen = () => {
           </View>
         )}
 
-        {/* Top Product */}
-        {dashboard?.top_product && (
+        {/* Top Products Preview */}
+        {topProducts && topProducts.length > 0 && (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              Top Product
-            </Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Top Products
+              </Text>
+            </View>
             <View
               style={[
                 styles.card,
@@ -285,29 +428,58 @@ const ReportsScreen = () => {
                 },
               ]}
             >
-              <View style={styles.productItem}>
-                <View
-                  style={[
-                    styles.rankBadge,
-                    { backgroundColor: "rgba(245,158,11,0.12)" },
-                  ]}
-                >
-                  <Text style={[styles.rankText, { color: "#f59e0b" }]}>#1</Text>
+              {topProducts.slice(0, 3).map((product, index) => (
+                <View key={product.product_id}>
+                  {index > 0 && (
+                    <View
+                      style={[
+                        styles.divider,
+                        { backgroundColor: isDark ? "#282b32" : "#f0f2f5" },
+                      ]}
+                    />
+                  )}
+                  <View style={styles.productItem}>
+                    <View
+                      style={[
+                        styles.rankBadge,
+                        {
+                          backgroundColor:
+                            index < 3
+                              ? "rgba(245,158,11,0.12)"
+                              : "rgba(59,130,246,0.12)",
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.rankText,
+                          { color: index < 3 ? "#f59e0b" : "#3b82f6" },
+                        ]}
+                      >
+                        #{index + 1}
+                      </Text>
+                    </View>
+                    <View style={styles.productInfo}>
+                      <Text
+                        style={[styles.productName, { color: colors.text }]}
+                      >
+                        {product.product_name}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.productQty,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        {product.qty_sold} sold
+                      </Text>
+                    </View>
+                    <Text style={[styles.productRevenue, { color: "#10b981" }]}>
+                      ₦{product.revenue.toLocaleString()}
+                    </Text>
+                  </View>
                 </View>
-                <View style={styles.productInfo}>
-                  <Text style={[styles.productName, { color: colors.text }]}>
-                    {dashboard.top_product.product_name}
-                  </Text>
-                  <Text
-                    style={[styles.productQty, { color: colors.textSecondary }]}
-                  >
-                    {dashboard.top_product.total_qty} sold
-                  </Text>
-                </View>
-                <Text style={[styles.productRevenue, { color: "#10b981" }]}>
-                  ₦{dashboard.top_product.total_revenue.toLocaleString()}
-                </Text>
-              </View>
+              ))}
             </View>
           </View>
         )}
@@ -372,6 +544,139 @@ const ReportsScreen = () => {
                   ₦{plResult.net_profit.toLocaleString()}
                 </Text>
               </View>
+            </View>
+          </View>
+        )}
+
+        {/* Customer Insights Preview */}
+        {customerInsights && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Customer Insights
+              </Text>
+            </View>
+            <View
+              style={[
+                styles.card,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: isDark ? "#282b32" : "#eef0f4",
+                },
+              ]}
+            >
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryItem}>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Total
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>
+                    {customerInsights.summary.unique_customers}
+                  </Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Repeat
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: "#3b82f6" }]}>
+                    {customerInsights.summary.returning_customers}
+                  </Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Avg Value
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: "#10b981" }]}>
+                    ₦
+                    {customerInsights.summary.avg_customer_value.toLocaleString()}
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        )}
+
+        {/* Document Summary Preview */}
+        {docSummary && (
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Documents
+              </Text>
+            </View>
+            <View style={styles.docGrid}>
+              {[
+                {
+                  label: "Total Docs",
+                  value: docSummary.summary.total_documents,
+                  icon: "file-text",
+                  color: "#3b82f6",
+                  bg: "rgba(59,130,246,0.12)",
+                },
+                {
+                  label: "Total Value",
+                  value: `₦${docSummary.summary.total_amount.toLocaleString()}`,
+                  icon: "wallet",
+                  color: "#a855f7",
+                  bg: "rgba(168,85,247,0.12)",
+                },
+                {
+                  label: "Paid",
+                  value: docSummary.summary.paid,
+                  icon: "check-circle",
+                  color: "#10b981",
+                  bg: "rgba(16,185,129,0.12)",
+                },
+                {
+                  label: "Overdue",
+                  value: docSummary.summary.overdue,
+                  icon: "alert-circle",
+                  color: "#f59e0b",
+                  bg: "rgba(245,158,11,0.12)",
+                },
+              ].map((item) => (
+                <View
+                  key={item.label}
+                  style={[
+                    styles.docCard,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: isDark ? "#282b32" : "#eef0f4",
+                    },
+                  ]}
+                >
+                  <View style={[styles.docIcon, { backgroundColor: item.bg }]}>
+                    <Lucide
+                      name={item.icon as any}
+                      size={16}
+                      color={item.color}
+                    />
+                  </View>
+                  <Text style={[styles.docValue, { color: item.color }]}>
+                    {item.value}
+                  </Text>
+                  <Text
+                    style={[styles.docLabel, { color: colors.textSecondary }]}
+                  >
+                    {item.label}
+                  </Text>
+                </View>
+              ))}
             </View>
           </View>
         )}
@@ -519,17 +824,39 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
   },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
   sectionTitle: {
     fontSize: 12,
     fontWeight: "700",
     letterSpacing: 1.2,
     textTransform: "uppercase",
-    marginBottom: 10,
   },
   card: {
     borderRadius: 16,
     padding: 16,
     borderWidth: StyleSheet.hairlineWidth,
+  },
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  summaryItem: {
+    alignItems: "center",
+    flex: 1,
+  },
+  summaryLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  summaryValue: {
+    fontSize: 16,
+    fontWeight: "800",
   },
   payItem: { marginBottom: 12 },
   payItemHeader: {
@@ -547,6 +874,10 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   payBarFill: { height: "100%", borderRadius: 3 },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginVertical: 4,
+  },
   productItem: {
     flexDirection: "row",
     alignItems: "center",
@@ -580,6 +911,35 @@ const styles = StyleSheet.create({
   plLabelBold: { fontSize: 15, fontWeight: "700" },
   plValue: { fontSize: 14, fontWeight: "700" },
   plValueBold: { fontSize: 15, fontWeight: "800" },
+  docGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  docCard: {
+    width: "47%",
+    flexGrow: 1,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: "center",
+    gap: 6,
+  },
+  docIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  docValue: {
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  docLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
   alertsRow: {
     flexDirection: "row",
     gap: 10,

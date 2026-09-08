@@ -97,8 +97,6 @@ const AddProduct = () => {
     }
   }, [storeId, stores]);
 
-  console.log("Selected store ID:", storeId);
-
   const { mutate: createProductMutation, isPending } = useMutation({
     mutationFn: (data: CreateProduct) => createProduct(storeId, data),
     onSuccess: () => {
@@ -172,7 +170,9 @@ const AddProduct = () => {
       cost_price: parseFloat(result.data.cost_price) || 0,
       selling_price: parseFloat(result.data.selling_price) || 0,
       reorder_point: parseInt(result.data.reorder_point, 10) || 0,
-      qty: result.data.initial_stock ? parseFloat(result.data.initial_stock) || 0 : 0,
+      qty: result.data.initial_stock
+        ? parseFloat(result.data.initial_stock) || 0
+        : 0,
       category_id: result.data.category_id || null,
       description: result.data.description || null,
       unit: result.data.unit || null,

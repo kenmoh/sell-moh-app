@@ -55,6 +55,18 @@ export const login = async (
   return res.data!;
 };
 
+export const socialSignIn = async (
+  data: { id_token: string; provider: "google" | "apple" },
+): Promise<DataMessageResponse> => {
+  const res = await apiClient.post<DataMessageResponse>(`${URL}/social`, data);
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!;
+};
+
 // ____________________________________Permissions____________________________________
 export const getPermissions = async (): Promise<Permissions> => {
   const res = await apiClient.get<Permissions>(`${URL}/permissions`);

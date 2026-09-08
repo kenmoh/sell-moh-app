@@ -2,8 +2,8 @@ import { getCart } from "@/api/cart";
 import AppView from "@/components/app-view";
 import { Colors } from "@/constants/theme";
 import { CartDetailResponse } from "@/types/cart";
-import { useQuery } from "@tanstack/react-query";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useQuery } from "@tanstack/react-query";
 import { useLocalSearchParams } from "expo-router";
 import {
   ActivityIndicator,
@@ -55,7 +55,11 @@ const CartDetail = () => {
 
   const total = cart.items.reduce((sum, i) => sum + i.unit_price * i.qty, 0);
 
-  const renderItem = ({ item }: { item: CartDetailResponse["items"][number] }) => (
+  const renderItem = ({
+    item,
+  }: {
+    item: CartDetailResponse["items"][number];
+  }) => (
     <View
       style={[
         styles.itemCard,
@@ -63,7 +67,9 @@ const CartDetail = () => {
       ]}
     >
       <View style={{ flex: 1 }}>
-        <Text style={[styles.itemName, { color: colors.text }]}>{item.name}</Text>
+        <Text style={[styles.itemName, { color: colors.text }]}>
+          {item.name}
+        </Text>
         <Text style={[styles.itemPrice, { color: colors.textSecondary }]}>
           ₦{item.unit_price.toLocaleString()} × {Number(item.qty)}
         </Text>
@@ -75,7 +81,7 @@ const CartDetail = () => {
   );
 
   return (
-    <AppView>
+    <View style={{ flex: 1, backgroundColor: colors.background, padding: 10 }}>
       {/* Cart Header */}
       <View style={[styles.header, { backgroundColor: colors.card }]}>
         <View style={styles.headerRow}>
@@ -143,7 +149,7 @@ const CartDetail = () => {
           </View>
         </>
       )}
-    </AppView>
+    </View>
   );
 };
 

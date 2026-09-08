@@ -1,4 +1,5 @@
 import AppBottomSheet from "@/components/bottom-sheet";
+import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
@@ -128,37 +129,15 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
             Document Type
           </Text>
           <View style={styles.typeRow}>
-            {DOC_TYPES.map((t) => {
-              const isActive = docType === t.value;
-              return (
-                <Pressable
-                  key={t.value}
-                  style={[
-                    styles.typePill,
-                    {
-                      backgroundColor: isActive
-                        ? colors.buttonPrimary
-                        : colors.backgroundElement,
-                    },
-                  ]}
-                  onPress={() => setDocType(t.value)}
-                >
-                  <Lucide
-                    name={t.icon as any}
-                    size={14}
-                    color={isActive ? "#fff" : colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.typePillText,
-                      { color: isActive ? "#fff" : colors.text },
-                    ]}
-                  >
-                    {t.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {DOC_TYPES.map((t) => (
+              <Pill
+                key={t.value}
+                label={t.label}
+                icon={t.icon as any}
+                active={docType === t.value}
+                onPress={() => setDocType(t.value)}
+              />
+            ))}
           </View>
         </View>
 
@@ -394,18 +373,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 8,
-  },
-  typePill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  typePillText: {
-    fontSize: 13,
-    fontWeight: "600",
   },
   addItemBtn: {
     flexDirection: "row",

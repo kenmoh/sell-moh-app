@@ -6,6 +6,7 @@ import Card from "@/components/card";
 import DraggableCart from "@/components/draggable-cart";
 import ExpandableFAB from "@/components/expandable-fab";
 import PendingPaymentsSheet from "@/components/pending-payments-sheet";
+import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
@@ -254,62 +255,21 @@ const POSScreen = () => {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.categoriesContainer}
               >
-                <Pressable
+                <Pill
+                  label="All"
+                  active={activeCategory === ""}
                   onPress={() => setActiveCategory("")}
-                  style={[
-                    styles.categoryPill,
-                    {
-                      backgroundColor:
-                        activeCategory === ""
-                          ? "#3b82f6"
-                          : colors.backgroundElement,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.categoryPillText,
-                      {
-                        color:
-                          activeCategory === ""
-                            ? "#ffffff"
-                            : colors.textSecondary,
-                        fontWeight: activeCategory === "" ? "700" : "600",
-                      },
-                    ]}
-                  >
-                    All
-                  </Text>
-                </Pressable>
-                {categories.map((cat) => {
-                  const isActive = cat.id === activeCategory;
-                  return (
-                    <Pressable
-                      key={cat.id}
-                      onPress={() => setActiveCategory(isActive ? "" : cat.id)}
-                      style={[
-                        styles.categoryPill,
-                        {
-                          backgroundColor: isActive
-                            ? "#3b82f6"
-                            : colors.backgroundElement,
-                        },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          styles.categoryPillText,
-                          {
-                            color: isActive ? "#ffffff" : colors.textSecondary,
-                            fontWeight: isActive ? "700" : "600",
-                          },
-                        ]}
-                      >
-                        {cat.name}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                  color="#3b82f6"
+                />
+                {categories.map((cat) => (
+                  <Pill
+                    key={cat.id}
+                    label={cat.name}
+                    active={cat.id === activeCategory}
+                    onPress={() => setActiveCategory(cat.id === activeCategory ? "" : cat.id)}
+                    color="#3b82f6"
+                  />
+                ))}
               </ScrollView>
 
               {/* Search Bar */}
@@ -530,17 +490,6 @@ const styles = StyleSheet.create({
   categoriesContainer: {
     paddingHorizontal: 16,
     gap: 8,
-  },
-  categoryPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderRadius: 100,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  categoryPillText: {
-    fontSize: 13,
   },
   searchRow: {
     flexDirection: "row",
