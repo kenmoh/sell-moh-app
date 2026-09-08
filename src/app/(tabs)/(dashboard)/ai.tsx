@@ -1,16 +1,16 @@
+import type { ConversationListItem } from "@/api/ai";
 import {
   deleteConversation,
   fetchConversations,
   getConversation,
 } from "@/api/ai";
-import type { ConversationListItem } from "@/api/ai";
 import { Colors } from "@/constants/theme";
 import { streamChat } from "@/lib/sse-client";
-import type { ToolCall, Recommendation } from "@/types/ai-chat";
+import type { Recommendation, ToolCall } from "@/types/ai-chat";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Marked } from "marked";
 import { useRouter } from "expo-router";
+import { Marked } from "marked";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -231,10 +231,19 @@ function TokenRenderer({
       return (
         <View style={{ marginBottom: 8 }}>
           {token.header && (
-            <View style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: backgroundElement }}>
-              {(Array.isArray(token.header[0]) ? token.header[0] : token.header).map((cell: any, ci: number) => (
+            <View
+              style={{
+                flexDirection: "row",
+                borderBottomWidth: 1,
+                borderBottomColor: backgroundElement,
+              }}
+            >
+              {(Array.isArray(token.header[0])
+                ? token.header[0]
+                : token.header
+              ).map((cell: any, ci: number) => (
                 <View
-                  key={ci}
+                  key={`h${ci}`}
                   style={{
                     flex: 1,
                     padding: 6,
@@ -248,16 +257,25 @@ function TokenRenderer({
             </View>
           )}
           {token.rows?.map((row: any[], ri: number) => (
-            <View key={`r${ri}`} style={{ flexDirection: "row", borderBottomWidth: 1, borderBottomColor: backgroundElement }}>
+            <View
+              key={`r${ri}`}
+              style={{
+                flexDirection: "row",
+                borderBottomWidth: 1,
+                borderBottomColor: backgroundElement,
+              }}
+            >
               {row.map((cell: any, ci: number) => (
                 <View
-                  key={ci}
+                  key={`r${ri}_c${ci}`}
                   style={{
                     flex: 1,
                     padding: 6,
                   }}
                 >
-                  <Text style={{ fontSize: 13, color }}>{cell?.text ?? String(cell)}</Text>
+                  <Text style={{ fontSize: 13, color }}>
+                    {cell?.text ?? String(cell)}
+                  </Text>
                 </View>
               ))}
             </View>
@@ -268,14 +286,18 @@ function TokenRenderer({
     default:
       if (token.tokens) {
         return (
-          <Text style={{ fontSize: 15, lineHeight: 22, color, marginBottom: 4 }}>
+          <Text
+            style={{ fontSize: 15, lineHeight: 22, color, marginBottom: 4 }}
+          >
             {renderInlineTokens(token.tokens, color, backgroundElement)}
           </Text>
         );
       }
       if (token.text) {
         return (
-          <Text style={{ fontSize: 15, lineHeight: 22, color, marginBottom: 4 }}>
+          <Text
+            style={{ fontSize: 15, lineHeight: 22, color, marginBottom: 4 }}
+          >
             {token.text}
           </Text>
         );
@@ -513,7 +535,7 @@ function HistoryDrawer({
         </View>
         <FlatList
           data={conversations}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => (
             <Pressable
               style={[
@@ -586,13 +608,16 @@ const AIScreen = () => {
   const streamingIdRef = useRef<string>("");
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  useKeyboardHandler({
-    onEnd: (e) => {
-      "worklet";
-      const height = e.progress > 0 ? e.height : 0;
-      runOnJS(setKeyboardHeight)(height);
+  useKeyboardHandler(
+    {
+      onEnd: (e) => {
+        "worklet";
+        const height = e.progress > 0 ? e.height : 0;
+        runOnJS(setKeyboardHeight)(height);
+      },
     },
-  }, []);
+    [],
+  );
 
   const { data: historyData, refetch: refetchHistory } = useQuery({
     queryKey: ["ai-conversations"],
@@ -657,9 +682,7 @@ const AIScreen = () => {
           accumulatedText += text;
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === assistantId
-                ? { ...m, content: accumulatedText }
-                : m,
+              m.id === assistantId ? { ...m, content: accumulatedText } : m,
             ),
           );
         },
@@ -671,7 +694,10 @@ const AIScreen = () => {
                 m.id === assistantId
                   ? {
                       ...m,
-                      content: typeof data.answer === "string" ? data.answer : JSON.stringify(data.answer) || accumulatedText,
+                      content:
+                        typeof data.answer === "string"
+                          ? data.answer
+                          : JSON.stringify(data.answer) || accumulatedText,
                       toolCalls: data.tool_calls,
                       recommendations: data.recommendations,
                       confidence: data.confidence,
@@ -843,10 +869,7 @@ const AIScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <KeyboardAvoidingView
-        style={styles.flex}
-        behavior="padding"
-      >
+      <KeyboardAvoidingView style={styles.flex} behavior="padding">
         <View style={styles.flex}>
           {/* ─── Header ─── */}
           <View
@@ -898,7 +921,7 @@ const AIScreen = () => {
           <FlatList
             ref={flatListRef}
             data={messages}
-          keyExtractor={(item) => String(item.id)}
+            keyExtractor={(item) => String(item.id)}
             renderItem={renderMessage}
             contentContainerStyle={[
               styles.messagesList,
@@ -1047,7 +1070,7 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
   },
   messageBubbleWrapper: {
-    maxWidth: "85%",
+    maxWidth: "100%",
     gap: 6,
   },
 
