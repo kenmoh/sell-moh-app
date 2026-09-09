@@ -439,7 +439,7 @@ const Discounts = () => {
           return (
             <Pressable
               key={tab}
-              style={styles.tab}
+              // style={styles.tab}
               onPress={() => onTabChange(tab)}
             >
               <Text
@@ -463,7 +463,7 @@ const Discounts = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingBottom: insets.bottom + 20,
-          padding: 20,
+          padding: 10,
         }}
         refreshControl={
           <RefreshControl
@@ -544,13 +544,15 @@ const styles = StyleSheet.create({
   tabRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
+    gap: 30,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderBottomColor: "rgba(0,0,0,0.05)",
   },
-  tab: {
-    flex: 1,
-    alignItems: "center",
-    paddingVertical: 12,
-  },
+  // tab: {
+  //   flex: 1,
+  //   alignItems: "center",
+  // },
 
   tabText: { fontSize: 15, fontWeight: "600" },
   filterTabs: {
@@ -588,7 +590,7 @@ const styles = StyleSheet.create({
   validityText: { fontSize: 11, fontWeight: "500" },
   promoRight: { alignItems: "flex-end" },
   expiredBadge: {
-    backgroundColor: "#f3f4f6",
+    backgroundColor: "rgba(255, 61, 61, 0.2)",
     borderRadius: 100,
     paddingHorizontal: 10,
     paddingVertical: 4,

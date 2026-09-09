@@ -2,6 +2,8 @@ import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { SessionProvider, useSession } from "@/lib/ctx";
 import { registerForPushNotifications } from "@/lib/push-notifications";
 import { SplashScreenController } from "@/lib/splash";
+import { ToastProvider } from "@/lib/toast-context";
+import { ToastContainer } from "@/components/toast-container";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
 import { useColorScheme, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -18,10 +20,12 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardProvider>
         <QueryClientProvider client={queryClient}>
-          <SessionProvider>
-            <SplashScreenController />
-            <RootNavigator />
-          </SessionProvider>
+          <ToastProvider>
+            <SessionProvider>
+              <SplashScreenController />
+              <RootNavigator />
+            </SessionProvider>
+          </ToastProvider>
         </QueryClientProvider>
       </KeyboardProvider>
     </GestureHandlerRootView>
@@ -31,10 +35,6 @@ export default function RootLayout() {
 function RootNavigator() {
   const dark = useColorScheme() === "dark";
   const { session } = useSession();
-
-  // if (Platform.OS === "android") {
-  //   SystemUI.setBackgroundColorAsync(dark ? "#111111" : "FAFAFA");
-  // }
 
   useEffect(() => {
     if (dark) {
@@ -53,6 +53,7 @@ function RootNavigator() {
   return (
     <ThemeProvider value={dark ? DarkTheme : DefaultTheme}>
       <AnimatedSplashOverlay />
+      <ToastContainer />
       <View style={{ flex: 1, backgroundColor: dark ? "#1c1d22" : "#fff" }}>
         <Stack
           screenOptions={{

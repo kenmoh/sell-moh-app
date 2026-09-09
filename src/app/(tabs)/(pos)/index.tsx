@@ -12,6 +12,7 @@ import SearchInput from "@/components/search-input";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
 import { usePendingPayments } from "@/hooks/usePendingPayments";
+import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/lib/ctx";
 import { Product } from "@/types/product-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -56,6 +57,7 @@ const POSScreen = () => {
 
   const cartTotalItems = useCartStore((s) => s.totalItems());
   const { count: pendingCount } = usePendingPayments();
+  const toast = useToast();
 
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>(null);
 
@@ -313,16 +315,14 @@ const POSScreen = () => {
               const state = useCartStore.getState();
               const cartId = state.activeCartId;
               if (!cartId || cartId.startsWith("cart-")) {
-                Alert.alert(
+                toast.action(
                   "No Cart Active",
-                  "Create a cart first before adding products. Tap the cart icon or the + button to get started.",
+                  "Create a cart first before adding products.",
                   [
-                    { text: "Cancel", style: "cancel" },
-                    {
-                      text: "Create Cart",
-                      onPress: () => setNewCartSheetVisible(true),
-                    },
+                    { label: "Create Cart", onPress: () => setNewCartSheetVisible(true) },
+                    { label: "Dismiss", onPress: () => {} },
                   ],
+                  "warning",
                 );
                 return;
               }
