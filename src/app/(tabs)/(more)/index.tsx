@@ -139,6 +139,11 @@ const more = () => {
         />
 
         <LinkItem
+          label="Settlements"
+          leadingIcon={"landmark"}
+          onPress={() => router.push("/(tabs)/(more)/settlement")}
+        />
+        <LinkItem
           label="Reports"
           leadingIcon={"bar-chart"}
           onPress={() => router.push("/(tabs)/(more)/report")}

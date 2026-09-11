@@ -39,7 +39,7 @@ export const getDocumentById = async (id: string) => {
 };
 
 export const updateDocumentStatus = async (id: string, status: string) => {
-  const res = await apiClient.patch(`${DOCUMENT_URL}/${id}/staus`, { status });
+  const res = await apiClient.patch(`${DOCUMENT_URL}/${id}/status`, { status });
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
   }

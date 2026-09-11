@@ -39,6 +39,10 @@ const MoreLayout = () => {
           name="tenant-activity-logs"
           options={{ title: "Activity Logs" }}
         />
+        <Stack.Screen
+          name="settlement"
+          options={{ title: "Settlements" }}
+        />
       </Stack>
     </AView>
   );
