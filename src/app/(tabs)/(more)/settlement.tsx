@@ -41,10 +41,7 @@ const SettlementScreen = () => {
   const colors = Colors[isDark ? "dark" : "light"];
   const [filter, setFilter] = useState<Filter>("all");
 
-  const {
-    data: balance,
-    isLoading: isLoadingBalance,
-  } = useQuery({
+  const { data: balance, isLoading: isLoadingBalance } = useQuery({
     queryKey: ["settlement-balance"],
     queryFn: fetchSettlementBalance,
   });
@@ -82,9 +79,7 @@ const SettlementScreen = () => {
       >
         <View style={styles.cardTop}>
           <View style={styles.cardLeft}>
-            <View
-              style={[styles.methodBadge, { backgroundColor: method.bg }]}
-            >
+            <View style={[styles.methodBadge, { backgroundColor: method.bg }]}>
               <Lucide
                 name={
                   item.payment_method === "cash"
@@ -143,7 +138,7 @@ const SettlementScreen = () => {
         renderItem={renderItem}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          paddingTop: insets.top + 8,
+          // paddingTop: insets.top + 8,
           paddingBottom: insets.bottom + 24,
           gap: 10,
         }}
@@ -170,10 +165,7 @@ const SettlementScreen = () => {
                     <Lucide name="clock" size={16} color="#D97706" />
                   </View>
                   <Text
-                    style={[
-                      styles.dashLabel,
-                      { color: colors.textSecondary },
-                    ]}
+                    style={[styles.dashLabel, { color: colors.textSecondary }]}
                   >
                     Pending
                   </Text>
@@ -191,10 +183,7 @@ const SettlementScreen = () => {
                     <Lucide name="check-circle" size={16} color="#059669" />
                   </View>
                   <Text
-                    style={[
-                      styles.dashLabel,
-                      { color: colors.textSecondary },
-                    ]}
+                    style={[styles.dashLabel, { color: colors.textSecondary }]}
                   >
                     Deducted
                   </Text>
@@ -322,6 +311,7 @@ const styles = StyleSheet.create({
   tabRow: {
     flexDirection: "row",
     gap: 8,
+    marginVertical: 10,
   },
   card: {
     borderWidth: 1,

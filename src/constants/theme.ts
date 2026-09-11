@@ -21,7 +21,8 @@ export const Colors = {
     sheet: "#FFFAFA",
     sheetContent: "#60646C",
     error: "#EF9A9A",
-    buttonPrimary: "#2563eb",
+    buttonPrimary: "#5e33cb",
+    // buttonPrimary: "#2563eb",
   },
   dark: {
     text: "#eaebeb",
@@ -36,7 +37,8 @@ export const Colors = {
     // textInput: "#191919",
     sheetContent: "#FFFFFF",
     error: "#EF9A9A",
-    buttonPrimary: "#2563eb",
+    buttonPrimary: "#5e33cb",
+    // buttonPrimary: "#2563eb",
   },
 } as const;
 
