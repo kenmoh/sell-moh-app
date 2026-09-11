@@ -4,12 +4,20 @@ import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from "react-native";
 
 type Props = {
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
   onAdd: (data: { code: string; name: string; account_type: string }) => void;
+  isPending?: boolean;
 };
 
 const accountTypes = [
@@ -20,24 +28,37 @@ const accountTypes = [
   { id: "expense", label: "Expense", icon: "trending-down", color: "#f59e0b" },
 ];
 
-const AddAccountSheet = ({ visible, onVisibleChange, onAdd }: Props) => {
+const AddAccountSheet = ({
+  visible,
+  onVisibleChange,
+  onAdd,
+  isPending,
+}: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [selectedType, setSelectedType] = useState("");
 
-  const handleAdd = () => {
-    if (!code || !name || !selectedType) return;
-    onAdd({ code, name, account_type: selectedType });
+  const reset = () => {
     setCode("");
     setName("");
     setSelectedType("");
-    onVisibleChange(false);
+  };
+
+  const handleAdd = () => {
+    if (!code || !name || !selectedType) return;
+    onAdd({ code, name, account_type: selectedType });
   };
 
   return (
-    <AppBottomSheet visible={visible} onVisibleChange={onVisibleChange}>
+    <AppBottomSheet
+      visible={visible}
+      onVisibleChange={(v) => {
+        if (!v) reset();
+        onVisibleChange(v);
+      }}
+    >
       <Text style={[styles.title, { color: colors.text }]}>Add Account</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Create a new account in your chart of accounts
@@ -89,13 +110,19 @@ const AddAccountSheet = ({ visible, onVisibleChange, onAdd }: Props) => {
       <Pressable
         style={[
           styles.confirmButton,
-          { opacity: code && name && selectedType ? 1 : 0.5 },
+          { opacity: code && name && selectedType && !isPending ? 1 : 0.5 },
         ]}
-        disabled={!code || !name || !selectedType}
+        disabled={!code || !name || !selectedType || isPending}
         onPress={handleAdd}
       >
-        <Lucide name="plus" size={18} color="#fff" />
-        <Text style={styles.confirmText}>Add Account</Text>
+        {isPending ? (
+          <ActivityIndicator size={18} color="#fff" />
+        ) : (
+          <Lucide name="plus" size={18} color="#fff" />
+        )}
+        <Text style={styles.confirmText}>
+          {isPending ? "Adding..." : "Add Account"}
+        </Text>
       </Pressable>
     </AppBottomSheet>
   );

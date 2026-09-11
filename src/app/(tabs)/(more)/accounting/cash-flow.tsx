@@ -73,14 +73,21 @@ const CashFlow = () => {
         </View>
         {section.items.map((item: PnLLineItem) => (
           <View
-            key={item.account_id}
+            key={item.journal_number || item.account_id}
             style={[styles.lineItem, { backgroundColor: colors.card, borderColor: isDark ? "#282b32" : "#eef0f4" }]}
           >
-            <View style={styles.lineItemLeft}>
-              <Text style={[styles.lineItemCode, { color: colors.textSecondary }]}>{item.account_code}</Text>
-              <Text style={[styles.lineItemName, { color: colors.text }]}>{item.account_name}</Text>
-            </View>
-            <Text style={[styles.lineItemAmount, { color: section.color }]}>₦{item.amount.toLocaleString()}</Text>
+            <Text style={[styles.lineItemCode, { color: colors.textSecondary }]}>
+              {item.account_code}
+            </Text>
+            <Text
+              style={[styles.lineItemName, { color: colors.text }]}
+              numberOfLines={1}
+            >
+              {item.account_name}
+            </Text>
+            <Text style={[styles.lineItemAmount, { color: section.color }]}>
+              ₦{item.amount.toLocaleString()}
+            </Text>
           </View>
         ))}
         {section.items.length === 0 && (
@@ -212,10 +219,9 @@ const styles = StyleSheet.create({
   sectionIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
   sectionTitle: { fontSize: 16, fontWeight: "700" },
   sectionTotal: { fontSize: 16, fontWeight: "800" },
-  lineItem: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 12, borderRadius: 10, marginBottom: 4, borderWidth: StyleSheet.hairlineWidth },
-  lineItemLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
-  lineItemCode: { fontSize: 12, fontFamily: "monospace", fontWeight: "600" },
-  lineItemName: { fontSize: 14, fontWeight: "500" },
+  lineItem: { padding: 12, borderRadius: 10, marginBottom: 4, borderWidth: StyleSheet.hairlineWidth },
+  lineItemCode: { fontSize: 12, fontFamily: "monospace", fontWeight: "600", marginBottom: 2 },
+  lineItemName: { fontSize: 14, fontWeight: "500", marginBottom: 2 },
   lineItemAmount: { fontSize: 14, fontWeight: "700" },
   emptySection: { fontSize: 13, fontStyle: "italic", paddingVertical: 8 },
   netCashFlowFooter: { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: StyleSheet.hairlineWidth },

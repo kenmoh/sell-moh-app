@@ -4,22 +4,22 @@ import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
-import { Pressable, StyleSheet, Text, useColorScheme } from "react-native";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  useColorScheme,
+} from "react-native";
 
 type Props = {
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
   onAdd: (expense: { category: string; amount: string; note: string }) => void;
+  isPending?: boolean;
 };
 
 const categories = [
-  {
-    id: "utility",
-    label: "Utility Bills",
-    icon: "zap",
-    color: "#f59e0b",
-    bg: "rgba(245,158,11,0.1)",
-  },
   {
     id: "rent",
     label: "Rent",
@@ -28,11 +28,11 @@ const categories = [
     bg: "rgba(59,130,246,0.1)",
   },
   {
-    id: "supplies",
-    label: "Supplies",
-    icon: "package",
-    color: "#16a34a",
-    bg: "rgba(22,163,74,0.1)",
+    id: "utilities",
+    label: "Utilities",
+    icon: "zap",
+    color: "#f59e0b",
+    bg: "rgba(245,158,11,0.1)",
   },
   {
     id: "salaries",
@@ -42,11 +42,32 @@ const categories = [
     bg: "rgba(168,85,247,0.1)",
   },
   {
-    id: "maintenance",
-    label: "Maintenance",
-    icon: "wrench",
+    id: "supplies",
+    label: "Supplies",
+    icon: "package",
+    color: "#16a34a",
+    bg: "rgba(22,163,74,0.1)",
+  },
+  {
+    id: "transport",
+    label: "Transport",
+    icon: "truck",
     color: "#ef4444",
     bg: "rgba(239,68,68,0.1)",
+  },
+  {
+    id: "marketing",
+    label: "Marketing",
+    icon: "megaphone",
+    color: "#ec4899",
+    bg: "rgba(236,72,153,0.1)",
+  },
+  {
+    id: "bank_charges",
+    label: "Bank Charges",
+    icon: "landmark",
+    color: "#6366f1",
+    bg: "rgba(99,102,241,0.1)",
   },
   {
     id: "misc",
@@ -57,24 +78,32 @@ const categories = [
   },
 ];
 
-const AddExpenseSheet = ({ visible, onVisibleChange, onAdd }: Props) => {
+const AddExpenseSheet = ({ visible, onVisibleChange, onAdd, isPending }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const [selectedCategory, setSelectedCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
-  const handleAdd = () => {
-    if (!selectedCategory || !amount) return;
-    onAdd({ category: selectedCategory, amount, note });
+  const reset = () => {
     setSelectedCategory("");
     setAmount("");
     setNote("");
-    onVisibleChange(false);
+  };
+
+  const handleAdd = () => {
+    if (!selectedCategory || !amount) return;
+    onAdd({ category: selectedCategory, amount, note });
   };
 
   return (
-    <AppBottomSheet visible={visible} onVisibleChange={onVisibleChange}>
+    <AppBottomSheet
+      visible={visible}
+      onVisibleChange={(v) => {
+        if (!v) reset();
+        onVisibleChange(v);
+      }}
+    >
       <Text style={[styles.title, { color: colors.text }]}>Add Expense</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Track a new expense for your store
@@ -124,13 +153,19 @@ const AddExpenseSheet = ({ visible, onVisibleChange, onAdd }: Props) => {
       <Pressable
         style={[
           styles.confirmButton,
-          { opacity: selectedCategory && amount ? 1 : 0.5 },
+          { opacity: selectedCategory && amount && !isPending ? 1 : 0.5 },
         ]}
-        disabled={!selectedCategory || !amount}
+        disabled={!selectedCategory || !amount || isPending}
         onPress={handleAdd}
       >
-        <Lucide name="plus" size={18} color="#fff" />
-        <Text style={styles.confirmText}>Add Expense</Text>
+        {isPending ? (
+          <ActivityIndicator size={18} color="#fff" />
+        ) : (
+          <Lucide name="plus" size={18} color="#fff" />
+        )}
+        <Text style={styles.confirmText}>
+          {isPending ? "Adding..." : "Add Expense"}
+        </Text>
       </Pressable>
     </AppBottomSheet>
   );

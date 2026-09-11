@@ -1,4 +1,12 @@
-import { fetchAccounts, createAccount } from "@/api/accounting";
+import AccountTooltip from "@/components/account-tooltip";
+import AccountActionSheet from "@/components/accounting/account-action-sheet";
+import {
+  fetchAccounts,
+  createAccount,
+  updateAccount,
+  toggleAccountStatus,
+  deleteAccount,
+} from "@/api/accounting";
 import AddAccountSheet from "@/components/accounting/add-account-sheet";
 import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
@@ -34,6 +42,8 @@ const ChartOfAccounts = () => {
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<AccountType>("All");
   const [showAddSheet, setShowAddSheet] = useState(false);
+  const [tooltipAccount, setTooltipAccount] = useState<(typeof accounts)[0] | null>(null);
+  const [actionSheetAccount, setActionSheetAccount] = useState<(typeof accounts)[0] | null>(null);
 
   const {
     data: accounts = [],
@@ -50,6 +60,32 @@ const ChartOfAccounts = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setShowAddSheet(false);
+    },
+  });
+
+  const { mutate: renameAccount, isPending: isRenaming } = useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      updateAccount(id, { name }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      setActionSheetAccount(null);
+    },
+  });
+
+  const { mutate: toggleStatus, isPending: isToggling } = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: "active" | "inactive" }) =>
+      toggleAccountStatus(id, { status }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      setActionSheetAccount(null);
+    },
+  });
+
+  const { mutate: removeAccount, isPending: isDeleting } = useMutation({
+    mutationFn: (id: string) => deleteAccount(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["accounts"] });
+      setActionSheetAccount(null);
     },
   });
 
@@ -90,48 +126,28 @@ const ChartOfAccounts = () => {
 
   const renderItem = useCallback(
     ({ item }: { item: (typeof accounts)[0] }) => (
-      <View
-        style={[
-          styles.card,
+      <Pressable
+        onPress={() => setTooltipAccount(item)}
+        style={({ pressed }) => [
+          styles.pill,
           {
-            backgroundColor: colors.card,
-            borderColor: isDark ? "#282b32" : "#eef0f4",
+            backgroundColor: colors.backgroundElement,
+            opacity: pressed ? 0.7 : 1,
           },
         ]}
       >
-        <View style={styles.cardHeader}>
-          <View
-            style={[
-              styles.codeBadge,
-              { backgroundColor: colors.backgroundElement },
-            ]}
-          >
-            <Text style={[styles.codeText, { color: colors.text }]}>
-              {item.code}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.typeBadge,
-              { backgroundColor: `${getTypeColor(item.account_type)}15` },
-            ]}
-          >
-            <Text
-              style={[
-                styles.typeText,
-                { color: getTypeColor(item.account_type) },
-              ]}
-            >
-              {item.account_type}
-            </Text>
-          </View>
-        </View>
-        <Text style={[styles.cardName, { color: colors.text }]}>
+        <View
+          style={[styles.pillDot, { backgroundColor: getTypeColor(item.account_type) }]}
+        />
+        <Text style={[styles.pillCode, { color: colors.text }]} numberOfLines={1}>
+          {item.code}
+        </Text>
+        <Text style={[styles.pillName, { color: colors.text }]} numberOfLines={1}>
           {item.name}
         </Text>
-      </View>
+      </Pressable>
     ),
-    [colors, isDark, getTypeColor],
+    [colors, getTypeColor],
   );
 
   return (
@@ -190,6 +206,8 @@ const ChartOfAccounts = () => {
         <FlatList
           data={filtered}
           keyExtractor={(item) => item.id}
+          numColumns={2}
+          columnWrapperStyle={styles.row}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 24 }}
           renderItem={renderItem}
@@ -225,7 +243,29 @@ const ChartOfAccounts = () => {
         visible={showAddSheet}
         onVisibleChange={setShowAddSheet}
         onAdd={(data) => addAccount(data)}
+        isPending={isAdding}
       />
+
+      <AccountTooltip
+        visible={tooltipAccount !== null}
+        account={tooltipAccount}
+        onClose={() => setTooltipAccount(null)}
+        onEdit={(acct) => setActionSheetAccount(acct)}
+      />
+
+      {actionSheetAccount && (
+        <AccountActionSheet
+          visible={actionSheetAccount !== null}
+          onVisibleChange={(v) => !v && setActionSheetAccount(null)}
+          account={actionSheetAccount}
+          onRename={(id, name) => renameAccount({ id, name })}
+          onToggleStatus={(id, status) => toggleStatus({ id, status })}
+          onDelete={(id) => removeAccount(id)}
+          isRenaming={isRenaming}
+          isToggling={isToggling}
+          isDeleting={isDeleting}
+        />
+      )}
     </SafeAreaView>
   );
 };
@@ -268,32 +308,35 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     flexWrap: "wrap",
   },
-  card: {
-    marginHorizontal: 16,
+  row: {
+    gap: 8,
+    paddingHorizontal: 16,
     marginBottom: 8,
-    borderRadius: 14,
-    padding: 14,
-    borderWidth: StyleSheet.hairlineWidth,
   },
-  cardHeader: {
+  pill: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 8,
-  },
-  codeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  codeText: { fontSize: 12, fontWeight: "700", fontFamily: "monospace" },
-  typeBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     borderRadius: 100,
   },
-  typeText: { fontSize: 11, fontWeight: "700" },
-  cardName: { fontSize: 15, fontWeight: "600" },
+  pillDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  pillCode: {
+    fontSize: 13,
+    fontWeight: "700",
+    fontFamily: "monospace",
+  },
+  pillName: {
+    fontSize: 13,
+    fontWeight: "500",
+    flex: 1,
+  },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   emptyContainer: {
     alignItems: "center",

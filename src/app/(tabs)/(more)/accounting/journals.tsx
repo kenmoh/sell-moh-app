@@ -215,6 +215,7 @@ const Journals = () => {
         onVisibleChange={setShowAddSheet}
         onAdd={(data) => addJournal(data)}
         accounts={accounts}
+        isPending={isAdding}
       />
     </SafeAreaView>
   );

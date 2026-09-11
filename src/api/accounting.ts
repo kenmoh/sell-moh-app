@@ -15,7 +15,9 @@ import {
   ProfitAndLossResponse,
   ReceivableResponse,
   RecordPaymentRequest,
+  ToggleAccountStatusRequest,
   TrialBalanceItem,
+  UpdateAccountRequest,
 } from "@/types/accounting";
 import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
@@ -49,6 +51,46 @@ export const createAccount = async (
   }
 
   return res.data?.data!;
+};
+
+export const updateAccount = async (
+  accountId: string,
+  data: UpdateAccountRequest,
+): Promise<AccountResponse> => {
+  const res = await apiClient.put<{ data: AccountResponse }>(
+    `${URL}/accounts/${accountId}`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
+export const toggleAccountStatus = async (
+  accountId: string,
+  data: ToggleAccountStatusRequest,
+): Promise<AccountResponse> => {
+  const res = await apiClient.patch<{ data: AccountResponse }>(
+    `${URL}/accounts/${accountId}/status`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
+export const deleteAccount = async (accountId: string): Promise<void> => {
+  const res = await apiClient.delete(`${URL}/accounts/${accountId}`);
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
 };
 
 // ── Journals ───────────────────────────────────────────────────────────────

@@ -102,7 +102,7 @@ const AccountingScreen = () => {
     isLoadingDashboard || isLoadingAR || isLoadingAP || isLoadingExpenses;
   const isRefetching = isRefetchingAR || isRefetchingAP || isRefetchingExpenses;
 
-  const { mutate: addExpense } = useMutation({
+  const { mutate: addExpense, isPending: isAddingExpense } = useMutation({
     mutationFn: (data: { category: string; amount: string; note: string }) =>
       createExpense({
         category: data.category,
@@ -676,6 +676,7 @@ const AccountingScreen = () => {
         visible={showAddExpense}
         onVisibleChange={setShowAddExpense}
         onAdd={addExpense}
+        isPending={isAddingExpense}
       />
       {selectedItem && (
         <RecordPaymentSheet

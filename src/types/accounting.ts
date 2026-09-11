@@ -12,6 +12,14 @@ export interface CreateAccountRequest {
   parent_id?: string;
 }
 
+export interface UpdateAccountRequest {
+  name: string;
+}
+
+export interface ToggleAccountStatusRequest {
+  status: "active" | "inactive";
+}
+
 export interface AccountResponse {
   id: string;
   tenant_id: string;
@@ -71,6 +79,7 @@ export interface PnLLineItem {
   account_code: string;
   account_name: string;
   amount: number;
+  journal_number?: string;
 }
 
 export interface ProfitAndLossResponse {

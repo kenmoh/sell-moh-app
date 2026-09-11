@@ -4,6 +4,7 @@ import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
 import {
+  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -31,17 +32,31 @@ type Props = {
   onVisibleChange: (visible: boolean) => void;
   onAdd: (data: { description: string; entries: EntryLine[] }) => void;
   accounts: Account[];
+  isPending?: boolean;
 };
 
-const AddJournalSheet = ({ visible, onVisibleChange, onAdd, accounts }: Props) => {
+const initialEntries: EntryLine[] = [
+  { account_id: "", account_code: "", debit: 0, credit: 0 },
+  { account_id: "", account_code: "", debit: 0, credit: 0 },
+];
+
+const AddJournalSheet = ({
+  visible,
+  onVisibleChange,
+  onAdd,
+  accounts,
+  isPending,
+}: Props) => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
   const [description, setDescription] = useState("");
-  const [entries, setEntries] = useState<EntryLine[]>([
-    { account_id: "", account_code: "", debit: 0, credit: 0 },
-    { account_id: "", account_code: "", debit: 0, credit: 0 },
-  ]);
+  const [entries, setEntries] = useState<EntryLine[]>(initialEntries);
+
+  const reset = () => {
+    setDescription("");
+    setEntries(initialEntries);
+  };
 
   const updateEntry = (index: number, field: keyof EntryLine, value: string | number) => {
     setEntries((prev) => {
@@ -75,16 +90,16 @@ const AddJournalSheet = ({ visible, onVisibleChange, onAdd, accounts }: Props) =
     );
     if (validEntries.length < 2) return;
     onAdd({ description: description.trim(), entries: validEntries });
-    setDescription("");
-    setEntries([
-      { account_id: "", account_code: "", debit: 0, credit: 0 },
-      { account_id: "", account_code: "", debit: 0, credit: 0 },
-    ]);
-    onVisibleChange(false);
   };
 
   return (
-    <AppBottomSheet visible={visible} onVisibleChange={onVisibleChange}>
+    <AppBottomSheet
+      visible={visible}
+      onVisibleChange={(v) => {
+        if (!v) reset();
+        onVisibleChange(v);
+      }}
+    >
       <Text style={[styles.title, { color: colors.text }]}>New Journal Entry</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Create a manual journal entry with debit and credit lines
@@ -212,13 +227,22 @@ const AddJournalSheet = ({ visible, onVisibleChange, onAdd, accounts }: Props) =
       <Pressable
         style={[
           styles.confirmButton,
-          { opacity: description.trim() && entries.length >= 2 ? 1 : 0.5 },
+          {
+            opacity:
+              description.trim() && entries.length >= 2 && !isPending ? 1 : 0.5,
+          },
         ]}
-        disabled={!description.trim() || entries.length < 2}
+        disabled={!description.trim() || entries.length < 2 || isPending}
         onPress={handleAdd}
       >
-        <Lucide name="check" size={18} color="#fff" />
-        <Text style={styles.confirmText}>Post Journal</Text>
+        {isPending ? (
+          <ActivityIndicator size={18} color="#fff" />
+        ) : (
+          <Lucide name="check" size={18} color="#fff" />
+        )}
+        <Text style={styles.confirmText}>
+          {isPending ? "Posting..." : "Post Journal"}
+        </Text>
       </Pressable>
     </AppBottomSheet>
   );
