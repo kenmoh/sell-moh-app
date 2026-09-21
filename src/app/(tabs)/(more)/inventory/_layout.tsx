@@ -30,6 +30,8 @@ const InventoryLayout = () => {
         />
         <Stack.Screen name="[id]" options={{ title: "Product Details" }} />
         <Stack.Screen name="add-product" options={{ title: "Add Product" }} />
+        <Stack.Screen name="stock" options={{ title: "Stock Balances" }} />
+        <Stack.Screen name="history" options={{ title: "Stock History" }} />
       </Stack>
     </AView>
   );

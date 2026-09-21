@@ -1,8 +1,9 @@
-import { fetchStoreDetails } from "@/api/store";
+import { fetchStoreDetails, syncStore } from "@/api/store";
 import StoreSheet from "@/components/store-sheet";
 import { Colors } from "@/constants/theme";
+import { useToast } from "@/hooks/use-toast";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -25,6 +26,8 @@ const StoreDetailScreen = () => {
   const colors = Colors[isDark ? "dark" : "light"];
 
   const [sheetVisible, setSheetVisible] = useState(false);
+  const queryClient = useQueryClient();
+  const toast = useToast();
 
   const {
     data: details,
@@ -40,6 +43,24 @@ const StoreDetailScreen = () => {
   const handleEdit = useCallback(() => {
     setSheetVisible(true);
   }, []);
+
+  const { mutate: syncProducts, isPending: isSyncing } = useMutation({
+    mutationFn: () => syncStore(storeId!),
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["store-details", storeId] });
+      const synced = data?.data?.synced ?? 0;
+      const skipped = data?.data?.skipped ?? 0;
+      toast.success(
+        "Sync Complete",
+        synced > 0
+          ? `${synced} product(s) added, ${skipped} already existed.`
+          : `All ${skipped} products already in this store.`,
+      );
+    },
+    onError: (e: any) => {
+      toast.error("Sync Failed", e.message || "Could not sync products");
+    },
+  });
 
   if (isLoading) {
     return (
@@ -330,6 +351,25 @@ const StoreDetailScreen = () => {
               <Text style={[styles.emptyCardText, { color: colors.textSecondary }]}>
                 No products in this store yet
               </Text>
+              {!store.is_warehouse && (
+                <Pressable
+                  onPress={() => syncProducts()}
+                  disabled={isSyncing}
+                  style={[
+                    styles.syncBtn,
+                    { backgroundColor: colors.buttonPrimary },
+                  ]}
+                >
+                  {isSyncing ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <>
+                      <Lucide name="refresh-cw" size={14} color="#fff" />
+                      <Text style={styles.syncBtnText}>Sync from Warehouse</Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
             </View>
           ) : (
             products.map((product) => (
@@ -600,6 +640,16 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   emptyCardText: { fontSize: 14, fontWeight: "500" },
+  syncBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    borderRadius: 100,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  syncBtnText: { color: "#fff", fontSize: 13, fontWeight: "600" },
   productCard: {
     borderRadius: 14,
     padding: 14,

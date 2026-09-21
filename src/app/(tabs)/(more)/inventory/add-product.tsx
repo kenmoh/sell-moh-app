@@ -1,5 +1,6 @@
 import { createProduct, fetchTenantCategories } from "@/api/inventory";
 import { fetchTenantStores } from "@/api/store";
+import { fetchTaxTypes, TaxType } from "@/api/taxes";
 import AddCategorySheet from "@/components/add-category-sheet";
 import AppBottomSheet from "@/components/bottom-sheet";
 import CategoryActionsSheet from "@/components/category-actions-sheet";
@@ -41,6 +42,7 @@ const AddProduct = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
+  const isDark = scheme === "dark";
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{
     id?: string;
@@ -58,6 +60,8 @@ const AddProduct = () => {
   const [sellingPrice, setSellingPrice] = useState(params.selling_price ?? "");
   const [unit, setUnit] = useState("");
   const [taxRate, setTaxRate] = useState("");
+  const [selectedTax, setSelectedTax] = useState<TaxType | null>(null);
+  const [taxSheetVisible, setTaxSheetVisible] = useState(false);
   const [reorderPoint, setReorderPoint] = useState("");
   const [initialStock, setInitialStock] = useState("");
   const [trackInventory, setTrackInventory] = useState(true);
@@ -83,6 +87,11 @@ const AddProduct = () => {
     queryFn: () => fetchTenantCategories(storeId),
     enabled: storeId.length > 0,
   });
+
+  const taxes = useQuery({
+    queryKey: ["tax-types"],
+    queryFn: () => fetchTaxTypes(true),
+  }).data ?? [];
 
   const { data: storesData } = useQuery({
     queryKey: ["stores"],
@@ -176,7 +185,8 @@ const AddProduct = () => {
       category_id: result.data.category_id || null,
       description: result.data.description || null,
       unit: result.data.unit || null,
-      tax_rate: result.data.tax_rate ? parseFloat(result.data.tax_rate) : null,
+      tax_id: selectedTax?.id || null,
+      tax_rate: selectedTax ? selectedTax.rate : null,
       metadata: buildMetadataObject(),
       store_id: storeId || null,
     };
@@ -260,29 +270,17 @@ const AddProduct = () => {
               )}
             </View>
           </View>
-          <View style={styles.row}>
-            <View style={styles.halfField}>
-              <AppTextInput
-                leftIcon="percent"
-                placeholder="Tax rate (%)"
-                value={taxRate}
-                onChangeText={setTaxRate}
-                keyboardType="decimal-pad"
-              />
-            </View>
-            <View style={styles.halfField}>
-              <AppTextInput
-                leftIcon="package"
-                placeholder="Reorder point"
-                value={reorderPoint}
-                onChangeText={setReorderPoint}
-                keyboardType="number-pad"
-              />
-              {errors.reorder_point && (
-                <Text style={styles.errorText}>{errors.reorder_point}</Text>
-              )}
-            </View>
-          </View>
+          {/* Tax Rate — temporarily disabled, deciding between product-level vs cart-level tax */}
+          <AppTextInput
+            leftIcon="package"
+            placeholder="Reorder point"
+            value={reorderPoint}
+            onChangeText={setReorderPoint}
+            keyboardType="number-pad"
+          />
+          {errors.reorder_point && (
+            <Text style={styles.errorText}>{errors.reorder_point}</Text>
+          )}
         </View>
 
         {/* Initial Stock */}
@@ -462,6 +460,7 @@ const AddProduct = () => {
       <AddCategorySheet
         visible={sheetVisible}
         onVisibleChange={setSheetVisible}
+        storeId={storeId}
         onCreated={(createdName) => {
           const newCat = categories.find((c) => c.name === createdName);
           if (newCat) setCategoryId(newCat.id);
@@ -583,6 +582,85 @@ const AddProduct = () => {
           </Text>
         )}
       </AppBottomSheet>
+      <AppBottomSheet
+        visible={taxSheetVisible}
+        onVisibleChange={setTaxSheetVisible}
+        snapPoints={["40%", "70%"]}
+      >
+        <View style={styles.sheetHeader}>
+          <Text style={[styles.sheetTitle, { color: colors.text }]}>
+            Select Tax Rate
+          </Text>
+          <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+            Choose a tax rate for this product
+          </Text>
+        </View>
+        <Pressable
+          style={[
+            styles.pill,
+            {
+              backgroundColor: !selectedTax
+                ? colors.buttonPrimary
+                : colors.backgroundElement,
+              marginBottom: 8,
+            },
+          ]}
+          onPress={() => {
+            setSelectedTax(null);
+            setTaxRate("");
+            setTaxSheetVisible(false);
+          }}
+        >
+          <Text
+            style={[
+              styles.pillText,
+              { color: !selectedTax ? "#fff" : colors.text },
+            ]}
+          >
+            No tax
+          </Text>
+        </Pressable>
+        {taxes && taxes.length > 0 ? (
+          <View style={styles.pills}>
+            {taxes
+              .filter((t) => t.is_active)
+              .map((tax) => {
+                const isActive = selectedTax?.id === tax.id;
+                return (
+                  <Pressable
+                    key={tax.id}
+                    style={[
+                      styles.pill,
+                      {
+                        backgroundColor: isActive
+                          ? colors.buttonPrimary
+                          : colors.backgroundElement,
+                      },
+                    ]}
+                    onPress={() => {
+                      setSelectedTax(tax);
+                      setTaxRate(String(tax.rate));
+                      setTaxSheetVisible(false);
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.pillText,
+                        { color: isActive ? "#fff" : colors.text },
+                      ]}
+                    >
+                      {tax.name} ({tax.rate}%)
+                    </Text>
+                  </Pressable>
+                );
+              })}
+          </View>
+        ) : (
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+            No tax rates available
+          </Text>
+        )}
+      </AppBottomSheet>
     </>
   );
 };
@@ -594,6 +672,24 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
     gap: 18,
+  },
+  pickerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
+  },
+  pickerText: {
+    flex: 1,
+    fontSize: 15,
+  },
+  label: {
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 6,
   },
   section: {
     gap: 10,

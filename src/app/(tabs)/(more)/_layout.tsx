@@ -43,6 +43,14 @@ const MoreLayout = () => {
           name="settlement"
           options={{ title: "Settlements" }}
         />
+        <Stack.Screen
+          name="change-password"
+          options={{ title: "Change Password" }}
+        />
+        <Stack.Screen
+          name="sessions"
+          options={{ title: "Active Sessions" }}
+        />
       </Stack>
     </AView>
   );

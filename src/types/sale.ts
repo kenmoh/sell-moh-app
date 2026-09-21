@@ -36,6 +36,7 @@ export interface SaleDetail {
   subtotal: number;
   discount: number;
   tax: number;
+  tax_breakdown: { name: string; rate: number; amount: number }[] | null;
   total: number;
   amount_paid: number;
   payment_methods: Record<string, number> | null;

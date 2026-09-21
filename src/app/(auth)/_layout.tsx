@@ -20,6 +20,8 @@ const AuthLayout = () => {
       <Stack.Screen name="sign-in" options={{ title: "" }} />
       <Stack.Screen name="sign-up" options={{ headerShown: false }} />
       <Stack.Screen name="forgot-password" options={{ title: "" }} />
+      <Stack.Screen name="reset-password" options={{ title: "" }} />
+      <Stack.Screen name="totp-verify" options={{ title: "" }} />
     </Stack>
   );
 };

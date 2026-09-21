@@ -42,6 +42,7 @@ const HeaderNav: React.FC<{
   isOwner: boolean;
   currentStoreName: string;
   onOpenStoreSheet: () => void;
+  activeStoreId: string;
 }> = ({
   totalCount,
   colors,
@@ -49,6 +50,7 @@ const HeaderNav: React.FC<{
   isOwner,
   currentStoreName,
   onOpenStoreSheet,
+  activeStoreId,
 }) => (
   <View style={[styles.header, { paddingVertical: 5 }]}>
     <View style={{ flex: 1 }}>
@@ -68,6 +70,34 @@ const HeaderNav: React.FC<{
       )}
     </View>
     <View style={styles.headerRight}>
+      <Pressable
+        onPress={() =>
+          router.push({
+            pathname: "/(tabs)/(more)/inventory/stock",
+            params: { storeId: activeStoreId },
+          })
+        }
+        style={[
+          styles.headerIconButton,
+          { backgroundColor: colors.backgroundElement },
+        ]}
+      >
+        <Lucide name="bar-chart-3" size={14} color={colors.textSecondary} />
+      </Pressable>
+      <Pressable
+        onPress={() =>
+          router.push({
+            pathname: "/(tabs)/(more)/inventory/history",
+            params: { storeId: activeStoreId },
+          })
+        }
+        style={[
+          styles.headerIconButton,
+          { backgroundColor: colors.backgroundElement },
+        ]}
+      >
+        <Lucide name="history" size={14} color={colors.textSecondary} />
+      </Pressable>
       <View
         style={[
           styles.countBadge,
@@ -447,6 +477,7 @@ const InventoryScreen = () => {
               isOwner={isOwner}
               currentStoreName={currentStoreName}
               onOpenStoreSheet={() => setStoreSheetVisible(true)}
+              activeStoreId={activeStoreId}
             />
             <InventoryStats
               totalItems={totalItems}
@@ -609,7 +640,14 @@ const styles = StyleSheet.create({
     gap: 4,
     marginTop: 2,
   },
-  headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  headerRight: { flexDirection: "row", alignItems: "center", gap: 8 },
+  headerIconButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   countBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,

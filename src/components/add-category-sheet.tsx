@@ -27,9 +27,10 @@ type Props = {
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
   onCreated?: (name: string) => void;
+  storeId: string;
 };
 
-const AddCategorySheet = ({ visible, onVisibleChange, onCreated }: Props) => {
+const AddCategorySheet = ({ visible, onVisibleChange, onCreated, storeId }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
@@ -41,7 +42,7 @@ const AddCategorySheet = ({ visible, onVisibleChange, onCreated }: Props) => {
   );
 
   const { mutate: createCategoryMutation, isPending } = useMutation({
-    mutationFn: (data: CreateCategory) => createCategory(data),
+    mutationFn: (data: CreateCategory) => createCategory(storeId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       onVisibleChange(false);

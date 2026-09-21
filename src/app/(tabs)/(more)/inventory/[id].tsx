@@ -3,6 +3,7 @@ import { getProductById } from "@/api/inventory";
 import { fetchTenantStores } from "@/api/store";
 import AdjustStockSheet from "@/components/adjust-stock-sheet";
 import AppBottomSheet from "@/components/bottom-sheet";
+import TransferSheet from "@/components/transfer-sheet";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
 import { StockHistoryItem } from "@/types/product";
@@ -77,6 +78,7 @@ const ProductDetails = () => {
   const { user } = useSession();
   const [storeId, setStoreId] = useState(storeIdParam ?? user?.store_id ?? "");
   const [adjustVisible, setAdjustVisible] = useState(false);
+  const [transferVisible, setTransferVisible] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
   const [qrSize, setQrSize] = useState<"small" | "medium" | "large">("small");
   const [qrBoxSize, setQrBoxSize] = useState("");
@@ -239,7 +241,7 @@ const ProductDetails = () => {
             ]}
             onPress={() =>
               router.push({
-                pathname: "/(tabs)/(inventory)/add-product",
+                pathname: "/(tabs)/(more)/inventory/add-product",
                 params: {
                   id: product.id,
                   name: product.name,
@@ -262,6 +264,16 @@ const ProductDetails = () => {
           >
             <Lucide name="package-plus" size={16} color="#3b82f6" />
             <Text style={styles.actionButtonText}>Adjust Stock</Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.actionButton,
+              { borderColor: colors.backgroundElement },
+            ]}
+            onPress={() => setTransferVisible(true)}
+          >
+            <Lucide name="arrow-right-left" size={16} color="#3b82f6" />
+            <Text style={styles.actionButtonText}>Transfer</Text>
           </Pressable>
         </View>
 
@@ -522,6 +534,14 @@ const ProductDetails = () => {
         productId={id!}
         storeId={storeId}
         unitCost={product?.unit_cost ?? product?.cost_price ?? 0}
+      />
+
+      <TransferSheet
+        visible={transferVisible}
+        onVisibleChange={setTransferVisible}
+        productId={id!}
+        productName={product?.name ?? ""}
+        currentStoreId={storeId}
       />
 
       <AppBottomSheet

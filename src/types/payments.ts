@@ -198,6 +198,12 @@ export interface ReceiptItem {
   line_total: number;
 }
 
+export interface TaxBreakdownLine {
+  name: string;
+  rate: number;
+  amount: number;
+}
+
 export interface ReceiptData {
   receipt_number: string;
   business_name: string;
@@ -213,6 +219,7 @@ export interface ReceiptData {
   subtotal: number;
   discount: number;
   tax: number;
+  tax_breakdown: TaxBreakdownLine[];
   total: number;
   amount_paid: number;
   payment_method: string;

@@ -4,9 +4,18 @@ import {
   CategoryResponse,
   CreateCategory,
   CreateProduct,
+  DistributeResult,
+  LowStockItem,
+  MinStockLevelResult,
   PaginatedResponse,
   ProductQueryParams,
   ProductResponse,
+  SetMinStockLevelPayload,
+  StockBalanceItem,
+  StockBalancesPaginatedResponse,
+  StockMovementItem,
+  StockMovementsPaginatedResponse,
+  StoreDistributePayload,
 } from "@/types/product";
 import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
@@ -16,10 +25,11 @@ const INVENTORY_URL = "/inventory";
 // _____________________________CATEGORY OPERATIONS_____________________________
 
 export const createCategory = async (
+  storeId: string,
   data: CreateCategory,
 ): Promise<DataMessageResponse> => {
   const res = await apiClient.post<DataMessageResponse>(
-    `${INVENTORY_URL}/categories`,
+    `${INVENTORY_URL}/${storeId}/categories`,
     data,
   );
 
@@ -193,4 +203,95 @@ export const downloadQRCode = async (
   }
 
   return res.data?.data ?? "";
+};
+
+// _____________________________STOCK OPERATIONS_____________________________
+
+export const fetchStockBalances = async (
+  storeId: string,
+  params?: { product_id?: string; page?: number; page_size?: number },
+): Promise<StockBalancesPaginatedResponse> => {
+  const query = new URLSearchParams();
+  if (params?.product_id) query.append("product_id", params.product_id);
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.page_size) query.append("page_size", String(params.page_size));
+  const qs = query.toString();
+
+  const res = await apiClient.get<StockBalancesPaginatedResponse>(
+    `${INVENTORY_URL}/${storeId}/stock${qs ? `?${qs}` : ""}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!;
+};
+
+export const fetchStockHistory = async (
+  storeId: string,
+  params?: { product_id?: string; page?: number; page_size?: number },
+): Promise<StockMovementsPaginatedResponse> => {
+  const query = new URLSearchParams();
+  if (params?.product_id) query.append("product_id", params.product_id);
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.page_size) query.append("page_size", String(params.page_size));
+  const qs = query.toString();
+
+  const res = await apiClient.get<StockMovementsPaginatedResponse>(
+    `${INVENTORY_URL}/${storeId}/history${qs ? `?${qs}` : ""}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!;
+};
+
+export const fetchLowStock = async (
+  storeId: string,
+): Promise<LowStockItem[]> => {
+  const res = await apiClient.get<{ data: LowStockItem[] }>(
+    `${INVENTORY_URL}/${storeId}/low-stock`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? [];
+};
+
+export const setMinStockLevel = async (
+  storeId: string,
+  productId: string,
+  data: SetMinStockLevelPayload,
+): Promise<MinStockLevelResult> => {
+  const res = await apiClient.patch<{ data: MinStockLevelResult }>(
+    `${INVENTORY_URL}/${storeId}/min-level/${productId}`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!.data;
+};
+
+export const distributeStock = async (
+  storeId: string,
+  data: StoreDistributePayload,
+): Promise<DistributeResult> => {
+  const res = await apiClient.post<{ data: DistributeResult }>(
+    `${INVENTORY_URL}/${storeId}/distribute`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!.data;
 };

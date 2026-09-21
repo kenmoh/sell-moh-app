@@ -8,6 +8,7 @@ import {
 import AppBottomSheet from "@/components/bottom-sheet";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { Host, Switch } from "@expo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { useState } from "react";
@@ -15,8 +16,8 @@ import {
     ActivityIndicator,
     FlatList,
     Pressable,
+    RefreshControl,
     StyleSheet,
-    Switch,
     Text,
     TextInput,
     useColorScheme,
@@ -39,10 +40,11 @@ export default function TaxSettings() {
   const {
     data: taxes = [],
     isLoading,
+    isRefetching,
     refetch,
   } = useQuery({
     queryKey: ["taxes"],
-    queryFn: fetchTaxTypes,
+    queryFn: () => fetchTaxTypes(true),
   });
 
   const createMutation = useMutation({
@@ -159,6 +161,9 @@ export default function TaxSettings() {
           data={taxes}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
+          refreshControl={
+            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          }
           renderItem={({ item }) => (
             <View
               style={[
@@ -179,14 +184,6 @@ export default function TaxSettings() {
                   </Text>
                 </View>
                 <View style={styles.cardActions}>
-                  <Switch
-                    value={item.is_active}
-                    onValueChange={(val) =>
-                      toggleMutation.mutate({ id: item.id, is_active: val })
-                    }
-                    trackColor={{ false: "#3a3a3c", true: "#34c759" }}
-                    thumbColor="#fff"
-                  />
                   <Pressable
                     onPress={() => openEdit(item)}
                     style={styles.editBtn}
@@ -204,6 +201,19 @@ export default function TaxSettings() {
                     <Lucide name="trash-2" size={16} color="#ef4444" />
                   </Pressable>
                 </View>
+              </View>
+              <View style={[styles.cardFooter, { borderTopColor: isDark ? "#282b32" : "#e5e7eb" }]}>
+                <Text style={[styles.activeLabel, { color: colors.textSecondary }]}>
+                  {item.is_active ? "Active" : "Inactive"}
+                </Text>
+                <Host matchContents>
+                  <Switch
+                    value={item.is_active}
+                    onValueChange={(val) =>
+                      toggleMutation.mutate({ id: item.id, is_active: val })
+                    }
+                  />
+                </Host>
               </View>
             </View>
           )}
@@ -311,6 +321,15 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
+  cardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  activeLabel: { fontSize: 13, fontWeight: "500" },
   editBtn: { padding: 6 },
   deleteBtn: { padding: 6 },
   emptyState: {

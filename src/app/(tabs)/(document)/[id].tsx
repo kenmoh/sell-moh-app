@@ -1,5 +1,6 @@
 import {
   convertDocumentToSale,
+  downloadDocumentPdf,
   getDocumentById,
   updateDocumentStatus,
 } from "@/api/document";
@@ -171,6 +172,7 @@ const DocumentDetailScreen = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
+  const isDark = scheme === "dark";
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -205,6 +207,14 @@ const DocumentDetailScreen = () => {
     },
     onError: (e: Error) => {
       toast.error("Failed", e.message || "Could not convert document");
+    },
+  });
+
+  const downloadMutation = useMutation({
+    mutationFn: () =>
+      downloadDocumentPdf(doc!.id, doc!.doc_type, doc!.doc_number),
+    onError: (e: Error) => {
+      toast.error("Failed", e.message || "Could not download PDF");
     },
   });
 
@@ -296,7 +306,7 @@ const DocumentDetailScreen = () => {
             styles.identityCard,
             {
               backgroundColor: colors.card,
-              borderColor: colors.backgroundSelected,
+              borderColor: isDark ? "#282b32" : "#e5e7eb",
             },
           ]}
         >
@@ -307,13 +317,29 @@ const DocumentDetailScreen = () => {
                 {type.label}
               </Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-              <View
-                style={[styles.statusDot, { backgroundColor: status.color }]}
-              />
-              <Text style={[styles.statusLabel, { color: status.color }]}>
-                {doc.status}
-              </Text>
+            <View style={styles.identityRight}>
+              <Pressable
+                onPress={() => downloadMutation.mutate()}
+                disabled={downloadMutation.isPending}
+                style={[
+                  styles.downloadBtn,
+                  { backgroundColor: colors.backgroundElement },
+                ]}
+              >
+                {downloadMutation.isPending ? (
+                  <ActivityIndicator size={14} color={colors.textSecondary} />
+                ) : (
+                  <Lucide name="download" size={14} color={colors.textSecondary} />
+                )}
+              </Pressable>
+              <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+                <View
+                  style={[styles.statusDot, { backgroundColor: status.color }]}
+                />
+                <Text style={[styles.statusLabel, { color: status.color }]}>
+                  {doc.status}
+                </Text>
+              </View>
             </View>
           </View>
 
@@ -335,7 +361,7 @@ const DocumentDetailScreen = () => {
           <View
             style={[
               styles.totalRow,
-              { borderTopColor: colors.backgroundSelected },
+              { borderTopColor: isDark ? "#282b32" : "#e5e7eb" },
             ]}
           >
             <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>
@@ -353,7 +379,7 @@ const DocumentDetailScreen = () => {
             styles.section,
             {
               backgroundColor: colors.card,
-              borderColor: colors.backgroundSelected,
+              borderColor: isDark ? "#282b32" : "#e5e7eb",
             },
           ]}
         >
@@ -366,7 +392,7 @@ const DocumentDetailScreen = () => {
               style={[
                 styles.itemRow,
                 i < doc.items.length - 1 && {
-                  borderBottomColor: colors.backgroundSelected,
+                  borderBottomColor: isDark ? "#282b32" : "#e5e7eb",
                   borderBottomWidth: 1,
                 },
               ]}
@@ -393,7 +419,7 @@ const DocumentDetailScreen = () => {
             styles.section,
             {
               backgroundColor: colors.card,
-              borderColor: colors.backgroundSelected,
+              borderColor: isDark ? "#282b32" : "#e5e7eb",
               borderBottomEndRadius: 16,
               borderBottomStartRadius: 16,
             },
@@ -417,7 +443,7 @@ const DocumentDetailScreen = () => {
             styles.actionBar,
             {
               backgroundColor: colors.card,
-              borderTopColor: colors.backgroundSelected,
+              borderTopColor: isDark ? "#282b32" : "#e5e7eb",
               paddingBottom: insets.bottom + 12,
             },
           ]}
@@ -481,6 +507,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  identityRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  downloadBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
   },
   typeBadge: {
     flexDirection: "row",

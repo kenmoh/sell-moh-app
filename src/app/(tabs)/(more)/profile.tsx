@@ -6,14 +6,15 @@ import {
 } from "@/api/business";
 import AppBottomSheet from "@/components/bottom-sheet";
 import { Colors } from "@/constants/theme";
+import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/lib/ctx";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -31,6 +32,7 @@ const ProfileScreen = () => {
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const { user } = useSession();
   const queryClient = useQueryClient();
+  const toast = useToast();
 
   const [pinSheetVisible, setPinSheetVisible] = useState(false);
   const [pinInput, setPinInput] = useState("");
@@ -58,10 +60,10 @@ const ProfileScreen = () => {
       setPinSheetVisible(false);
       setPinInput("");
       setPinConfirm("");
-      Alert.alert("Success", "Supervisor PIN updated");
+      toast.success("Success", "Supervisor PIN updated");
     },
     onError: (e: any) => {
-      Alert.alert("Error", e?.message || "Failed to set PIN");
+      toast.error("Error", e?.message || "Failed to set PIN");
     },
   });
 
@@ -75,10 +77,10 @@ const ProfileScreen = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["business-settings"] });
       setBizSheetVisible(false);
-      Alert.alert("Success", "Business profile updated");
+      toast.success("Success", "Business profile updated");
     },
     onError: (e: any) => {
-      Alert.alert("Error", e?.message || "Failed to update business profile");
+      toast.error("Error", e?.message || "Failed to update business profile");
     },
   });
 
@@ -102,11 +104,11 @@ const ProfileScreen = () => {
 
   const handleSavePin = () => {
     if (pinInput.length < 4) {
-      Alert.alert("Error", "PIN must be 4-6 digits");
+      toast.warning("Invalid PIN", "PIN must be 4-6 digits");
       return;
     }
     if (pinInput !== pinConfirm) {
-      Alert.alert("Error", "PINs do not match");
+      toast.warning("Mismatch", "PINs do not match");
       return;
     }
     savePin(pinInput);
@@ -123,17 +125,17 @@ const ProfileScreen = () => {
     mutationFn: (uri: string) => uploadBusinessLogo(uri),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["business-settings"] });
-      Alert.alert("Success", "Logo updated");
+      toast.success("Success", "Logo updated");
     },
     onError: (e: any) => {
-      Alert.alert("Error", e?.message || "Failed to upload logo");
+      toast.error("Error", e?.message || "Failed to upload logo");
     },
   });
 
   const handlePickLogo = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission needed", "Please grant photo library access");
+      toast.warning("Permission needed", "Please grant photo library access");
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
@@ -336,6 +338,32 @@ const ProfileScreen = () => {
                       : "Not set"}
                 </Text>
               </View>
+            </View>
+            <Lucide name="chevron-right" size={20} color="#aaa" />
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/(tabs)/(more)/change-password")}
+            style={styles.pinRow}
+          >
+            <View style={styles.pinRowLeft}>
+              <Lucide name="lock" size={18} color="#aaa" />
+              <Text style={[styles.pinLabel, { color: colors.text }]}>
+                Change Password
+              </Text>
+            </View>
+            <Lucide name="chevron-right" size={20} color="#aaa" />
+          </Pressable>
+
+          <Pressable
+            onPress={() => router.push("/(tabs)/(more)/sessions")}
+            style={styles.pinRow}
+          >
+            <View style={styles.pinRowLeft}>
+              <Lucide name="shield" size={18} color="#aaa" />
+              <Text style={[styles.pinLabel, { color: colors.text }]}>
+                Active Sessions
+              </Text>
             </View>
             <Lucide name="chevron-right" size={20} color="#aaa" />
           </Pressable>

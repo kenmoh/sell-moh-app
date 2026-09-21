@@ -71,6 +71,7 @@ export default function PaymentAwaitingScreen() {
               subtotal: String(r.subtotal),
               discount: String(r.discount),
               tax: String(r.tax),
+              taxBreakdown: JSON.stringify(r.tax_breakdown ?? []),
               total: String(r.total),
               amountPaid: String(r.amount_paid),
               paymentMethod: r.payment_method,

@@ -46,8 +46,15 @@ export function buildReceiptHtml(r: ReceiptData): string {
     )
     .join("");
 
-  const hasTax = r.tax > 0;
   const hasDiscount = r.discount > 0;
+
+  const taxLines = (r.tax_breakdown && r.tax_breakdown.length > 0)
+    ? r.tax_breakdown.map((t: { name: string; rate: number; amount: number }) =>
+        `<div class="row"><span>${t.name} (${t.rate}%)</span><span>${formatNgn(t.amount)}</span></div>`
+      ).join("")
+    : r.tax > 0
+      ? `<div class="row"><span>Tax</span><span>${formatNgn(r.tax)}</span></div>`
+      : "";
 
   const methodLabel =
     r.payment_method === "cash"
@@ -193,7 +200,7 @@ export function buildReceiptHtml(r: ReceiptData): string {
 
     <div class="row"><span>Subtotal</span><span>${formatNgn(r.subtotal)}</span></div>
     ${hasDiscount ? `<div class="row"><span>Discount</span><span>-${formatNgn(r.discount)}</span></div>` : ""}
-    ${hasTax ? `<div class="row"><span>Tax (VAT)</span><span>${formatNgn(r.tax)}</span></div>` : ""}
+    ${taxLines}
 
     <hr class="solid">
 

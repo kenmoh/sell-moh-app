@@ -72,10 +72,10 @@ const SignIn = () => {
       const data = res.data as LoginResponseData;
 
       if (data.requires_totp) {
-        Alert.alert(
-          "TOTP Required",
-          "Please complete two-factor authentication.",
-        );
+        router.push({
+          pathname: "/(auth)/totp-verify",
+          params: { email: result.data.email, password: result.data.password },
+        });
         return;
       }
 

@@ -1,6 +1,7 @@
 import { apiClient, BASE_URL } from "./client";
 import type { BusinessSettings, BusinessUpdate } from "@/types/business";
 import * as SecureStore from "expo-secure-store";
+import { File } from "expo-file-system";
 import { Platform } from "react-native";
 
 const URL = "/business/settings";
@@ -49,15 +50,9 @@ export const updateBusinessSettings = async (
 export const uploadBusinessLogo = async (
   fileUri: string,
 ): Promise<BusinessSettings> => {
+  const file = new File(fileUri);
   const formData = new FormData();
-  const filename = fileUri.split("/").pop() || "logo.jpg";
-  const ext = filename.split(".").pop()?.toLowerCase() || "jpeg";
-  const mimeType = ext === "png" ? "image/png" : "image/jpeg";
-  formData.append("file", {
-    uri: fileUri,
-    name: filename,
-    type: mimeType,
-  } as any);
+  formData.append("file", file, file.name);
 
   const token = await getAccessToken();
   const res = await fetch(`${BASE_URL}/business/logo`, {

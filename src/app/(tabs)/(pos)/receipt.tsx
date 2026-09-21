@@ -33,6 +33,7 @@ export default function ReceiptScreen() {
     subtotal?: string;
     discount?: string;
     tax?: string;
+    taxBreakdown?: string;
     total?: string;
     amountPaid?: string;
     paymentMethod?: string;
@@ -56,6 +57,7 @@ export default function ReceiptScreen() {
         subtotal: parseFloat(params.subtotal || "0"),
         discount: parseFloat(params.discount || "0"),
         tax: parseFloat(params.tax || "0"),
+        tax_breakdown: params.taxBreakdown ? JSON.parse(params.taxBreakdown) : [],
         total: parseFloat(params.total || "0"),
         amount_paid: parseFloat(params.amountPaid || "0"),
         payment_method: params.paymentMethod || "cash",
@@ -178,16 +180,27 @@ export default function ReceiptScreen() {
             </Text>
           </View>
         )}
-        {receiptData.tax > 0 && (
+        {receiptData.tax_breakdown.length > 0 ? (
+          receiptData.tax_breakdown.map((t, i) => (
+            <View key={i} style={styles.receiptRow}>
+              <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+                {t.name} ({t.rate}%)
+              </Text>
+              <Text style={[styles.receiptValue, { color: colors.text }]}>
+                ₦{t.amount.toLocaleString()}
+              </Text>
+            </View>
+          ))
+        ) : receiptData.tax > 0 ? (
           <View style={styles.receiptRow}>
             <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
-              Tax (VAT)
+              Tax
             </Text>
             <Text style={[styles.receiptValue, { color: colors.text }]}>
               ₦{receiptData.tax.toLocaleString()}
             </Text>
           </View>
-        )}
+        ) : null}
 
         <View style={[styles.divider, { borderColor: colors.backgroundElement, borderWidth: 1.5 }]} />
 

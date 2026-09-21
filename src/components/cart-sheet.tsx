@@ -5,11 +5,12 @@ import {
   confirmPayment,
   recordSplitPayment,
 } from "@/api/payments";
+import { fetchTaxTypes, TaxType } from "@/api/taxes";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
 import { useSession } from "@/lib/ctx";
 import Lucide from "@react-native-vector-icons/lucide";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -746,7 +747,6 @@ interface CartSummaryCardProps {
   totalItemsCount: number;
   totalPrice: number;
   discountAmount: number;
-  taxAmount: number;
   couponCode: string | null;
   colors: ColorPalette;
 }
@@ -755,11 +755,20 @@ export const CartSummaryCard = ({
   totalItemsCount,
   totalPrice,
   discountAmount,
-  taxAmount,
   couponCode,
   colors,
 }: CartSummaryCardProps) => {
-  const finalTotal = Math.max(0, totalPrice - discountAmount + taxAmount);
+  const { data: taxes } = useQuery({
+    queryKey: ["taxes"],
+    queryFn: () => fetchTaxTypes(true),
+  });
+
+  const activeTaxes = taxes?.filter((t) => t.is_active) ?? [];
+  const totalTaxAmount = activeTaxes.reduce(
+    (sum, t) => sum + totalPrice * (t.rate / 100),
+    0,
+  );
+  const finalTotal = Math.max(0, totalPrice - discountAmount + totalTaxAmount);
 
   return (
     <View
@@ -781,7 +790,7 @@ export const CartSummaryCard = ({
       </View>
       {discountAmount > 0 && (
         <View style={styles.summaryRow}>
-          <Text style={{ color: "#10b981" }}>
+          <Text style={{ color: colors.textSecondary }}>
             Discount{couponCode ? ` (${couponCode})` : ""}
           </Text>
           <Text style={{ color: "#10b981", fontWeight: "600" }}>
@@ -789,14 +798,19 @@ export const CartSummaryCard = ({
           </Text>
         </View>
       )}
-      {taxAmount > 0 && (
-        <View style={styles.summaryRow}>
-          <Text style={{ color: colors.textSecondary }}>Tax (VAT)</Text>
-          <Text style={{ color: colors.text, fontWeight: "600" }}>
-            ₦{taxAmount.toLocaleString()}
-          </Text>
-        </View>
-      )}
+      {activeTaxes.map((t) => {
+        const amt = totalPrice * (t.rate / 100);
+        return (
+          <View key={t.id} style={styles.summaryRow}>
+            <Text style={{ color: colors.textSecondary }}>
+              {t.name} ({t.rate}%)
+            </Text>
+            <Text style={{ color: colors.text, fontWeight: "600" }}>
+              ₦{amt.toLocaleString()}
+            </Text>
+          </View>
+        );
+      })}
       <View style={[styles.summaryRow, { marginTop: 8 }]}>
         <Text style={[styles.totalLabel, { color: colors.text }]}>
           Total Due
@@ -1014,7 +1028,6 @@ interface CartPaymentSectionProps {
   totalPrice: number;
   totalItemsCount: number;
   discountAmount: number;
-  taxAmount: number;
   couponCode: string | null;
   paymentMethod: PaymentMethod;
   cashInput: string;
@@ -1043,7 +1056,6 @@ export const CartPaymentSection = ({
   totalPrice,
   totalItemsCount,
   discountAmount,
-  taxAmount,
   couponCode,
   paymentMethod,
   cashInput,
@@ -1105,7 +1117,6 @@ export const CartPaymentSection = ({
         totalItemsCount={totalItemsCount}
         totalPrice={totalPrice}
         discountAmount={discountAmount}
-        taxAmount={taxAmount}
         couponCode={couponCode}
         colors={colors}
       />
@@ -1158,11 +1169,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     0,
   );
   const totalItemsCount = items.reduce((sum, i) => sum + i.quantity, 0);
-  const taxAmount = items.reduce(
-    (sum, i) => sum + (i.product.tax_rate ? i.product.price * i.quantity * (i.product.tax_rate / 100) : 0),
-    0,
-  );
-  const finalTotal = Math.max(0, totalPrice - discountAmount + taxAmount);
+  const finalTotal = Math.max(0, totalPrice - discountAmount);
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [cashInput, setCashInput] = useState<string>("");
@@ -1698,7 +1705,6 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
                 totalPrice={totalPrice}
                 totalItemsCount={totalItemsCount}
                 discountAmount={discountAmount}
-                taxAmount={taxAmount}
                 couponCode={couponCode}
                 paymentMethod={paymentMethod}
                 cashInput={cashInput}

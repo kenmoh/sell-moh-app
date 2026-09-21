@@ -24,8 +24,12 @@ export interface UpdateTaxRequest {
   is_active?: boolean;
 }
 
-export const fetchTaxTypes = async (): Promise<TaxType[]> => {
-  const res = await apiClient.get<{ data: TaxType[] }>(URL);
+export const fetchTaxTypes = async (
+  includeInactive = false,
+): Promise<TaxType[]> => {
+  const res = await apiClient.get<{ data: TaxType[] }>(
+    `${URL}?include_inactive=${includeInactive}`,
+  );
   if (!res.ok) throw new Error(getErrorMessage(res));
   return res.data?.data ?? [];
 };

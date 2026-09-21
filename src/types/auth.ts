@@ -76,6 +76,7 @@ export interface ChangePasswordRequest {
 export interface LoginRequest {
   email: string;
   password: string;
+  totp_code?: string;
 }
 
 export interface RegisterRequest {
@@ -136,7 +137,9 @@ export interface CreateRole {
   permission_ids: string[];
 }
 
-export interface UpdateRole extends CreateRole {}
+export interface UpdateRole extends CreateRole {
+  id: string;
+}
 
 export interface FetchTenantRoles extends RoleResponse {
   permissions: string[];

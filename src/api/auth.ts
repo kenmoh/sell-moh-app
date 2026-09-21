@@ -104,7 +104,10 @@ export const createRole = async (
 export const updateRole = async (
   data: UpdateRole,
 ): Promise<DataMessageResponse> => {
-  const res = await apiClient.patch<DataMessageResponse>(`${URL}/roles`, data);
+  const res = await apiClient.patch<DataMessageResponse>(
+    `${URL}/roles/${data.id}`,
+    data,
+  );
 
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
@@ -114,9 +117,11 @@ export const updateRole = async (
 };
 
 export const deleteRole = async (
-  data: UpdateRole,
+  roleId: string,
 ): Promise<DataMessageResponse> => {
-  const res = await apiClient.delete<DataMessageResponse>(`${URL}/roles`, data);
+  const res = await apiClient.delete<DataMessageResponse>(
+    `${URL}/roles/${roleId}`,
+  );
 
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
@@ -246,6 +251,109 @@ export const getPinStatus = async (): Promise<{
 export const setSupervisorPin = async (pin: string): Promise<void> => {
   const res = await apiClient.post(`${URL}/pin`, { pin });
 
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+};
+
+// ____________________________________Session Management____________________________________
+
+export const logoutApi = async (
+  refreshToken: string,
+  allDevices = false,
+): Promise<void> => {
+  const res = await apiClient.post(`${URL}/logout`, {
+    refresh_token: refreshToken,
+    all_devices: allDevices,
+  });
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+};
+
+export const listSessions = async (): Promise<SessionItem[]> => {
+  const res = await apiClient.get<{ data: SessionItem[] }>(`${URL}/sessions`);
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+  return res.data?.data ?? [];
+};
+
+export const revokeSession = async (sessionId: string): Promise<void> => {
+  const res = await apiClient.delete(`${URL}/sessions/${sessionId}`);
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+};
+
+export interface SessionItem {
+  id: string;
+  device_name: string | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string | null;
+  last_active_at: string | null;
+}
+
+// ____________________________________Password Management____________________________________
+
+export const forgotPassword = async (email: string): Promise<void> => {
+  const res = await apiClient.post(`${URL}/forgot-password`, { email });
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+};
+
+export const resetPassword = async (
+  token: string,
+  newPassword: string,
+): Promise<void> => {
+  const res = await apiClient.post(`${URL}/reset-password`, {
+    token,
+    new_password: newPassword,
+  });
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+};
+
+export const changePassword = async (data: {
+  current_password: string;
+  new_password: string;
+}): Promise<void> => {
+  const res = await apiClient.post(`${URL}/change-password`, data);
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+};
+
+// ____________________________________2FA / TOTP____________________________________
+
+export const setupTotp = async (): Promise<{
+  secret: string;
+  otpauth_url: string;
+}> => {
+  const res = await apiClient.post<{ data: { secret: string; otpauth_url: string } }>(
+    `${URL}/totp/setup`,
+  );
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+  return res.data!.data;
+};
+
+export const verifyTotp = async (code: string): Promise<void> => {
+  const res = await apiClient.post(`${URL}/totp/verify`, { code });
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+};
+
+export const disableTotp = async (
+  password: string,
+  code: string,
+): Promise<void> => {
+  const res = await apiClient.post(`${URL}/totp/disable`, { password, code });
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
   }

@@ -1,9 +1,12 @@
+import { forgotPassword } from "@/api/auth";
 import AppView from "@/components/app-view";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -23,11 +26,13 @@ const ForgotPassword = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<ForgotField, string>>>(
     {},
   );
 
-  const handleSendCode = () => {
+  const handleSendCode = async () => {
     const result = forgotPasswordSchema.safeParse({ email });
     if (!result.success) {
       const nextErrors: Partial<Record<ForgotField, string>> = {};
@@ -39,9 +44,40 @@ const ForgotPassword = () => {
       return;
     }
     setErrors({});
-    // TODO: Implement send code logic
-    console.log("Send code to:", result.data.email);
+    setLoading(true);
+    try {
+      await forgotPassword(result.data.email);
+      setSent(true);
+    } catch (err: any) {
+      Alert.alert("Error", err.message || "Failed to send reset email");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  if (sent) {
+    return (
+      <AppView>
+        <View style={styles.centered}>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Check Your Email
+          </Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            We've sent a password reset link to{"\n"}
+            <Text style={{ fontWeight: "700", color: colors.text }}>
+              {email}
+            </Text>
+          </Text>
+          <TouchableOpacity
+            style={[styles.primaryButton, { backgroundColor: colors.buttonPrimary }]}
+            onPress={() => router.replace("/(auth)/sign-in")}
+          >
+            <Text style={styles.primaryButtonText}>Back to Sign In</Text>
+          </TouchableOpacity>
+        </View>
+      </AppView>
+    );
+  }
 
   return (
     <AppView>
@@ -54,8 +90,7 @@ const ForgotPassword = () => {
             Forgot Password?
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Enter your email and we'll send a 5-digit verification code
-            instantly.
+            Enter your email and we'll send you a password reset link.
           </Text>
         </View>
 
@@ -77,13 +112,19 @@ const ForgotPassword = () => {
 
           <TouchableOpacity
             activeOpacity={0.8}
+            disabled={loading}
             style={[
               styles.primaryButton,
               { backgroundColor: colors.buttonPrimary },
+              loading && { opacity: 0.7 },
             ]}
             onPress={handleSendCode}
           >
-            <Text style={styles.primaryButtonText}>Send Code</Text>
+            {loading ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={styles.primaryButtonText}>Send Reset Link</Text>
+            )}
           </TouchableOpacity>
         </View>
 
@@ -108,6 +149,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 10,
+  },
+  centered: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 32,
+    gap: 16,
   },
   header: {
     alignItems: "center",

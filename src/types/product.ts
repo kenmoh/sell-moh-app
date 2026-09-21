@@ -87,3 +87,88 @@ export interface AdjustProduct {
   unit_cost: number;
   notes?: string | null;
 }
+
+// ── Stock Store-Level Types ──────────────────────────────────────────────────
+
+export interface StockBalanceItem {
+  product_id: string;
+  product_name: string | null;
+  sku: string | null;
+  qty: number;
+  reserved_qty: number;
+  committed_qty: number;
+  available: number;
+  min_stock_level: number;
+  unit_cost: number | null;
+}
+
+export interface StockMovementItem {
+  id: string;
+  product_id: string;
+  product_name: string | null;
+  product_sku: string | null;
+  store_id: string;
+  store_name: string | null;
+  movement_type: string;
+  qty_change: number;
+  balance_before: number;
+  balance_after: number;
+  reference_type: string | null;
+  reference_id: string | null;
+  reason: string | null;
+  unit_cost: number | null;
+  notes: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface LowStockItem {
+  product_id: string;
+  product_name: string;
+  sku: string | null;
+  store_id: string;
+  store_name: string | null;
+  qty: number;
+  min_stock_level: number;
+  available: number;
+}
+
+export interface DistributeResult {
+  from_adjustment_id: string;
+  to_adjustment_id: string;
+  from_new_balance: number;
+  to_new_balance: number;
+}
+
+export interface MinStockLevelResult {
+  store_id: string;
+  product_id: string;
+  min_stock_level: number;
+}
+
+export interface StoreDistributePayload {
+  product_id: string;
+  to_store_id: string;
+  qty: number;
+  notes?: string | null;
+}
+
+export interface SetMinStockLevelPayload {
+  min_stock_level: number;
+}
+
+export interface StockBalancesPaginatedResponse {
+  data: StockBalanceItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  message: string | null;
+}
+
+export interface StockMovementsPaginatedResponse {
+  data: StockMovementItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  message: string | null;
+}

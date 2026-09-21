@@ -1,7 +1,7 @@
 import { use, createContext, useEffect, useState, type PropsWithChildren } from "react";
 import { useStorageState } from "@/lib/useStorageState";
 import { AuthUser } from "@/types/auth";
-import { setLogoutHandler } from "@/api/client";
+import { apiClient, setLogoutHandler } from "@/api/client";
 
 export interface SessionData {
   accessToken: string;
@@ -10,7 +10,7 @@ export interface SessionData {
 
 const AuthContext = createContext<{
   signIn: (accessToken: string, refreshToken: string, user: AuthUser) => void;
-  signOut: () => void;
+  signOut: () => Promise<void>;
   updateUser: (user: AuthUser) => void;
   session: string | null;
   user: AuthUser | null;
@@ -69,7 +69,18 @@ export function SessionProvider({ children }: PropsWithChildren) {
           setUserRaw(JSON.stringify(user));
           setUserState(user);
         },
-        signOut: () => {
+        signOut: async () => {
+          try {
+            const tokens = await getTokens();
+            if (tokens?.refreshToken) {
+              await apiClient.post("/auth/logout", {
+                refresh_token: tokens.refreshToken,
+                all_devices: false,
+              });
+            }
+          } catch {
+            // Proceed with local sign-out even if server call fails
+          }
           setSession(null);
           setUserRaw(null);
           setUserState(null);
