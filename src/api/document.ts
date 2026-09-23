@@ -6,6 +6,7 @@ import {
 import * as SecureStore from "expo-secure-store";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
+import { fetch as expoFetch } from "expo/fetch";
 import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
 
@@ -67,15 +68,39 @@ export const downloadDocumentPdf = async (
   const url = `${BASE_URL}/documents/${docId}/download`;
   const fileUri = `${FileSystem.cacheDirectory}${docType}_${docNumber}.pdf`;
 
-  const result = await FileSystem.downloadAsync(url, fileUri, {
+  const response = await expoFetch(url, {
     headers: session?.accessToken
       ? { Authorization: `Bearer ${session.accessToken}` }
       : {},
+    redirect: "error",
   });
 
-  if (result.status !== 200) {
+  if (!response.ok) {
     throw new Error("Failed to download document");
   }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (!contentType.includes("application/pdf")) {
+    throw new Error("Server did not return a PDF");
+  }
+
+  const buffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  let binary = "";
+  const CHUNK = 8192;
+  for (let i = 0; i < bytes.byteLength; i += CHUNK) {
+    const slice = bytes.subarray(i, i + CHUNK);
+    binary += String.fromCharCode(...slice);
+  }
+  const base64 = btoa(binary);
+
+  if (!base64.startsWith("JVBERi")) {
+    throw new Error("Downloaded file is not a valid PDF");
+  }
+
+  await FileSystem.writeAsStringAsync(fileUri, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
 
   await Sharing.shareAsync(fileUri, {
     mimeType: "application/pdf",

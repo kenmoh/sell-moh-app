@@ -91,12 +91,14 @@ const NewCartSheet = ({
             id: cart.id,
             name: cart.session_id || "Cart",
             sessionId: cart.session_id,
+            storeId,
             customerName: cart.customer_name ?? undefined,
             customerPhone: cart.customer_phone ?? undefined,
             items: [],
           },
         ],
         activeCartId: cart.id,
+        storeCartIds: { ...state.storeCartIds, [storeId]: cart.id },
       }));
       queryClient.invalidateQueries({ queryKey: ["carts"] });
       onVisibleChange(false);

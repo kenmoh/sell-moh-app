@@ -147,6 +147,7 @@ const ExpandableFAB = ({ activeStoreId }: ExpandableFABProps) => {
         store_id: activeStoreId || user?.store_id || "",
       }),
     onSuccess: (cart) => {
+      const storeId = activeStoreId || user?.store_id || "";
       useCartStore.setState((state) => ({
         carts: [
           ...state.carts,
@@ -154,11 +155,13 @@ const ExpandableFAB = ({ activeStoreId }: ExpandableFABProps) => {
             id: cart.id,
             name: cart.session_id || "Cart",
             sessionId: cart.session_id,
+            storeId,
             customerName: cart.customer_name ?? undefined,
             items: [],
           },
         ],
         activeCartId: cart.id,
+        storeCartIds: { ...state.storeCartIds, [storeId]: cart.id },
       }));
       queryClient.invalidateQueries({ queryKey: ["carts"] });
       setCartSheetVisible(true);

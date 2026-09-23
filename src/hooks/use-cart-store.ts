@@ -11,6 +11,7 @@ export interface Cart {
   id: string;
   name: string;
   sessionId?: string;
+  storeId?: string;
   customerName?: string;
   customerPhone?: string;
   items: CartItem[];
@@ -23,7 +24,9 @@ let cartCounter = 1;
 interface CartState {
   carts: Cart[];
   activeCartId: string;
-  createCart: (name?: string, sessionId?: string, customerName?: string, customerPhone?: string) => string;
+  storeCartIds: Record<string, string>;
+  switchStore: (storeId: string) => void;
+  createCart: (name?: string, sessionId?: string, customerName?: string, customerPhone?: string, storeId?: string) => string;
   deleteCart: (cartId: string) => void;
   setActiveCart: (cartId: string) => void;
   addItemToCart: (cartId: string, product: Product, quantity?: number, itemId?: string) => void;
@@ -50,28 +53,55 @@ interface CartState {
 const useCartStore = create<CartState>((set, get) => ({
   carts: [],
   activeCartId: "",
+  storeCartIds: {},
 
-  createCart: (name?: string, sessionId?: string, customerName?: string, customerPhone?: string) => {
+  switchStore: (storeId) => {
+    if (!storeId) {
+      set({ activeCartId: "" });
+      return;
+    }
+    const { storeCartIds, carts } = get();
+    const cartId = storeCartIds[storeId];
+    if (cartId && carts.find((c) => c.id === cartId)) {
+      set({ activeCartId: cartId });
+    } else {
+      set({ activeCartId: "" });
+    }
+  },
+
+  createCart: (name?, sessionId?, customerName?, customerPhone?, storeId?) => {
     const id = `cart-${cartCounter}`;
     const cartName = name || `Cart ${cartCounter}`;
     cartCounter++;
-    set((state) => ({
-      carts: [
-        ...state.carts,
-        { id, name: cartName, sessionId, customerName, customerPhone, items: [] },
-      ],
-      activeCartId: id,
-    }));
+    set((state) => {
+      const newStoreCartIds = storeId
+        ? { ...state.storeCartIds, [storeId]: id }
+        : state.storeCartIds;
+      return {
+        carts: [
+          ...state.carts,
+          { id, name: cartName, sessionId, storeId, customerName, customerPhone, items: [] },
+        ],
+        activeCartId: id,
+        storeCartIds: newStoreCartIds,
+      };
+    });
     return id;
   },
 
   deleteCart: (cartId) =>
     set((state) => {
       const filtered = state.carts.filter((c) => c.id !== cartId);
+      const deletedCart = state.carts.find((c) => c.id === cartId);
+      const newStoreCartIds = { ...state.storeCartIds };
+      if (deletedCart?.storeId && newStoreCartIds[deletedCart.storeId] === cartId) {
+        delete newStoreCartIds[deletedCart.storeId];
+      }
       return {
         carts: filtered,
         activeCartId:
           state.activeCartId === cartId ? (filtered[0]?.id ?? "") : state.activeCartId,
+        storeCartIds: newStoreCartIds,
       };
     }),
 
@@ -133,10 +163,18 @@ const useCartStore = create<CartState>((set, get) => ({
     })),
 
   removeCart: (cartId) =>
-    set((state) => ({
-      carts: state.carts.filter((cart) => cart.id !== cartId),
-      activeCartId: state.activeCartId === cartId ? "" : state.activeCartId,
-    })),
+    set((state) => {
+      const removedCart = state.carts.find((c) => c.id === cartId);
+      const newStoreCartIds = { ...state.storeCartIds };
+      if (removedCart?.storeId && newStoreCartIds[removedCart.storeId] === cartId) {
+        delete newStoreCartIds[removedCart.storeId];
+      }
+      return {
+        carts: state.carts.filter((cart) => cart.id !== cartId),
+        activeCartId: state.activeCartId === cartId ? "" : state.activeCartId,
+        storeCartIds: newStoreCartIds,
+      };
+    }),
 
   setCartCoupon: (cartId, code, discountAmount = 0) =>
     set((state) => ({

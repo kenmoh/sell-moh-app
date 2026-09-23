@@ -95,6 +95,12 @@ const POSScreen = () => {
     }
   }, [isOwner, stores, selectedStoreId]);
 
+  useEffect(() => {
+    if (activeStoreId) {
+      useCartStore.getState().switchStore(activeStoreId);
+    }
+  }, [activeStoreId]);
+
   const currentStoreName =
     stores.find((s) => s.id === activeStoreId)?.name ?? "All Stores";
 

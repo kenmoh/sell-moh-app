@@ -1538,18 +1538,19 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   };
 
   const handleFinishSuccess = async () => {
+    const currentCart = useCartStore.getState().carts.find((c) => c.id === activeCartId);
+    const storeId = currentCart?.storeId || user?.store_id || "";
     removeCart(activeCartId);
     queryClient.invalidateQueries({ queryKey: ["carts"] });
     setIsSuccess(false);
 
-    if (user?.store_id) {
+    if (storeId) {
       try {
         const res = await createCart({
-          store_id: user.store_id,
+          store_id: storeId,
           customer_name: "",
           customer_phone: "",
         });
-        const store = useCartStore.getState();
         useCartStore.setState((state) => ({
           carts: [
             ...state.carts,
@@ -1557,12 +1558,14 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
               id: res.id,
               name: "New Sale",
               sessionId: res.session_id,
+              storeId,
               customerName: "",
               customerPhone: "",
               items: [],
             },
           ],
           activeCartId: res.id,
+          storeCartIds: { ...state.storeCartIds, [storeId]: res.id },
         }));
       } catch {}
     }
