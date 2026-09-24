@@ -67,40 +67,36 @@ export const downloadDocumentPdf = async (
   const { BASE_URL } = await import("./client");
   const url = `${BASE_URL}/documents/${docId}/download`;
   const fileUri = `${FileSystem.cacheDirectory}${docType}_${docNumber}.pdf`;
+  const headers: Record<string, string> = session?.accessToken
+    ? { Authorization: `Bearer ${session.accessToken}` }
+    : {};
 
-  const response = await expoFetch(url, {
-    headers: session?.accessToken
-      ? { Authorization: `Bearer ${session.accessToken}` }
-      : {},
-    redirect: "error",
-  });
-
-  if (!response.ok) {
+  // Preflight: fail fast on redirects (e.g. auth gateway sending us to a
+  // login page) instead of saving an HTML page as the "PDF".
+  const preflight = await expoFetch(url, { headers, redirect: "error" });
+  if (!preflight.ok) {
     throw new Error("Failed to download document");
   }
-
-  const contentType = response.headers.get("content-type") ?? "";
+  const contentType = preflight.headers.get("content-type") ?? "";
   if (!contentType.includes("application/pdf")) {
     throw new Error("Server did not return a PDF");
   }
 
-  const buffer = await response.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  let binary = "";
-  const CHUNK = 8192;
-  for (let i = 0; i < bytes.byteLength; i += CHUNK) {
-    const slice = bytes.subarray(i, i + CHUNK);
-    binary += String.fromCharCode(...slice);
+  // Native download preserves binary bytes (no arrayBuffer/btoa round-trip).
+  const result = await FileSystem.downloadAsync(url, fileUri, { headers });
+  if (result.status !== 200) {
+    throw new Error("Failed to download document");
   }
-  const base64 = btoa(binary);
 
-  if (!base64.startsWith("JVBERi")) {
+  const magic = await FileSystem.readAsStringAsync(fileUri, {
+    encoding: FileSystem.EncodingType.UTF8,
+    length: 5,
+    position: 0,
+  });
+  if (!magic.startsWith("%PDF")) {
+    await FileSystem.deleteAsync(fileUri, { idempotent: true });
     throw new Error("Downloaded file is not a valid PDF");
   }
-
-  await FileSystem.writeAsStringAsync(fileUri, base64, {
-    encoding: FileSystem.EncodingType.Base64,
-  });
 
   await Sharing.shareAsync(fileUri, {
     mimeType: "application/pdf",
