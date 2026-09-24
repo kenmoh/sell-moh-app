@@ -3,10 +3,8 @@ import {
   DocumentCreateRequest,
   DocumentResponse,
 } from "@/types/document-types";
-import * as SecureStore from "expo-secure-store";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
-import { fetch as expoFetch } from "expo/fetch";
 import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
 
@@ -58,45 +56,34 @@ export const convertDocumentToSale = async (id: string) => {
   return res.data;
 };
 
+export interface DocumentPdfPayload {
+  filename: string;
+  mime_type: string;
+  pdf_base64: string;
+}
+
 export const downloadDocumentPdf = async (
   docId: string,
   docType: string,
   docNumber: string,
 ): Promise<void> => {
-  const session = JSON.parse(SecureStore.getItem("session") ?? "{}");
-  const { BASE_URL } = await import("./client");
-  const url = `${BASE_URL}/documents/${docId}/download`;
-  const fileUri = `${FileSystem.cacheDirectory}${docType}_${docNumber}.pdf`;
-  const headers: Record<string, string> = session?.accessToken
-    ? { Authorization: `Bearer ${session.accessToken}` }
-    : {};
-
-  // Preflight: fail fast on redirects (e.g. auth gateway sending us to a
-  // login page) instead of saving an HTML page as the "PDF".
-  const preflight = await expoFetch(url, { headers, redirect: "error" });
-  if (!preflight.ok) {
-    throw new Error("Failed to download document");
-  }
-  const contentType = preflight.headers.get("content-type") ?? "";
-  if (!contentType.includes("application/pdf")) {
-    throw new Error("Server did not return a PDF");
+  const res = await apiClient.get<{ data: DocumentPdfPayload }>(
+    `${DOCUMENT_URL}/${docId}/pdf`,
+  );
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
   }
 
-  // Native download preserves binary bytes (no arrayBuffer/btoa round-trip).
-  const result = await FileSystem.downloadAsync(url, fileUri, { headers });
-  if (result.status !== 200) {
-    throw new Error("Failed to download document");
-  }
-
-  const magic = await FileSystem.readAsStringAsync(fileUri, {
-    encoding: FileSystem.EncodingType.UTF8,
-    length: 5,
-    position: 0,
-  });
-  if (!magic.startsWith("%PDF")) {
-    await FileSystem.deleteAsync(fileUri, { idempotent: true });
+  const payload = res.data?.data;
+  const base64 = payload?.pdf_base64 ?? "";
+  if (!base64.startsWith("JVBERi")) {
     throw new Error("Downloaded file is not a valid PDF");
   }
+
+  const fileUri = `${FileSystem.cacheDirectory}${payload?.filename || `${docType}_${docNumber}.pdf`}`;
+  await FileSystem.writeAsStringAsync(fileUri, base64, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
 
   await Sharing.shareAsync(fileUri, {
     mimeType: "application/pdf",
