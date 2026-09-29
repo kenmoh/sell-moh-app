@@ -73,15 +73,16 @@ export default function AppTabs() {
       indicatorColor={colors.backgroundElement}
       labelStyle={{ selected: { color: colors.card } }}
       rippleColor={colors.backgroundElement}
+      labelVisibilityMode="unlabeled"
     >
       <NativeTabs.Trigger name="(pos)">
-        <NativeTabs.Trigger.Label hidden>POS</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>POS</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="cart.fill" md={"home"} />
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(sales)">
         <NativeTabs.Trigger.Label hidden>Sales</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf="list.bullet" md={"orders"} />
+        <NativeTabs.Trigger.Icon sf="list.bullet" md={"lists"} />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(dashboard)">
         <NativeTabs.Trigger.Label hidden>Dashboard</NativeTabs.Trigger.Label>
