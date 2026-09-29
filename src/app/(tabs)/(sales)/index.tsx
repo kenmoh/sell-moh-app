@@ -3,10 +3,10 @@ import OrderCard from "@/components/order-card";
 import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
 import { ColorPalette, Colors } from "@/constants/theme";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -30,7 +30,20 @@ function formatDate(iso: string | null): string {
     const min = String(d.getMinutes()).padStart(2, "0");
     const ampm = hr >= 12 ? "PM" : "AM";
     const h12 = hr % 12 || 12;
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const months = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     return `${h12}:${min} ${ampm}, ${months[d.getMonth()]} ${d.getDate()}`;
   } catch {
     return iso;
@@ -46,7 +59,18 @@ const statusMap: Record<string, "Completed" | "Pending" | "Voided"> = {
 
 type ListItemType =
   | { type: "sticky_header" }
-  | { type: "order_item"; data: { id: string; orderNumber: string; customer: string; itemCount: number; price: number; status: "Completed" | "Pending" | "Voided"; date: string } };
+  | {
+      type: "order_item";
+      data: {
+        id: string;
+        orderNumber: string;
+        customer: string;
+        itemCount: number;
+        price: number;
+        status: "Completed" | "Pending" | "Voided";
+        date: string;
+      };
+    };
 
 const SalesScreen = () => {
   const scheme = useColorScheme();
@@ -57,7 +81,8 @@ const SalesScreen = () => {
   const [activeFilter, setActiveFilter] = useState<FilterStatus>("All");
   const [search, setSearch] = useState("");
 
-  const apiStatus = activeFilter === "All" ? undefined : activeFilter.toLowerCase();
+  const apiStatus =
+    activeFilter === "All" ? undefined : activeFilter.toLowerCase();
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["sales", apiStatus],
@@ -91,7 +116,10 @@ const SalesScreen = () => {
   );
 
   const totalRevenue = useMemo(
-    () => orders.filter((o) => o.status === "Completed").reduce((sum, o) => sum + o.price, 0),
+    () =>
+      orders
+        .filter((o) => o.status === "Completed")
+        .reduce((sum, o) => sum + o.price, 0),
     [orders],
   );
 
@@ -163,17 +191,16 @@ const SalesScreen = () => {
                     Track and manage sales transactions
                   </Text>
                 </View>
-                <View
-                  style={[
-                    styles.iconBadge,
-                    {
-                      backgroundColor: colors.card,
-                      borderColor: isDark ? "#282b32" : "#eef0f4",
-                    },
+                <Pressable
+                  onPress={() => router.push("/(tabs)/(sales)/ai")}
+                  style={({ pressed }) => [
+                    styles.aiBtn,
+                    { backgroundColor: "rgba(37,99,235,0.1)" },
+                    pressed && { opacity: 0.7 },
                   ]}
                 >
-                  <Lucide name="shopping-bag" size={20} color="#3b82f6" />
-                </View>
+                  <Lucide name="sparkles" size={20} color="#2563eb" />
+                </Pressable>
               </View>
 
               {/* Summary Metrics Row */}
@@ -405,6 +432,13 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+  },
+  aiBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
   headerTitleRow: {
     flexDirection: "row",
