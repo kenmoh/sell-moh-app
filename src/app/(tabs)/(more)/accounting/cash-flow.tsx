@@ -1,10 +1,12 @@
 import { fetchCashFlow } from "@/api/accounting";
 import InfoTooltip from "@/components/info-tooltip";
 import { Colors } from "@/constants/theme";
+import type { PnLLineItem } from "@/types/accounting";
+import Info from "@expo/material-symbols/info.xml";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -16,7 +18,6 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type { PnLLineItem } from "@/types/accounting";
 
 const CashFlow = () => {
   const scheme = useColorScheme();
@@ -37,7 +38,11 @@ const CashFlow = () => {
   const to = toDate.toISOString().split("T")[0];
 
   const formatDate = (d: Date) =>
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+    d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
 
   const { data, isLoading } = useQuery({
     queryKey: ["cash-flow", from, to],
@@ -52,8 +57,20 @@ const CashFlow = () => {
     const totalIn = data.inflows.reduce((s, i) => s + i.amount, 0);
     const totalOut = data.outflows.reduce((s, o) => s + o.amount, 0);
     return [
-      { title: "Inflows", items: data.inflows, total: totalIn, color: "#10b981", icon: "arrow-down-left" },
-      { title: "Outflows", items: data.outflows, total: totalOut, color: "#ef4444", icon: "arrow-up-right" },
+      {
+        title: "Inflows",
+        items: data.inflows,
+        total: totalIn,
+        color: "#10b981",
+        icon: "arrow-down-left",
+      },
+      {
+        title: "Outflows",
+        items: data.outflows,
+        total: totalOut,
+        color: "#ef4444",
+        icon: "arrow-up-right",
+      },
     ];
   }, [data]);
 
@@ -62,10 +79,21 @@ const CashFlow = () => {
       <View key={section.title} style={styles.section}>
         <View style={styles.sectionHeader}>
           <View style={styles.sectionHeaderLeft}>
-            <View style={[styles.sectionIcon, { backgroundColor: `${section.color}15` }]}>
-              <Lucide name={section.icon as any} size={16} color={section.color} />
+            <View
+              style={[
+                styles.sectionIcon,
+                { backgroundColor: `${section.color}15` },
+              ]}
+            >
+              <Lucide
+                name={section.icon as any}
+                size={16}
+                color={section.color}
+              />
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{section.title}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {section.title}
+            </Text>
           </View>
           <Text style={[styles.sectionTotal, { color: section.color }]}>
             ₦{section.total.toLocaleString()}
@@ -74,9 +102,17 @@ const CashFlow = () => {
         {section.items.map((item: PnLLineItem) => (
           <View
             key={item.journal_number || item.account_id}
-            style={[styles.lineItem, { backgroundColor: colors.card, borderColor: isDark ? "#282b32" : "#eef0f4" }]}
+            style={[
+              styles.lineItem,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? "#282b32" : "#eef0f4",
+              },
+            ]}
           >
-            <Text style={[styles.lineItemCode, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.lineItemCode, { color: colors.textSecondary }]}
+            >
               {item.account_code}
             </Text>
             <Text
@@ -101,12 +137,22 @@ const CashFlow = () => {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={["top", "left", "right"]}>
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={["top", "left", "right"]}
+    >
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "info.circle" : Info}
+        />
+      </Stack.Toolbar>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backBtn}>
           <Lucide name="arrow-left" size={20} color={colors.text} />
         </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>Cash Flow</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>
+          Cash Flow
+        </Text>
         <InfoTooltip
           title="Cash Flow"
           message="Your cash flow statement tracks how money moves in and out of your business. It's divided into three sections: operating (day-to-day business), investing (buying/selling assets), and financing (loans, owner draws). Positive cash flow means more money coming in than going out."
@@ -117,14 +163,29 @@ const CashFlow = () => {
       {/* Date Pickers */}
       <View style={styles.dateRow}>
         <View style={styles.dateCol}>
-          <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>From</Text>
+          <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>
+            From
+          </Text>
           <Pressable
             onPress={() => setShowFromPicker(true)}
-            style={({ pressed }) => [styles.datePill, { backgroundColor: colors.card, borderColor: isDark ? "#262930" : "#eef0f4" }, pressed && { opacity: 0.8 }]}
+            style={({ pressed }) => [
+              styles.datePill,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? "#262930" : "#eef0f4",
+              },
+              pressed && { opacity: 0.8 },
+            ]}
           >
             <Lucide name="calendar" size={14} color={colors.text} />
-            <Text style={[styles.datePillText, { color: colors.text }]}>{formatDate(fromDate)}</Text>
-            <Lucide name="chevron-down" size={14} color={colors.textSecondary} />
+            <Text style={[styles.datePillText, { color: colors.text }]}>
+              {formatDate(fromDate)}
+            </Text>
+            <Lucide
+              name="chevron-down"
+              size={14}
+              color={colors.textSecondary}
+            />
           </Pressable>
           {showFromPicker && (
             <DateTimePicker
@@ -132,20 +193,38 @@ const CashFlow = () => {
               mode="date"
               display="compact"
               presentation="dialog"
-              onValueChange={(_, d) => { setShowFromPicker(false); if (d) setFromDate(d); }}
+              onValueChange={(_, d) => {
+                setShowFromPicker(false);
+                if (d) setFromDate(d);
+              }}
               onDismiss={() => setShowFromPicker(false)}
             />
           )}
         </View>
         <View style={styles.dateCol}>
-          <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>To</Text>
+          <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>
+            To
+          </Text>
           <Pressable
             onPress={() => setShowToPicker(true)}
-            style={({ pressed }) => [styles.datePill, { backgroundColor: colors.card, borderColor: isDark ? "#262930" : "#eef0f4" }, pressed && { opacity: 0.8 }]}
+            style={({ pressed }) => [
+              styles.datePill,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? "#262930" : "#eef0f4",
+              },
+              pressed && { opacity: 0.8 },
+            ]}
           >
             <Lucide name="calendar" size={14} color={colors.text} />
-            <Text style={[styles.datePillText, { color: colors.text }]}>{formatDate(toDate)}</Text>
-            <Lucide name="chevron-down" size={14} color={colors.textSecondary} />
+            <Text style={[styles.datePillText, { color: colors.text }]}>
+              {formatDate(toDate)}
+            </Text>
+            <Lucide
+              name="chevron-down"
+              size={14}
+              color={colors.textSecondary}
+            />
           </Pressable>
           {showToPicker && (
             <DateTimePicker
@@ -153,7 +232,10 @@ const CashFlow = () => {
               mode="date"
               display="compact"
               presentation="dialog"
-              onValueChange={(_, d) => { setShowToPicker(false); if (d) setToDate(d); }}
+              onValueChange={(_, d) => {
+                setShowToPicker(false);
+                if (d) setToDate(d);
+              }}
               onDismiss={() => setShowToPicker(false)}
             />
           )}
@@ -174,11 +256,27 @@ const CashFlow = () => {
             renderItem={({ item }) => renderSection(item)}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <View style={[styles.emptyIconBadge, { backgroundColor: colors.backgroundElement }]}>
-                  <Lucide name="banknote" size={32} color={colors.textSecondary} />
+                <View
+                  style={[
+                    styles.emptyIconBadge,
+                    { backgroundColor: colors.backgroundElement },
+                  ]}
+                >
+                  <Lucide
+                    name="banknote"
+                    size={32}
+                    color={colors.textSecondary}
+                  />
                 </View>
-                <Text style={[styles.emptyTitle, { color: colors.text }]}>No Data</Text>
-                <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>
+                  No Data
+                </Text>
+                <Text
+                  style={[
+                    styles.emptySubtitle,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   No cash flow data for this period
                 </Text>
               </View>
@@ -187,11 +285,23 @@ const CashFlow = () => {
           <View
             style={[
               styles.netCashFlowFooter,
-              { backgroundColor: isPositive ? "rgba(16,185,129,0.1)" : "rgba(239,68,68,0.1)", borderColor: isPositive ? "#10b981" : "#ef4444" },
+              {
+                backgroundColor: isPositive
+                  ? "rgba(16,185,129,0.1)"
+                  : "rgba(239,68,68,0.1)",
+                borderColor: isPositive ? "#10b981" : "#ef4444",
+              },
             ]}
           >
-            <Text style={[styles.netCashFlowLabel, { color: colors.text }]}>Net Cash Flow</Text>
-            <Text style={[styles.netCashFlowValue, { color: isPositive ? "#10b981" : "#ef4444" }]}>
+            <Text style={[styles.netCashFlowLabel, { color: colors.text }]}>
+              Net Cash Flow
+            </Text>
+            <Text
+              style={[
+                styles.netCashFlowValue,
+                { color: isPositive ? "#10b981" : "#ef4444" },
+              ]}
+            >
               {isPositive ? "+" : ""}₦{Math.abs(netCashFlow).toLocaleString()}
             </Text>
           </View>
@@ -205,31 +315,107 @@ export default CashFlow;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12 },
-  backBtn: { width: 36, height: 36, borderRadius: 12, alignItems: "center", justifyContent: "center" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+  },
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   headerTitle: { fontSize: 18, fontWeight: "700" },
-  dateRow: { flexDirection: "row", paddingHorizontal: 16, gap: 10, marginBottom: 16 },
+  dateRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    gap: 10,
+    marginBottom: 16,
+  },
   dateCol: { flex: 1 },
-  dateLabel: { fontSize: 11, fontWeight: "600", marginBottom: 4, letterSpacing: 0.5, textTransform: "uppercase" },
-  datePill: { flexDirection: "row", alignItems: "center", borderRadius: 100, paddingHorizontal: 12, paddingVertical: 8, gap: 6, borderWidth: 1 },
+  dateLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginBottom: 4,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  datePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 100,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
+    borderWidth: 1,
+  },
   datePillText: { fontSize: 12, fontWeight: "600", flex: 1 },
   section: { marginBottom: 20, paddingHorizontal: 16 },
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 10,
+  },
   sectionHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
-  sectionIcon: { width: 32, height: 32, borderRadius: 10, alignItems: "center", justifyContent: "center" },
+  sectionIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   sectionTitle: { fontSize: 16, fontWeight: "700" },
   sectionTotal: { fontSize: 16, fontWeight: "800" },
-  lineItem: { padding: 12, borderRadius: 10, marginBottom: 4, borderWidth: StyleSheet.hairlineWidth },
-  lineItemCode: { fontSize: 12, fontFamily: "monospace", fontWeight: "600", marginBottom: 2 },
+  lineItem: {
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 4,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  lineItemCode: {
+    fontSize: 12,
+    fontFamily: "monospace",
+    fontWeight: "600",
+    marginBottom: 2,
+  },
   lineItemName: { fontSize: 14, fontWeight: "500", marginBottom: 2 },
   lineItemAmount: { fontSize: 14, fontWeight: "700" },
   emptySection: { fontSize: 13, fontStyle: "italic", paddingVertical: 8 },
-  netCashFlowFooter: { position: "absolute", bottom: 0, left: 0, right: 0, flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingVertical: 16, borderTopWidth: StyleSheet.hairlineWidth },
+  netCashFlowFooter: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   netCashFlowLabel: { fontSize: 16, fontWeight: "800" },
   netCashFlowValue: { fontSize: 18, fontWeight: "800" },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  emptyContainer: { alignItems: "center", justifyContent: "center", paddingVertical: 48, paddingHorizontal: 24 },
-  emptyIconBadge: { width: 64, height: 64, borderRadius: 32, alignItems: "center", justifyContent: "center", marginBottom: 14 },
+  emptyContainer: {
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 48,
+    paddingHorizontal: 24,
+  },
+  emptyIconBadge: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 14,
+  },
   emptyTitle: { fontSize: 17, fontWeight: "700", marginBottom: 6 },
   emptySubtitle: { fontSize: 13, textAlign: "center", marginBottom: 18 },
 });

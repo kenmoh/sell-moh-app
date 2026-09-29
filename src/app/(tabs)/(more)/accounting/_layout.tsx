@@ -16,12 +16,15 @@ const AccountingLayout = () => {
         }}
       >
         <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen name="chart-of-accounts" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="chart-of-accounts"
+          options={{ headerShown: false }}
+        />
         <Stack.Screen name="journals" options={{ headerShown: false }} />
         <Stack.Screen name="trial-balance" options={{ headerShown: false }} />
         <Stack.Screen name="profit-and-loss" options={{ headerShown: false }} />
         <Stack.Screen name="balance-sheet" options={{ headerShown: false }} />
-        <Stack.Screen name="cash-flow" options={{ headerShown: false }} />
+        <Stack.Screen name="cash-flow" options={{ title: "Cash Flow" }} />
       </Stack>
     </AView>
   );
