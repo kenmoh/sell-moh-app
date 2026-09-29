@@ -223,6 +223,7 @@ export interface ReceiptData {
   total: number;
   amount_paid: number;
   payment_method: string;
+  is_void?: boolean;
 }
 
 export interface ConfirmPaymentResult {

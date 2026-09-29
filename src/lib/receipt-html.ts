@@ -72,7 +72,7 @@ export function buildReceiptHtml(r: ReceiptData): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Receipt ${r.receipt_number}</title>
+<title>${r.is_void ? "VOID " : ""}Receipt ${r.receipt_number}</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -167,6 +167,16 @@ export function buildReceiptHtml(r: ReceiptData): string {
   }
   .footer p { margin: 4px 0; font-size: 11px; }
   .thanks { font-weight: 700; font-size: 12px; }
+  .void-banner {
+    border: 2px solid #EF4444;
+    color: #EF4444;
+    text-align: center;
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 4px;
+    padding: 8px 0;
+    margin-bottom: 12px;
+  }
 
   @media print {
     body { background: #FFFFFF; padding: 0; }
@@ -176,6 +186,7 @@ export function buildReceiptHtml(r: ReceiptData): string {
 </head>
 <body>
   <div class="receipt">
+    ${r.is_void ? `<div class="void-banner">VOID</div>` : ""}
     <div class="center">
       ${logoHtml}
       <h1>${r.business_name || "SALES RECEIPT"}</h1>

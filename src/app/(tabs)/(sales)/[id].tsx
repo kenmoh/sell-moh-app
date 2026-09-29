@@ -1,13 +1,17 @@
-import { getSaleById } from "@/api/sales";
+import { getSaleById, voidSale } from "@/api/sales";
 import { Colors, type ColorPalette } from "@/constants/theme";
+import { useToast } from "@/hooks/use-toast";
+import Printer from "@expo/material-symbols/print.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useQuery } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   useColorScheme,
   View,
 } from "react-native";
@@ -78,12 +82,84 @@ const OrderDetails = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
+  const router = useRouter();
+  const toast = useToast();
+  const queryClient = useQueryClient();
 
   const { data: sale, isLoading } = useQuery({
     queryKey: ["sale-detail", id],
     queryFn: () => getSaleById(id!),
     enabled: !!id,
   });
+
+  const openVoidReceipt = (s: NonNullable<typeof sale>) => {
+    const receiptItems = s.items.map((i) => ({
+      product_name: i.product_name,
+      qty: i.qty,
+      unit_price: i.unit_price,
+      discount_pct: i.discount ?? 0,
+      tax_rate: i.tax_rate ?? null,
+      line_total: i.qty * i.unit_price * (1 - (i.discount ?? 0) / 100),
+    }));
+    router.push({
+      pathname: "/(tabs)/(pos)/receipt",
+      params: {
+        receiptNumber: `VOID-${s.sale_number}`,
+        saleNumber: s.sale_number,
+        createdAt: s.created_at ?? new Date().toISOString(),
+        customerName: s.customer_name ?? "",
+        items: JSON.stringify(receiptItems),
+        subtotal: String(s.subtotal),
+        discount: String(s.discount),
+        tax: String(s.tax),
+        taxBreakdown: JSON.stringify(s.tax_breakdown ?? []),
+        total: String(s.total),
+        amountPaid: String(s.amount_paid),
+        paymentMethod: getPaymentMethod(s.payment_methods).toLowerCase(),
+        voided: "1",
+      },
+    });
+  };
+
+  const voidMutation = useMutation({
+    mutationFn: (reason: string) => voidSale(id!, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sale-detail", id] });
+      toast.success("Sale voided — stock restored, cash adjusted");
+      if (sale) openVoidReceipt(sale);
+    },
+    onError: (e: any) =>
+      toast.error(e?.message || "Could not void this sale"),
+  });
+
+  const confirmVoid = (reason: string) => {
+    Alert.alert(
+      "Void this sale?",
+      "Stock will be returned and the cash entry reversed. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Void Sale",
+          style: "destructive",
+          onPress: () => voidMutation.mutate(reason),
+        },
+      ],
+    );
+  };
+
+  const handleVoidPress = () => {
+    Alert.alert("Void Reason", "Select a reason for voiding this sale", [
+      {
+        text: "Customer request",
+        onPress: () => confirmVoid("customer request"),
+      },
+      {
+        text: "Wrong item or price",
+        onPress: () => confirmVoid("wrong item or price"),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
 
   if (isLoading) {
     return (
@@ -117,6 +193,12 @@ const OrderDetails = () => {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "printer.fill" : Printer}
+          onPress={() => console.log("Printing")}
+        />
+      </Stack.Toolbar>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={styles.content}
@@ -378,6 +460,32 @@ const OrderDetails = () => {
           )}
         </View>
 
+        {sale.status !== "voided" && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleVoidPress}
+            disabled={voidMutation.isPending}
+            style={[
+              styles.voidBtn,
+              {
+                borderColor: "#ef4444",
+                backgroundColor: isDark
+                  ? "rgba(239, 68, 68, 0.10)"
+                  : "rgba(239, 68, 68, 0.06)",
+              },
+            ]}
+          >
+            <Lucide
+              name="x-octagon"
+              size={18}
+              color="#ef4444"
+            />
+            <Text style={styles.voidBtnText}>
+              {voidMutation.isPending ? "Voiding…" : "Void Sale"}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <View style={{ height: 80 }} />
       </ScrollView>
     </View>
@@ -606,5 +714,20 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "800",
     letterSpacing: -0.5,
+  },
+  voidBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingVertical: 14,
+    marginTop: 16,
+  },
+  voidBtnText: {
+    color: "#ef4444",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

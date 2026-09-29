@@ -37,7 +37,10 @@ export default function ReceiptScreen() {
     total?: string;
     amountPaid?: string;
     paymentMethod?: string;
+    voided?: string;
   }>();
+
+  const isVoid = params.voided === "1";
 
   const receiptData = useMemo<ReceiptData | null>(() => {
     if (!params.saleNumber) return null;
@@ -61,11 +64,12 @@ export default function ReceiptScreen() {
         total: parseFloat(params.total || "0"),
         amount_paid: parseFloat(params.amountPaid || "0"),
         payment_method: params.paymentMethod || "cash",
+        is_void: isVoid,
       };
     } catch {
       return null;
     }
-  }, [params]);
+  }, [params, isVoid]);
 
   const html = useMemo(
     () => (receiptData ? buildReceiptHtml(receiptData) : ""),
@@ -101,11 +105,18 @@ export default function ReceiptScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Lucide name="arrow-left" size={22} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>Receipt</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {isVoid ? "Void Receipt" : "Receipt"}
+        </Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={[styles.receiptCard, { backgroundColor: colors.sheet, borderColor: colors.backgroundElement }]}>
+        {isVoid && (
+          <View style={styles.voidBanner}>
+            <Text style={styles.voidBannerText}>VOID — ITEMS RETURNED TO STOCK</Text>
+          </View>
+        )}
         <View style={styles.receiptRow}>
           <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
             Receipt #
@@ -252,6 +263,21 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 16,
     marginBottom: 20,
+  },
+  voidBanner: {
+    backgroundColor: "rgba(239, 68, 68, 0.1)",
+    borderColor: "#ef4444",
+    borderWidth: 1.5,
+    borderRadius: 8,
+    paddingVertical: 8,
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  voidBannerText: {
+    color: "#ef4444",
+    fontSize: 14,
+    fontWeight: "800",
+    letterSpacing: 2,
   },
   receiptRow: {
     flexDirection: "row",
