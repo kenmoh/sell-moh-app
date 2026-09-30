@@ -50,11 +50,12 @@ function formatDate(iso: string | null): string {
   }
 }
 
-const statusMap: Record<string, "Completed" | "Pending" | "Voided"> = {
+const statusMap: Record<string, "Completed" | "Pending" | "Voided" | "Returned"> = {
   completed: "Completed",
   pending: "Pending",
   partial: "Pending",
   voided: "Voided",
+  returned: "Returned",
 };
 
 type ListItemType =
@@ -67,7 +68,7 @@ type ListItemType =
         customer: string;
         itemCount: number;
         price: number;
-        status: "Completed" | "Pending" | "Voided";
+        status: "Completed" | "Pending" | "Voided" | "Returned";
         date: string;
       };
     };

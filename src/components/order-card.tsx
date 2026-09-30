@@ -8,7 +8,7 @@ import {
   View,
 } from "react-native";
 
-export type OrderStatus = "Completed" | "Pending" | "Voided";
+export type OrderStatus = "Completed" | "Pending" | "Voided" | "Returned";
 
 export interface Order {
   id: number | string;
@@ -51,6 +51,11 @@ const statusConfig: Record<
     color: "#ef4444",
     bg: "rgba(239, 68, 68, 0.12)",
     icon: "x-circle",
+  },
+  Returned: {
+    color: "#f97316",
+    bg: "rgba(249, 115, 22, 0.12)",
+    icon: "undo-2",
   },
 };
 

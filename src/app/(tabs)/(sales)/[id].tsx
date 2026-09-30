@@ -1,4 +1,4 @@
-import { getSaleById, voidSale } from "@/api/sales";
+import { getSaleById, returnSale, voidSale } from "@/api/sales";
 import { Colors, type ColorPalette } from "@/constants/theme";
 import { useToast } from "@/hooks/use-toast";
 import Printer from "@expo/material-symbols/print.xml";
@@ -16,13 +16,14 @@ import {
   View,
 } from "react-native";
 
-type OrderStatus = "Completed" | "Pending" | "Voided";
+type OrderStatus = "Completed" | "Pending" | "Voided" | "Returned";
 
 const statusMap: Record<string, OrderStatus> = {
   completed: "Completed",
   pending: "Pending",
   partial: "Pending",
   voided: "Voided",
+  returned: "Returned",
 };
 
 const statusConfig: Record<
@@ -49,6 +50,13 @@ const statusConfig: Record<
     bgDark: "rgba(239, 68, 68, 0.12)",
     icon: "x-circle",
     label: "Voided",
+  },
+  Returned: {
+    color: "#f97316",
+    bg: "rgba(249, 115, 22, 0.08)",
+    bgDark: "rgba(249, 115, 22, 0.12)",
+    icon: "undo-2",
+    label: "Returned",
   },
 };
 
@@ -156,6 +164,45 @@ const OrderDetails = () => {
       {
         text: "Wrong item or price",
         onPress: () => confirmVoid("wrong item or price"),
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const returnMutation = useMutation({
+    mutationFn: (reason: string) => returnSale(id!, reason),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["sale-detail", id] });
+      toast.success("Sale returned — stock restored, payment reversed");
+    },
+    onError: (e: any) =>
+      toast.error(e?.message || "Could not return this sale"),
+  });
+
+  const confirmReturn = (reason: string) => {
+    Alert.alert(
+      "Return this sale?",
+      "Stock will be restored and the sale journal reversed. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Return Sale",
+          style: "destructive",
+          onPress: () => returnMutation.mutate(reason),
+        },
+      ],
+    );
+  };
+
+  const handleReturnPress = () => {
+    Alert.alert("Return Reason", "Select a reason for returning this sale", [
+      {
+        text: "Customer request",
+        onPress: () => confirmReturn("customer request"),
+      },
+      {
+        text: "Damaged or defective",
+        onPress: () => confirmReturn("damaged or defective"),
       },
       { text: "Cancel", style: "cancel" },
     ]);
@@ -460,7 +507,7 @@ const OrderDetails = () => {
           )}
         </View>
 
-        {sale.status !== "voided" && (
+        {sale.status !== "voided" && sale.status !== "returned" && (
           <TouchableOpacity
             activeOpacity={0.8}
             onPress={handleVoidPress}
@@ -482,6 +529,28 @@ const OrderDetails = () => {
             />
             <Text style={styles.voidBtnText}>
               {voidMutation.isPending ? "Voiding…" : "Void Sale"}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        {(sale.status === "completed" || sale.status === "partial") && (
+          <TouchableOpacity
+            activeOpacity={0.8}
+            onPress={handleReturnPress}
+            disabled={returnMutation.isPending}
+            style={[
+              styles.voidBtn,
+              {
+                borderColor: "#f97316",
+                backgroundColor: isDark
+                  ? "rgba(249, 115, 22, 0.10)"
+                  : "rgba(249, 115, 22, 0.06)",
+              },
+            ]}
+          >
+            <Lucide name="undo-2" size={18} color="#f97316" />
+            <Text style={[styles.voidBtnText, { color: "#f97316" }]}>
+              {returnMutation.isPending ? "Returning…" : "Return Sale"}
             </Text>
           </TouchableOpacity>
         )}

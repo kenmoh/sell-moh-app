@@ -78,9 +78,11 @@ export const voidSale = async (
 
 export const returnSale = async (
   saleId: string,
+  reason: string,
 ): Promise<SaleReturnResult> => {
   const res = await apiClient.post<{ data: SaleReturnResult }>(
     `${URL}/${saleId}/return`,
+    { reason },
   );
 
   if (!res.ok) {
