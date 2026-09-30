@@ -300,7 +300,7 @@ const ProfitAndLoss = () => {
                 { color: isProfit ? "#10b981" : "#ef4444" },
               ]}
             >
-              {isProfit ? "+" : ""}₦{Math.abs(netProfit).toLocaleString()}
+              {isProfit ? "+" : "-"}₦{Math.abs(netProfit).toLocaleString()}
             </Text>
           </View>
         </>

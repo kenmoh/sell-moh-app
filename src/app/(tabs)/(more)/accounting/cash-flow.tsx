@@ -302,7 +302,7 @@ const CashFlow = () => {
                 { color: isPositive ? "#10b981" : "#ef4444" },
               ]}
             >
-              {isPositive ? "+" : ""}₦{Math.abs(netCashFlow).toLocaleString()}
+              {isPositive ? "+" : "-"}₦{Math.abs(netCashFlow).toLocaleString()}
             </Text>
           </View>
         </>
