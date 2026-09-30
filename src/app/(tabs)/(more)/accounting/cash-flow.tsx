@@ -6,8 +6,8 @@ import Info from "@expo/material-symbols/info.xml";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
-import { Stack, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { Stack } from "expo-router";
+import { Fragment, useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -23,7 +23,6 @@ const CashFlow = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
-  const router = useRouter();
 
   const [fromDate, setFromDate] = useState(() => {
     const d = new Date();
@@ -33,6 +32,7 @@ const CashFlow = () => {
   const [toDate, setToDate] = useState(new Date());
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   const from = fromDate.toISOString().split("T")[0];
   const to = toDate.toISOString().split("T")[0];
@@ -77,7 +77,12 @@ const CashFlow = () => {
   const renderSection = useCallback(
     (section: (typeof sections)[0]) => (
       <View key={section.title} style={styles.section}>
-        <View style={styles.sectionHeader}>
+        <View
+          style={[
+            styles.sectionHeader,
+            { borderBottomColor: isDark ? "#282b32" : "#e5e7eb" },
+          ]}
+        >
           <View style={styles.sectionHeaderLeft}>
             <View
               style={[
@@ -99,32 +104,35 @@ const CashFlow = () => {
             ₦{section.total.toLocaleString()}
           </Text>
         </View>
-        {section.items.map((item: PnLLineItem) => (
-          <View
-            key={item.journal_number || item.account_id}
-            style={[
-              styles.lineItem,
-              {
-                backgroundColor: colors.card,
-                borderColor: isDark ? "#282b32" : "#eef0f4",
-              },
-            ]}
-          >
-            <Text
-              style={[styles.lineItemCode, { color: colors.textSecondary }]}
-            >
-              {item.account_code}
-            </Text>
-            <Text
-              style={[styles.lineItemName, { color: colors.text }]}
-              numberOfLines={1}
-            >
-              {item.account_name}
-            </Text>
-            <Text style={[styles.lineItemAmount, { color: section.color }]}>
-              ₦{item.amount.toLocaleString()}
-            </Text>
-          </View>
+        {section.items.map((item: PnLLineItem, idx: number) => (
+          <Fragment key={item.journal_number || item.account_id}>
+            {idx > 0 && (
+              <View
+                style={[
+                  styles.lineSeparator,
+                  { backgroundColor: isDark ? "#282b32" : "#e5e7eb" },
+                ]}
+              />
+            )}
+            <View style={styles.lineItem}>
+              <View style={styles.lineItemLeft}>
+                <Text
+                  style={[styles.lineItemCode, { color: colors.textSecondary }]}
+                >
+                  {item.account_code}
+                </Text>
+                <Text
+                  style={[styles.lineItemName, { color: colors.text }]}
+                  numberOfLines={1}
+                >
+                  {item.account_name}
+                </Text>
+              </View>
+              <Text style={[styles.lineItemAmount, { color: section.color }]}>
+                ₦{item.amount.toLocaleString()}
+              </Text>
+            </View>
+          </Fragment>
         ))}
         {section.items.length === 0 && (
           <Text style={[styles.emptySection, { color: colors.textSecondary }]}>
@@ -137,28 +145,20 @@ const CashFlow = () => {
   );
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top", "left", "right"]}
-    >
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
           icon={process.env.EXPO_OS === "ios" ? "info.circle" : Info}
+          onPress={() => setShowInfo(true)}
         />
       </Stack.Toolbar>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Lucide name="arrow-left" size={20} color={colors.text} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Cash Flow
-        </Text>
-        <InfoTooltip
-          title="Cash Flow"
-          message="Your cash flow statement tracks how money moves in and out of your business. It's divided into three sections: operating (day-to-day business), investing (buying/selling assets), and financing (loans, owner draws). Positive cash flow means more money coming in than going out."
-        />
-        <View style={styles.backBtn} />
-      </View>
+      <InfoTooltip
+        title="Cash Flow"
+        message="Your cash flow statement tracks how money moves in and out of your business. It's divided into three sections: operating (day-to-day business), investing (buying/selling assets), and financing (loans, owner draws). Positive cash flow means more money coming in than going out."
+        visible={showInfo}
+        onVisibleChange={setShowInfo}
+        trigger={false}
+      />
 
       {/* Date Pickers */}
       <View style={styles.dateRow}>
@@ -307,7 +307,7 @@ const CashFlow = () => {
           </View>
         </>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -315,22 +315,6 @@ export default CashFlow;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
   dateRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
@@ -360,7 +344,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    paddingBottom: 8,
+    marginBottom: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   sectionHeaderLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   sectionIcon: {
@@ -373,19 +359,26 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 16, fontWeight: "700" },
   sectionTotal: { fontSize: 16, fontWeight: "800" },
   lineItem: {
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 4,
-    borderWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 12,
+  },
+  lineItemLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginRight: 12,
   },
   lineItemCode: {
     fontSize: 12,
     fontFamily: "monospace",
     fontWeight: "600",
-    marginBottom: 2,
   },
-  lineItemName: { fontSize: 14, fontWeight: "500", marginBottom: 2 },
+  lineItemName: { fontSize: 14, fontWeight: "500", flexShrink: 1 },
   lineItemAmount: { fontSize: 14, fontWeight: "700" },
+  lineSeparator: { height: StyleSheet.hairlineWidth },
   emptySection: { fontSize: 13, fontStyle: "italic", paddingVertical: 8 },
   netCashFlowFooter: {
     position: "absolute",

@@ -90,10 +90,7 @@ const AccountingScreen = () => {
     queryFn: () => fetchExpenses(),
   });
 
-  const {
-    data: expenseSummary = {},
-    isLoading: isLoadingSummary,
-  } = useQuery({
+  const { data: expenseSummary = {}, isLoading: isLoadingSummary } = useQuery({
     queryKey: ["expense-summary"],
     queryFn: () => fetchExpenseSummary(),
   });
@@ -152,7 +149,8 @@ const AccountingScreen = () => {
         key: "chart-of-accounts",
         label: "Chart of Accounts",
         icon: "book-open",
-        onPress: () => router.push("/(tabs)/(more)/accounting/chart-of-accounts"),
+        onPress: () =>
+          router.push("/(tabs)/(more)/accounting/chart-of-accounts"),
       },
       {
         key: "journals",
@@ -592,7 +590,10 @@ const AccountingScreen = () => {
                         {category}
                       </Text>
                       <Text
-                        style={[styles.summaryItemAmount, { color: colors.text }]}
+                        style={[
+                          styles.summaryItemAmount,
+                          { color: colors.text },
+                        ]}
                       >
                         ₦{amount.toLocaleString()}
                       </Text>

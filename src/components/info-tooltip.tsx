@@ -13,33 +13,44 @@ import { Colors } from "@/constants/theme";
 interface InfoTooltipProps {
   title: string;
   message: string;
+  visible?: boolean;
+  onVisibleChange?: (visible: boolean) => void;
+  trigger?: boolean;
 }
 
-export default function InfoTooltip({ title, message }: InfoTooltipProps) {
-  const [visible, setVisible] = useState(false);
+export default function InfoTooltip({
+  title,
+  message,
+  visible,
+  onVisibleChange,
+  trigger = true,
+}: InfoTooltipProps) {
+  const [internalVisible, setInternalVisible] = useState(false);
+  const isControlled = visible !== undefined;
+  const isVisible = isControlled ? visible : internalVisible;
+  const setVisible = (v: boolean) => {
+    if (!isControlled) setInternalVisible(v);
+    onVisibleChange?.(v);
+  };
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
 
   return (
     <>
-      <Pressable
-        onPress={() => setVisible(true)}
-        style={styles.trigger}
-      >
-        <Lucide name="info" size={18} color={colors.textSecondary} />
-      </Pressable>
+      {trigger && (
+        <Pressable onPress={() => setVisible(true)} style={styles.trigger}>
+          <Lucide name="info" size={18} color={colors.textSecondary} />
+        </Pressable>
+      )}
 
       <Modal
-        visible={visible}
+        visible={isVisible}
         transparent
         animationType="fade"
         onRequestClose={() => setVisible(false)}
       >
-        <Pressable
-          style={styles.overlay}
-          onPress={() => setVisible(false)}
-        >
+        <Pressable style={styles.overlay} onPress={() => setVisible(false)}>
           <Pressable
             style={[
               styles.card,

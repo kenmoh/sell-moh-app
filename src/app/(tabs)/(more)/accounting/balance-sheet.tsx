@@ -2,10 +2,11 @@ import { fetchBalanceSheet } from "@/api/accounting";
 import InfoTooltip from "@/components/info-tooltip";
 import { Colors } from "@/constants/theme";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
+import Info from "@expo/material-symbols/info.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useCallback, useState } from "react";
+import { Stack } from "expo-router";
+import { Fragment, useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -30,10 +31,10 @@ const BalanceSheet = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
-  const router = useRouter();
 
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const asAtDate = date.toISOString().split("T")[0];
 
   const formatDate = (d: Date) => {
@@ -78,7 +79,12 @@ const BalanceSheet = () => {
   const renderSection = useCallback(
     (section: Section) => (
       <View key={section.title} style={styles.section}>
-        <View style={styles.sectionHeader}>
+        <View
+          style={[
+            styles.sectionHeader,
+            { borderBottomColor: isDark ? "#282b32" : "#e5e7eb" },
+          ]}
+        >
           <View style={styles.sectionHeaderLeft}>
             <View
               style={[
@@ -100,31 +106,32 @@ const BalanceSheet = () => {
             ₦{section.total.toLocaleString()}
           </Text>
         </View>
-        {section.items.map((item: PnLLineItem) => (
-          <View
-            key={item.account_id}
-            style={[
-              styles.lineItem,
-              {
-                backgroundColor: colors.card,
-                borderColor: isDark ? "#282b32" : "#eef0f4",
-              },
-            ]}
-          >
-            <View style={styles.lineItemLeft}>
-              <Text
-                style={[styles.lineItemCode, { color: colors.textSecondary }]}
-              >
-                {item.account_code}
-              </Text>
-              <Text style={[styles.lineItemName, { color: colors.text }]}>
-                {item.account_name}
+        {section.items.map((item: PnLLineItem, idx: number) => (
+          <Fragment key={item.account_id}>
+            {idx > 0 && (
+              <View
+                style={[
+                  styles.lineSeparator,
+                  { backgroundColor: isDark ? "#282b32" : "#e5e7eb" },
+                ]}
+              />
+            )}
+            <View style={styles.lineItem}>
+              <View style={styles.lineItemLeft}>
+                <Text
+                  style={[styles.lineItemCode, { color: colors.textSecondary }]}
+                >
+                  {item.account_code}
+                </Text>
+                <Text style={[styles.lineItemName, { color: colors.text }]}>
+                  {item.account_name}
+                </Text>
+              </View>
+              <Text style={[styles.lineItemAmount, { color: section.color }]}>
+                ₦{item.amount.toLocaleString()}
               </Text>
             </View>
-            <Text style={[styles.lineItemAmount, { color: section.color }]}>
-              ₦{item.amount.toLocaleString()}
-            </Text>
-          </View>
+          </Fragment>
         ))}
         {section.items.length === 0 && (
           <Text style={[styles.emptySection, { color: colors.textSecondary }]}>
@@ -137,24 +144,24 @@ const BalanceSheet = () => {
   );
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top", "left", "right"]}
+      
     >
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Lucide name="arrow-left" size={20} color={colors.text} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Balance Sheet
-        </Text>
-        <InfoTooltip
-          title="Balance Sheet"
-          message="Your balance sheet is a snapshot of your business's financial health at a specific point in time. It shows what you own (assets), what you owe (liabilities), and what's left over (equity). The equation is always: Assets = Liabilities + Equity."
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "info.circle" : Info}
+          onPress={() => setShowInfo(true)}
         />
-        <View style={styles.backBtn} />
-      </View>
+      </Stack.Toolbar>
+      <InfoTooltip
+        title="Balance Sheet"
+        message="Your balance sheet is a snapshot of your business's financial health at a specific point in time. It shows what you own (assets), what you owe (liabilities), and what's left over (equity). The equation is always: Assets = Liabilities + Equity."
+        visible={showInfo}
+        onVisibleChange={setShowInfo}
+        trigger={false}
+      />
 
       {/* Date Picker */}
       <View style={styles.dateContainer}>
@@ -209,7 +216,11 @@ const BalanceSheet = () => {
                   { backgroundColor: colors.backgroundElement },
                 ]}
               >
-                <Lucide name="landmark" size={32} color={colors.textSecondary} />
+                <Lucide
+                  name="landmark"
+                  size={32}
+                  color={colors.textSecondary}
+                />
               </View>
               <Text style={[styles.emptyTitle, { color: colors.text }]}>
                 No Data
@@ -247,7 +258,12 @@ const BalanceSheet = () => {
                 ₦{data.total_assets.toLocaleString()}
               </Text>
             </View>
-            <Text style={[styles.totalFooterEquals, { color: colors.textSecondary }]}>
+            <Text
+              style={[
+                styles.totalFooterEquals,
+                { color: colors.textSecondary },
+              ]}
+            >
               =
             </Text>
             <View style={styles.totalFooterItem}>
@@ -261,7 +277,7 @@ const BalanceSheet = () => {
           </View>
         </View>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -269,22 +285,6 @@ export default BalanceSheet;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
   dateContainer: {
     paddingHorizontal: 16,
     marginBottom: 12,
@@ -316,7 +316,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 10,
+    paddingBottom: 8,
+    marginBottom: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
   sectionHeaderLeft: {
     flexDirection: "row",
@@ -336,12 +338,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 4,
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 12,
   },
-  lineItemLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
+  lineSeparator: { height: StyleSheet.hairlineWidth },
+  lineItemLeft: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   lineItemCode: { fontSize: 12, fontFamily: "monospace", fontWeight: "600" },
   lineItemName: { fontSize: 14, fontWeight: "500" },
   lineItemAmount: { fontSize: 14, fontWeight: "700" },

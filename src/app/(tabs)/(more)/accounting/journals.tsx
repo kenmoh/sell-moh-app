@@ -2,14 +2,20 @@ import { fetchJournals, createJournal, fetchAccounts } from "@/api/accounting";
 import AddJournalSheet from "@/components/accounting/add-journal-sheet";
 import InfoTooltip from "@/components/info-tooltip";
 import { Colors } from "@/constants/theme";
+import Add from "@expo/material-symbols/add.xml";
+import Info from "@expo/material-symbols/info.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { Stack } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -23,9 +29,9 @@ const Journals = () => {
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   const [showAddSheet, setShowAddSheet] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
 
   const {
     data,
@@ -133,29 +139,28 @@ const Journals = () => {
   );
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top", "left", "right"]}
+     
     >
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Lucide name="arrow-left" size={20} color={colors.text} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Journal Entries
-        </Text>
-        <InfoTooltip
-          title="Journal Entries"
-          message="A journal entry records a financial transaction in your accounting system. Every entry follows double-entry bookkeeping — every debit must have an equal credit. Use journal entries to record adjustments, corrections, and non-routine transactions."
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "info.circle" : Info}
+          onPress={() => setShowInfo(true)}
         />
-        <Pressable
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "plus" : Add}
           onPress={() => setShowAddSheet(true)}
-          style={[styles.addTrigger, { backgroundColor: colors.backgroundElement }]}
-        >
-          <Lucide name="plus" size={18} color={colors.text} />
-        </Pressable>
-      </View>
+        />
+      </Stack.Toolbar>
+      <InfoTooltip
+        title="Journal Entries"
+        message="A journal entry records a financial transaction in your accounting system. Every entry follows double-entry bookkeeping — every debit must have an equal credit. Use journal entries to record adjustments, corrections, and non-routine transactions."
+        visible={showInfo}
+        onVisibleChange={setShowInfo}
+        trigger={false}
+      />
 
       {/* Journal List */}
       {isLoading ? (
@@ -195,7 +200,11 @@ const Journals = () => {
                   { backgroundColor: colors.backgroundElement },
                 ]}
               >
-                <Lucide name="file-text" size={32} color={colors.textSecondary} />
+                <Lucide
+                  name="file-text"
+                  size={32}
+                  color={colors.textSecondary}
+                />
               </View>
               <Text style={[styles.emptyTitle, { color: colors.text }]}>
                 No Journal Entries
@@ -217,7 +226,7 @@ const Journals = () => {
         accounts={accounts}
         isPending={isAdding}
       />
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -225,29 +234,6 @@ export default Journals;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
-  addTrigger: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   card: {
     marginHorizontal: 16,
     marginBottom: 8,

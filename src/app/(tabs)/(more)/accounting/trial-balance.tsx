@@ -2,9 +2,10 @@ import { fetchTrialBalance } from "@/api/accounting";
 import InfoTooltip from "@/components/info-tooltip";
 import { Colors } from "@/constants/theme";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
+import Info from "@expo/material-symbols/info.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
@@ -21,10 +22,10 @@ const TrialBalance = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
-  const router = useRouter();
 
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
+  const [showInfo, setShowInfo] = useState(false);
   const asAtDate = date.toISOString().split("T")[0];
 
   const formatDate = (d: Date) => {
@@ -49,17 +50,21 @@ const TrialBalance = () => {
   const totalCredit = items.reduce((sum, item) => sum + item.credit, 0);
   const isBalanced = Math.abs(totalDebit - totalCredit) < 0.01;
 
+  const renderSeparator = useCallback(
+    () => (
+      <View
+        style={{
+          height: StyleSheet.hairlineWidth,
+          backgroundColor: isDark ? "#282b32" : "#e5e7eb",
+        }}
+      />
+    ),
+    [isDark],
+  );
+
   const renderItem = useCallback(
     ({ item }: { item: (typeof items)[0] }) => (
-      <View
-        style={[
-          styles.row,
-          {
-            backgroundColor: colors.card,
-            borderColor: isDark ? "#282b32" : "#eef0f4",
-          },
-        ]}
-      >
+      <View style={styles.row}>
         <View style={styles.rowLeft}>
           <Text style={[styles.accountCode, { color: colors.textSecondary }]}>
             {item.account_code}
@@ -78,28 +83,28 @@ const TrialBalance = () => {
         </View>
       </View>
     ),
-    [colors, isDark],
+    [colors],
   );
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top", "left", "right"]}
+    
     >
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Lucide name="arrow-left" size={20} color={colors.text} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Trial Balance
-        </Text>
-        <InfoTooltip
-          title="Trial Balance"
-          message="A trial balance lists all your accounts and their balances at a specific point in time. It's used to verify that total debits equal total credits — if they don't, there's an error in your books that needs fixing."
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "info.circle" : Info}
+          onPress={() => setShowInfo(true)}
         />
-        <View style={styles.backBtn} />
-      </View>
+      </Stack.Toolbar>
+      <InfoTooltip
+        title="Trial Balance"
+        message="A trial balance lists all your accounts and their balances at a specific point in time. It's used to verify that total debits equal total credits — if they don't, there's an error in your books that needs fixing."
+        visible={showInfo}
+        onVisibleChange={setShowInfo}
+        trigger={false}
+      />
 
       {/* Date Picker */}
       <View style={styles.dateContainer}>
@@ -136,15 +141,34 @@ const TrialBalance = () => {
       </View>
 
       {/* Column Headers */}
-      <View style={[styles.columnHeader, { borderBottomColor: isDark ? "#282b32" : "#e5e7eb" }]}>
-        <Text style={[styles.columnHeaderText, { color: colors.textSecondary }]}>
+      <View
+        style={[
+          styles.columnHeader,
+          { borderBottomColor: isDark ? "#282b32" : "#e5e7eb" },
+        ]}
+      >
+        <Text
+          style={[styles.columnHeaderText, { color: colors.textSecondary }]}
+        >
           Account
         </Text>
         <View style={styles.columnHeaderRight}>
-          <Text style={[styles.columnHeaderText, { color: colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.columnHeaderText,
+              styles.headerCell,
+              { color: colors.textSecondary },
+            ]}
+          >
             Debit
           </Text>
-          <Text style={[styles.columnHeaderText, { color: colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.columnHeaderText,
+              styles.headerCell,
+              { color: colors.textSecondary },
+            ]}
+          >
             Credit
           </Text>
         </View>
@@ -162,6 +186,7 @@ const TrialBalance = () => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 80 }}
           renderItem={renderItem}
+          ItemSeparatorComponent={renderSeparator}
           ListFooterComponent={
             <>
               {/* Totals Row */}
@@ -169,8 +194,7 @@ const TrialBalance = () => {
                 style={[
                   styles.totalRow,
                   {
-                    backgroundColor: colors.backgroundElement,
-                    borderColor: isDark ? "#282b32" : "#e5e7eb",
+                    borderTopColor: isDark ? "#3a3f47" : "#d1d5db",
                   },
                 ]}
               >
@@ -236,7 +260,7 @@ const TrialBalance = () => {
           }
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -244,22 +268,6 @@ export default TrialBalance;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
   dateContainer: {
     paddingHorizontal: 16,
     marginBottom: 12,
@@ -292,17 +300,14 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   columnHeaderText: { fontSize: 12, fontWeight: "600" },
-  columnHeaderRight: { flexDirection: "row", gap: 40 },
+  headerCell: { width: 80, textAlign: "right" },
+  columnHeaderRight: { flexDirection: "row", gap: 24 },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginHorizontal: 16,
-    marginBottom: 2,
     paddingVertical: 12,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 16,
   },
   rowLeft: { flex: 1, flexDirection: "row", alignItems: "center", gap: 10 },
   accountCode: { fontSize: 12, fontFamily: "monospace", fontWeight: "600" },
@@ -314,16 +319,25 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginHorizontal: 16,
-    marginTop: 8,
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: StyleSheet.hairlineWidth,
+    marginTop: 4,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderTopWidth: 1,
   },
   totalLabel: { fontSize: 15, fontWeight: "800" },
   totalAmounts: { flexDirection: "row", gap: 24 },
-  totalDebit: { fontSize: 14, fontWeight: "800" },
-  totalCredit: { fontSize: 14, fontWeight: "800" },
+  totalDebit: {
+    fontSize: 14,
+    fontWeight: "800",
+    width: 80,
+    textAlign: "right",
+  },
+  totalCredit: {
+    fontSize: 14,
+    fontWeight: "800",
+    width: 80,
+    textAlign: "right",
+  },
   balanceStatus: {
     flexDirection: "row",
     alignItems: "center",

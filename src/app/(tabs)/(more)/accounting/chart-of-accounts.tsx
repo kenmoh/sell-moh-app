@@ -12,9 +12,11 @@ import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
 import InfoTooltip from "@/components/info-tooltip";
 import { Colors } from "@/constants/theme";
+import Add from "@expo/material-symbols/add.xml";
+import Info from "@expo/material-symbols/info.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -28,22 +30,34 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-type AccountType = "All" | "Asset" | "Liability" | "Equity" | "Revenue" | "Expense";
+type AccountType =
+  "All" | "Asset" | "Liability" | "Equity" | "Revenue" | "Expense";
 
-const accountTypes: AccountType[] = ["All", "Asset", "Liability", "Equity", "Revenue", "Expense"];
+const accountTypes: AccountType[] = [
+  "All",
+  "Asset",
+  "Liability",
+  "Equity",
+  "Revenue",
+  "Expense",
+];
 
 const ChartOfAccounts = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   const [search, setSearch] = useState("");
   const [activeFilter, setActiveFilter] = useState<AccountType>("All");
   const [showAddSheet, setShowAddSheet] = useState(false);
-  const [tooltipAccount, setTooltipAccount] = useState<(typeof accounts)[0] | null>(null);
-  const [actionSheetAccount, setActionSheetAccount] = useState<(typeof accounts)[0] | null>(null);
+  const [showInfo, setShowInfo] = useState(false);
+  const [tooltipAccount, setTooltipAccount] = useState<
+    (typeof accounts)[0] | null
+  >(null);
+  const [actionSheetAccount, setActionSheetAccount] = useState<
+    (typeof accounts)[0] | null
+  >(null);
 
   const {
     data: accounts = [],
@@ -73,8 +87,13 @@ const ChartOfAccounts = () => {
   });
 
   const { mutate: toggleStatus, isPending: isToggling } = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: "active" | "inactive" }) =>
-      toggleAccountStatus(id, { status }),
+    mutationFn: ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: "active" | "inactive";
+    }) => toggleAccountStatus(id, { status }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["accounts"] });
       setActionSheetAccount(null);
@@ -100,8 +119,7 @@ const ChartOfAccounts = () => {
       const q = search.toLowerCase();
       result = result.filter(
         (a) =>
-          a.name.toLowerCase().includes(q) ||
-          a.code.toLowerCase().includes(q),
+          a.name.toLowerCase().includes(q) || a.code.toLowerCase().includes(q),
       );
     }
     return result;
@@ -137,12 +155,21 @@ const ChartOfAccounts = () => {
         ]}
       >
         <View
-          style={[styles.pillDot, { backgroundColor: getTypeColor(item.account_type) }]}
+          style={[
+            styles.pillDot,
+            { backgroundColor: getTypeColor(item.account_type) },
+          ]}
         />
-        <Text style={[styles.pillCode, { color: colors.text }]} numberOfLines={1}>
+        <Text
+          style={[styles.pillCode, { color: colors.text }]}
+          numberOfLines={1}
+        >
           {item.code}
         </Text>
-        <Text style={[styles.pillName, { color: colors.text }]} numberOfLines={1}>
+        <Text
+          style={[styles.pillName, { color: colors.text }]}
+          numberOfLines={1}
+        >
           {item.name}
         </Text>
       </Pressable>
@@ -156,24 +183,23 @@ const ChartOfAccounts = () => {
       edges={["top", "left", "right"]}
     >
       {/* Header */}
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Lucide name="arrow-left" size={20} color={colors.text} />
-        </Pressable>
-        <Text style={[styles.headerTitle, { color: colors.text }]}>
-          Chart of Accounts
-        </Text>
-        <InfoTooltip
-          title="Chart of Accounts"
-          message="Your chart of accounts is the complete list of all financial accounts used to record transactions. It's the backbone of your accounting system, organizing everything into assets, liabilities, equity, revenue, and expenses."
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "info.circle" : Info}
+          onPress={() => setShowInfo(true)}
         />
-        <Pressable
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "plus" : Add}
           onPress={() => setShowAddSheet(true)}
-          style={[styles.addTrigger, { backgroundColor: colors.backgroundElement }]}
-        >
-          <Lucide name="plus" size={18} color={colors.text} />
-        </Pressable>
-      </View>
+        />
+      </Stack.Toolbar>
+      <InfoTooltip
+        title="Chart of Accounts"
+        message="Your chart of accounts is the complete list of all financial accounts used to record transactions. It's the backbone of your accounting system, organizing everything into assets, liabilities, equity, revenue, and expenses."
+        visible={showInfo}
+        onVisibleChange={setShowInfo}
+        trigger={false}
+      />
 
       {/* Search */}
       <View style={styles.searchContainer}>
@@ -222,7 +248,11 @@ const ChartOfAccounts = () => {
                   { backgroundColor: colors.backgroundElement },
                 ]}
               >
-                <Lucide name="book-open" size={32} color={colors.textSecondary} />
+                <Lucide
+                  name="book-open"
+                  size={32}
+                  color={colors.textSecondary}
+                />
               </View>
               <Text style={[styles.emptyTitle, { color: colors.text }]}>
                 No Accounts Found
@@ -274,29 +304,6 @@ export default ChartOfAccounts;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
-  backBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerTitle: { fontSize: 18, fontWeight: "700" },
-  addTrigger: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   searchContainer: {
     paddingHorizontal: 16,
     marginBottom: 10,
