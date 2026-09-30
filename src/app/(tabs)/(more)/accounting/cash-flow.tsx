@@ -1,6 +1,8 @@
 import { fetchCashFlow } from "@/api/accounting";
 import InfoTooltip from "@/components/info-tooltip";
+import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
+import { useActiveStore } from "@/lib/store-context";
 import type { PnLLineItem } from "@/types/accounting";
 import Info from "@expo/material-symbols/info.xml";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
@@ -24,6 +26,8 @@ const CashFlow = () => {
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
 
+  const { activeStoreId } = useActiveStore();
+
   const [fromDate, setFromDate] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() - 1);
@@ -45,8 +49,8 @@ const CashFlow = () => {
     });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["cash-flow", from, to],
-    queryFn: () => fetchCashFlow(from, to),
+    queryKey: ["cash-flow", from, to, activeStoreId],
+    queryFn: () => fetchCashFlow(from, to, activeStoreId),
   });
 
   const netCashFlow = data?.net_cash_flow ?? 0;
@@ -159,6 +163,11 @@ const CashFlow = () => {
         onVisibleChange={setShowInfo}
         trigger={false}
       />
+
+      {/* Store Filter */}
+      <View style={styles.switcherRow}>
+        <StoreSwitcher mode="all" />
+      </View>
 
       {/* Date Pickers */}
       <View style={styles.dateRow}>
@@ -315,6 +324,10 @@ export default CashFlow;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  switcherRow: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
   dateRow: {
     flexDirection: "row",
     paddingHorizontal: 16,

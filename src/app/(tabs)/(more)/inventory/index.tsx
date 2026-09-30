@@ -1,21 +1,19 @@
 import { fetchProducts, fetchTenantCategories } from "@/api/inventory";
-import { fetchTenantStores } from "@/api/store";
 import AdjustStockSheet from "@/components/adjust-stock-sheet";
-import AppBottomSheet from "@/components/bottom-sheet";
 import InventoryCard, {
   InventoryItem,
   StatusType,
 } from "@/components/inventory-card";
 import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
+import StoreSwitcher from "@/components/store-switcher";
 import { ColorPalette, Colors } from "@/constants/theme";
-import { useSession } from "@/lib/ctx";
+import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import React, {
   useCallback,
-  useEffect,
   useMemo,
   useRef,
   useState,
@@ -39,35 +37,11 @@ const HeaderNav: React.FC<{
   totalCount: number;
   colors: ColorPalette;
   insetsTop: number;
-  isOwner: boolean;
-  currentStoreName: string;
-  onOpenStoreSheet: () => void;
   activeStoreId: string;
-}> = ({
-  totalCount,
-  colors,
-  insetsTop,
-  isOwner,
-  currentStoreName,
-  onOpenStoreSheet,
-  activeStoreId,
-}) => (
+}> = ({ totalCount, colors, insetsTop, activeStoreId }) => (
   <View style={[styles.header, { paddingVertical: 5 }]}>
     <View style={{ flex: 1 }}>
-      {isOwner ? (
-        <Pressable onPress={onOpenStoreSheet} style={styles.storeSelector}>
-          <Text
-            style={[styles.headerSubtitle, { color: colors.buttonPrimary }]}
-          >
-            {currentStoreName}
-          </Text>
-          <Lucide name="chevron-down" size={14} color={colors.buttonPrimary} />
-        </Pressable>
-      ) : (
-        <Text style={[styles.headerSubtitle, { color: colors.textSecondary }]}>
-          {currentStoreName}
-        </Text>
-      )}
+      <StoreSwitcher mode="store" />
     </View>
     <View style={styles.headerRight}>
       <Pressable
@@ -290,28 +264,8 @@ const InventoryScreen = () => {
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
   const insets = useSafeAreaInsets();
   const flatListRef = useRef<FlatList>(null);
-  const { user } = useSession();
-  const isOwner = user?.role?.toLowerCase() === "owner";
-  const [selectedStoreId, setSelectedStoreId] = useState(user?.store_id ?? "");
-  const [storeSheetVisible, setStoreSheetVisible] = useState(false);
 
-  const activeStoreId = isOwner ? selectedStoreId : (user?.store_id ?? "");
-
-  const { data: storesData } = useQuery({
-    queryKey: ["stores"],
-    queryFn: fetchTenantStores,
-  });
-
-  const stores = storesData ?? [];
-
-  useEffect(() => {
-    if (isOwner && stores?.length > 0 && !selectedStoreId) {
-      setSelectedStoreId(stores[0].id);
-    }
-  }, [isOwner, stores, selectedStoreId]);
-
-  const currentStoreName =
-    stores.find((s) => s.id === activeStoreId)?.name ?? "All Stores";
+  const { resolvedStoreId: activeStoreId } = useActiveStore();
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -474,9 +428,6 @@ const InventoryScreen = () => {
               totalCount={totalItems}
               colors={colors}
               insetsTop={insets.top}
-              isOwner={isOwner}
-              currentStoreName={currentStoreName}
-              onOpenStoreSheet={() => setStoreSheetVisible(true)}
               activeStoreId={activeStoreId}
             />
             <InventoryStats
@@ -561,62 +512,6 @@ const InventoryScreen = () => {
         storeId={activeStoreId}
         unitCost={selectedItem?.price ?? 0}
       />
-
-      {isOwner && (
-        <AppBottomSheet
-          visible={storeSheetVisible}
-          onVisibleChange={setStoreSheetVisible}
-          snapPoints={["40%", "70%"]}
-        >
-          <View style={styles.sheetHeader}>
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>
-              Select Store
-            </Text>
-            <Text
-              style={[styles.sheetSubtitle, { color: colors.textSecondary }]}
-            >
-              Choose a store to view inventory
-            </Text>
-          </View>
-          {stores.length > 0 ? (
-            <View style={styles.pills}>
-              {stores.map((store) => {
-                const isActive = selectedStoreId === store.id;
-                return (
-                  <Pressable
-                    key={store.id}
-                    style={[
-                      styles.pill,
-                      {
-                        backgroundColor: isActive
-                          ? "#3b82f6"
-                          : colors.backgroundElement,
-                      },
-                    ]}
-                    onPress={() => {
-                      setSelectedStoreId(isActive ? "" : store.id);
-                      setStoreSheetVisible(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.pillText,
-                        { color: isActive ? "#fff" : colors.text },
-                      ]}
-                    >
-                      {store.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              No stores available
-            </Text>
-          )}
-        </AppBottomSheet>
-      )}
     </View>
   );
 };

@@ -2,6 +2,7 @@ import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { SessionProvider, useSession } from "@/lib/ctx";
 import { registerForPushNotifications } from "@/lib/push-notifications";
 import { SplashScreenController } from "@/lib/splash";
+import { ActiveStoreProvider } from "@/lib/store-context";
 import { ToastProvider } from "@/lib/toast-context";
 import { ToastContainer } from "@/components/toast-container";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
@@ -22,8 +23,10 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ToastProvider>
             <SessionProvider>
-              <SplashScreenController />
-              <RootNavigator />
+              <ActiveStoreProvider>
+                <SplashScreenController />
+                <RootNavigator />
+              </ActiveStoreProvider>
             </SessionProvider>
           </ToastProvider>
         </QueryClientProvider>

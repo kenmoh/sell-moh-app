@@ -1,15 +1,14 @@
 import { fetchStockHistory } from "@/api/inventory";
-import { fetchTenantStores } from "@/api/store";
+import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
-import { useSession } from "@/lib/ctx";
+import { useActiveStore } from "@/lib/store-context";
 import { StockMovementItem } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
   useColorScheme,
@@ -55,26 +54,8 @@ export default function StockHistoryScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const insets = useSafeAreaInsets();
-  const { user } = useSession();
-  const isOwner = user?.role?.toLowerCase() === "owner";
-  const [selectedStoreId, setSelectedStoreId] = useState(user?.store_id ?? "");
-  const [storeSheetVisible, setStoreSheetVisible] = useState(false);
 
-  const { data: storesData } = useQuery({
-    queryKey: ["stores"],
-    queryFn: fetchTenantStores,
-  });
-  const stores = storesData ?? [];
-
-  useEffect(() => {
-    if (isOwner && stores.length > 0 && !selectedStoreId) {
-      setSelectedStoreId(stores[0].id);
-    }
-  }, [isOwner, stores, selectedStoreId]);
-
-  const activeStoreId = isOwner ? selectedStoreId : (user?.store_id ?? "");
-  const currentStoreName =
-    stores.find((s) => s.id === activeStoreId)?.name ?? "All Stores";
+  const { resolvedStoreId: activeStoreId } = useActiveStore();
 
   const {
     data,
@@ -117,21 +98,7 @@ export default function StockHistoryScreen() {
         onRefresh={refetch}
         ListHeaderComponent={
           <View style={styles.header}>
-            {isOwner ? (
-              <Pressable
-                style={styles.storeSelector}
-                onPress={() => setStoreSheetVisible(true)}
-              >
-                <Text style={[styles.storeName, { color: colors.buttonPrimary }]}>
-                  {currentStoreName}
-                </Text>
-                <Lucide name="chevron-down" size={14} color={colors.buttonPrimary} />
-              </Pressable>
-            ) : (
-              <Text style={[styles.storeName, { color: colors.textSecondary }]}>
-                {currentStoreName}
-              </Text>
-            )}
+            <StoreSwitcher mode="store" />
           </View>
         }
         renderItem={({ item }) => {
@@ -204,55 +171,6 @@ export default function StockHistoryScreen() {
           paddingHorizontal: 16,
         }}
       />
-
-      {isOwner && storeSheetVisible && (
-        <Pressable
-          style={styles.overlay}
-          onPress={() => setStoreSheetVisible(false)}
-        >
-          <View
-            style={[styles.sheet, { backgroundColor: colors.card }]}
-            onStartShouldSetResponder={() => true}
-          >
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>
-              Select Store
-            </Text>
-            {stores.map((store) => {
-              const isActive = selectedStoreId === store.id;
-              return (
-                <Pressable
-                  key={store.id}
-                  style={[
-                    styles.storeOption,
-                    {
-                      backgroundColor: isActive
-                        ? "rgba(59,130,246,0.1)"
-                        : "transparent",
-                    },
-                  ]}
-                  onPress={() => {
-                    setSelectedStoreId(store.id);
-                    setStoreSheetVisible(false);
-                  }}
-                >
-                  <Text
-                    style={[
-                      styles.storeOptionText,
-                      {
-                        color: isActive ? "#3b82f6" : colors.text,
-                        fontWeight: isActive ? "700" : "500",
-                      },
-                    ]}
-                  >
-                    {store.name}
-                  </Text>
-                  {isActive && <Lucide name="check" size={16} color="#3b82f6" />}
-                </Pressable>
-              );
-            })}
-          </View>
-        </Pressable>
-      )}
     </View>
   );
 }

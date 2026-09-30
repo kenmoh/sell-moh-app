@@ -12,7 +12,9 @@ import AddPayableSheet from "@/components/add-payable-sheet";
 import AddReceivableSheet from "@/components/add-receivable-sheet";
 import Pill from "@/components/pill";
 import RecordPaymentSheet from "@/components/record-payment-sheet";
+import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
+import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -43,6 +45,8 @@ const AccountingScreen = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
+  const { activeStoreId } = useActiveStore();
+
   const [activeTab, setActiveTab] = useState<Tab>("receivables");
   const [showAddReceivable, setShowAddReceivable] = useState(false);
   const [showAddPayable, setShowAddPayable] = useState(false);
@@ -56,8 +60,8 @@ const AccountingScreen = () => {
   } | null>(null);
 
   const { data: dashboard, isLoading: isLoadingDashboard } = useQuery({
-    queryKey: ["financial-dashboard"],
-    queryFn: fetchFinancialDashboard,
+    queryKey: ["financial-dashboard", activeStoreId],
+    queryFn: () => fetchFinancialDashboard(activeStoreId),
   });
 
   const {
@@ -86,13 +90,15 @@ const AccountingScreen = () => {
     isRefetching: isRefetchingExpenses,
     refetch: refetchExpenses,
   } = useQuery({
-    queryKey: ["expenses"],
-    queryFn: () => fetchExpenses(),
+    queryKey: ["expenses", activeStoreId],
+    queryFn: () =>
+      fetchExpenses({ store_id: activeStoreId ?? undefined }),
   });
 
   const { data: expenseSummary = {}, isLoading: isLoadingSummary } = useQuery({
-    queryKey: ["expense-summary"],
-    queryFn: () => fetchExpenseSummary(),
+    queryKey: ["expense-summary", activeStoreId],
+    queryFn: () =>
+      fetchExpenseSummary({ store_id: activeStoreId ?? undefined }),
   });
 
   const isLoading =
@@ -106,6 +112,7 @@ const AccountingScreen = () => {
         description: data.note || "",
         amount: parseFloat(data.amount),
         expense_date: new Date().toISOString().split("T")[0],
+        store_id: activeStoreId ?? undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });
@@ -181,6 +188,12 @@ const AccountingScreen = () => {
         label: "Cash Flow",
         icon: "banknote",
         onPress: () => router.push("/(tabs)/(more)/accounting/cash-flow"),
+      },
+      {
+        key: "compare-stores",
+        label: "Compare Stores",
+        icon: "git-compare",
+        onPress: () => router.push("/(tabs)/(more)/accounting/compare"),
       },
     ],
     [router],
@@ -461,6 +474,11 @@ const AccountingScreen = () => {
               <AccountingContextMenu items={menuItems} />
             </View>
 
+            {/* Store Filter */}
+            <View style={styles.switcherRow}>
+              <StoreSwitcher mode="all" />
+            </View>
+
             {/* Dashboard Card */}
             <View
               style={[
@@ -705,6 +723,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
+  },
+  switcherRow: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
   },
   headerTitle: { fontSize: 24, fontWeight: "800", letterSpacing: -0.4 },
   headerSubtitle: { fontSize: 13, marginTop: 2 },

@@ -1,6 +1,8 @@
 import { fetchBalanceSheet } from "@/api/accounting";
 import InfoTooltip from "@/components/info-tooltip";
+import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
+import { useActiveStore } from "@/lib/store-context";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import Info from "@expo/material-symbols/info.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -32,6 +34,8 @@ const BalanceSheet = () => {
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
 
+  const { activeStoreId } = useActiveStore();
+
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -46,8 +50,8 @@ const BalanceSheet = () => {
   };
 
   const { data, isLoading } = useQuery({
-    queryKey: ["balance-sheet", asAtDate],
-    queryFn: () => fetchBalanceSheet(asAtDate),
+    queryKey: ["balance-sheet", asAtDate, activeStoreId],
+    queryFn: () => fetchBalanceSheet(asAtDate, activeStoreId),
   });
 
   const sections: Section[] = data
@@ -162,6 +166,11 @@ const BalanceSheet = () => {
         onVisibleChange={setShowInfo}
         trigger={false}
       />
+
+      {/* Store Filter */}
+      <View style={styles.switcherRow}>
+        <StoreSwitcher mode="all" />
+      </View>
 
       {/* Date Picker */}
       <View style={styles.dateContainer}>
@@ -285,6 +294,10 @@ export default BalanceSheet;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  switcherRow: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
   dateContainer: {
     paddingHorizontal: 16,
     marginBottom: 12,

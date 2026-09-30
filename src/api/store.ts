@@ -7,7 +7,7 @@ import { apiClient } from "./client";
 
 const STORE_URL = "/stores";
 
-interface StoreData {
+export interface StoreData {
   id: string;
   name: string;
   address: string;

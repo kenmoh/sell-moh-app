@@ -1,6 +1,8 @@
 import { fetchProfitAndLoss } from "@/api/accounting";
 import InfoTooltip from "@/components/info-tooltip";
+import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
+import { useActiveStore } from "@/lib/store-context";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import Info from "@expo/material-symbols/info.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -24,6 +26,8 @@ const ProfitAndLoss = () => {
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
 
+  const { activeStoreId } = useActiveStore();
+
   const [fromDate, setFromDate] = useState(() => {
     const d = new Date();
     d.setMonth(d.getMonth() - 1);
@@ -45,8 +49,8 @@ const ProfitAndLoss = () => {
     });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["profit-and-loss", from, to],
-    queryFn: () => fetchProfitAndLoss(from, to),
+    queryKey: ["profit-and-loss", from, to, activeStoreId],
+    queryFn: () => fetchProfitAndLoss(from, to, activeStoreId),
   });
 
   const netProfit = (data?.total_revenue ?? 0) - (data?.total_expenses ?? 0);
@@ -157,6 +161,11 @@ const ProfitAndLoss = () => {
         onVisibleChange={setShowInfo}
         trigger={false}
       />
+
+      {/* Store Filter */}
+      <View style={styles.switcherRow}>
+        <StoreSwitcher mode="all" />
+      </View>
 
       {/* Date Pickers */}
       <View style={styles.dateRow}>
@@ -313,6 +322,10 @@ export default ProfitAndLoss;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  switcherRow: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
   dateRow: {
     flexDirection: "row",
     paddingHorizontal: 16,

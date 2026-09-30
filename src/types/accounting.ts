@@ -44,6 +44,7 @@ export interface CreateJournalRequest {
   entries: JournalEntryLineRequest[];
   reference_id?: string;
   ref_type?: string;
+  store_id?: string;
 }
 
 export interface JournalCreatedResponse {
@@ -164,12 +165,14 @@ export interface CreateExpenseRequest {
   expense_date: string;
   vendor?: string;
   receipt_url?: string;
+  store_id?: string;
 }
 
 export interface ExpenseResponse {
   id: string;
   tenant_id: string;
   expense_number: string;
+  store_id?: string | null;
   category: string;
   description: string;
   amount: number;

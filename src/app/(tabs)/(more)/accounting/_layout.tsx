@@ -34,6 +34,10 @@ const AccountingLayout = () => {
           options={{ title: "Balance Sheet" }}
         />
         <Stack.Screen name="cash-flow" options={{ title: "Cash Flow" }} />
+        <Stack.Screen
+          name="compare"
+          options={{ title: "Compare Stores" }}
+        />
       </Stack>
     </AView>
   );

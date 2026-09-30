@@ -1,7 +1,5 @@
 import { fetchProducts, fetchTenantCategories } from "@/api/inventory";
-import { fetchTenantStores } from "@/api/store";
 import { addToCart } from "@/api/cart";
-import AppBottomSheet from "@/components/bottom-sheet";
 import Card from "@/components/card";
 import DraggableCart from "@/components/draggable-cart";
 import ExpandableFAB from "@/components/expandable-fab";
@@ -9,11 +7,12 @@ import PendingPaymentsSheet from "@/components/pending-payments-sheet";
 import NewCartSheet from "@/components/new-cart-sheet";
 import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
+import StoreSwitcher from "@/components/store-switcher";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
 import { usePendingPayments } from "@/hooks/usePendingPayments";
 import { useToast } from "@/hooks/use-toast";
-import { useSession } from "@/lib/ctx";
+import { useActiveStore } from "@/lib/store-context";
 import { Product } from "@/types/product-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -40,20 +39,15 @@ const POSScreen = () => {
   const isDark = scheme === "dark";
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
   const flatListRef = useRef<FlatList>(null);
-  const { user } = useSession();
   const queryClient = useQueryClient();
 
-  const isOwner = user?.role?.toLowerCase() === "owner";
+  const { resolvedStoreId: activeStoreId } = useActiveStore();
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("");
-  const [selectedStoreId, setSelectedStoreId] = useState(user?.store_id ?? "");
-  const [storeSheetVisible, setStoreSheetVisible] = useState(false);
   const [pendingSheetVisible, setPendingSheetVisible] = useState(false);
   const [newCartSheetVisible, setNewCartSheetVisible] = useState(false);
-
-  const activeStoreId = isOwner ? selectedStoreId : (user?.store_id ?? "");
 
   const cartTotalItems = useCartStore((s) => s.totalItems());
   const { count: pendingCount } = usePendingPayments();
@@ -82,27 +76,11 @@ const POSScreen = () => {
     enabled: !!activeStoreId,
   });
 
-  const { data: storesData } = useQuery({
-    queryKey: ["stores"],
-    queryFn: fetchTenantStores,
-  });
-
-  const stores = storesData ?? [];
-
-  useEffect(() => {
-    if (isOwner && stores?.length > 0 && !selectedStoreId) {
-      setSelectedStoreId(stores[0].id);
-    }
-  }, [isOwner, stores, selectedStoreId]);
-
   useEffect(() => {
     if (activeStoreId) {
       useCartStore.getState().switchStore(activeStoreId);
     }
   }, [activeStoreId]);
-
-  const currentStoreName =
-    stores.find((s) => s.id === activeStoreId)?.name ?? "All Stores";
 
   const categories = categoriesData ?? [];
 
@@ -201,35 +179,7 @@ const POSScreen = () => {
                 <Text style={[styles.headerTitle, { color: colors.text }]}>
                   POS Terminal
                 </Text>
-                {isOwner ? (
-                  <Pressable
-                    onPress={() => setStoreSheetVisible(true)}
-                    style={styles.storeSelector}
-                  >
-                    <Text
-                      style={[
-                        styles.headerSubtitle,
-                        { color: colors.buttonPrimary },
-                      ]}
-                    >
-                      {currentStoreName}
-                    </Text>
-                    <Lucide
-                      name="chevron-down"
-                      size={14}
-                      color={colors.buttonPrimary}
-                    />
-                  </Pressable>
-                ) : (
-                  <Text
-                    style={[
-                      styles.headerSubtitle,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    {currentStoreName}
-                  </Text>
-                )}
+                <StoreSwitcher mode="store" />
               </View>
 
               <View style={styles.headerActions}>
@@ -404,63 +354,6 @@ const POSScreen = () => {
         visible={pendingSheetVisible}
         onVisibleChange={setPendingSheetVisible}
       />
-
-      {/* Store Selector Sheet (Owner only) */}
-      {isOwner && (
-        <AppBottomSheet
-          visible={storeSheetVisible}
-          onVisibleChange={setStoreSheetVisible}
-          snapPoints={["40%", "70%"]}
-        >
-          <View style={styles.sheetHeader}>
-            <Text style={[styles.sheetTitle, { color: colors.text }]}>
-              Select Store
-            </Text>
-            <Text
-              style={[styles.sheetSubtitle, { color: colors.textSecondary }]}
-            >
-              Choose a store to view products
-            </Text>
-          </View>
-          {stores.length > 0 ? (
-            <View style={styles.pills}>
-              {stores.map((store) => {
-                const isActive = selectedStoreId === store.id;
-                return (
-                  <Pressable
-                    key={store.id}
-                    style={[
-                      styles.pill,
-                      {
-                        backgroundColor: isActive
-                          ? "#3b82f6"
-                          : colors.backgroundElement,
-                      },
-                    ]}
-                    onPress={() => {
-                      setSelectedStoreId(isActive ? "" : store.id);
-                      setStoreSheetVisible(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.pillText,
-                        { color: isActive ? "#fff" : colors.text },
-                      ]}
-                    >
-                      {store.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : (
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              No stores available
-            </Text>
-          )}
-        </AppBottomSheet>
-      )}
 
       {/* New Cart Sheet */}
       <NewCartSheet

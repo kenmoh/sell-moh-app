@@ -113,13 +113,18 @@ export const createJournal = async (
 export const fetchJournals = async (
   page = 1,
   pageSize = 50,
+  storeId?: string | null,
 ): Promise<{ items: JournalListItem[]; total: number; page: number; page_size: number }> => {
+  const params = new URLSearchParams();
+  params.append("page", String(page));
+  params.append("page_size", String(pageSize));
+  if (storeId) params.append("store_id", storeId);
   const res = await apiClient.get<{
     data: JournalListItem[];
     total: number;
     page: number;
     page_size: number;
-  }>(`${URL}/journals?page=${page}&page_size=${pageSize}`);
+  }>(`${URL}/journals?${params.toString()}`);
 
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
@@ -137,10 +142,14 @@ export const fetchJournals = async (
 
 export const fetchTrialBalance = async (
   asAt?: string,
+  storeId?: string | null,
 ): Promise<TrialBalanceItem[]> => {
-  const qs = asAt ? `?as_at=${asAt}` : "";
+  const params = new URLSearchParams();
+  if (asAt) params.append("as_at", asAt);
+  if (storeId) params.append("store_id", storeId);
+  const qs = params.toString();
   const res = await apiClient.get<{ data: TrialBalanceItem[] }>(
-    `${URL}/trial-balance${qs}`,
+    `${URL}/trial-balance${qs ? `?${qs}` : ""}`,
   );
 
   if (!res.ok) {
@@ -153,9 +162,14 @@ export const fetchTrialBalance = async (
 export const fetchProfitAndLoss = async (
   fromDate: string,
   toDate: string,
+  storeId?: string | null,
 ): Promise<ProfitAndLossResponse> => {
+  const params = new URLSearchParams();
+  params.append("from_date", fromDate);
+  params.append("to_date", toDate);
+  if (storeId) params.append("store_id", storeId);
   const res = await apiClient.get<{ data: ProfitAndLossResponse }>(
-    `${URL}/profit-and-loss?from_date=${fromDate}&to_date=${toDate}`,
+    `${URL}/profit-and-loss?${params.toString()}`,
   );
 
   if (!res.ok) {
@@ -167,10 +181,14 @@ export const fetchProfitAndLoss = async (
 
 export const fetchBalanceSheet = async (
   asAt?: string,
+  storeId?: string | null,
 ): Promise<BalanceSheetResponse> => {
-  const qs = asAt ? `?as_at=${asAt}` : "";
+  const params = new URLSearchParams();
+  if (asAt) params.append("as_at", asAt);
+  if (storeId) params.append("store_id", storeId);
+  const qs = params.toString();
   const res = await apiClient.get<{ data: BalanceSheetResponse }>(
-    `${URL}/balance-sheet${qs}`,
+    `${URL}/balance-sheet${qs ? `?${qs}` : ""}`,
   );
 
   if (!res.ok) {
@@ -183,10 +201,12 @@ export const fetchBalanceSheet = async (
 export const fetchCashFlow = async (
   fromDate?: string,
   toDate?: string,
+  storeId?: string | null,
 ): Promise<CashFlowResponse> => {
   const params = new URLSearchParams();
   if (fromDate) params.append("from_date", fromDate);
   if (toDate) params.append("to_date", toDate);
+  if (storeId) params.append("store_id", storeId);
   const qs = params.toString();
   const res = await apiClient.get<{ data: CashFlowResponse }>(
     `${URL}/cash-flow${qs ? `?${qs}` : ""}`,
@@ -301,11 +321,13 @@ export const fetchExpenses = async (params?: {
   category?: string;
   from_date?: string;
   to_date?: string;
+  store_id?: string;
 }): Promise<ExpenseResponse[]> => {
   const query = new URLSearchParams();
   if (params?.category) query.append("category", params.category);
   if (params?.from_date) query.append("from_date", params.from_date);
   if (params?.to_date) query.append("to_date", params.to_date);
+  if (params?.store_id) query.append("store_id", params.store_id);
   const qs = query.toString();
   const res = await apiClient.get<{ data: ExpenseResponse[] }>(
     `${URL}/expenses${qs ? `?${qs}` : ""}`,
@@ -336,10 +358,12 @@ export const createExpense = async (
 export const fetchExpenseSummary = async (params?: {
   from_date?: string;
   to_date?: string;
+  store_id?: string;
 }): Promise<Record<string, number>> => {
   const query = new URLSearchParams();
   if (params?.from_date) query.append("from_date", params.from_date);
   if (params?.to_date) query.append("to_date", params.to_date);
+  if (params?.store_id) query.append("store_id", params.store_id);
   const qs = query.toString();
   const res = await apiClient.get<{ data: Record<string, number> }>(
     `${URL}/expenses/summary${qs ? `?${qs}` : ""}`,
@@ -354,15 +378,17 @@ export const fetchExpenseSummary = async (params?: {
 
 // ── Financial Dashboard ────────────────────────────────────────────────────
 
-export const fetchFinancialDashboard =
-  async (): Promise<FinancialDashboardResponse> => {
-    const res = await apiClient.get<{ data: FinancialDashboardResponse }>(
-      `${URL}/dashboard`,
-    );
+export const fetchFinancialDashboard = async (
+  storeId?: string | null,
+): Promise<FinancialDashboardResponse> => {
+  const qs = storeId ? `?store_id=${storeId}` : "";
+  const res = await apiClient.get<{ data: FinancialDashboardResponse }>(
+    `${URL}/dashboard${qs}`,
+  );
 
-    if (!res.ok) {
-      throw new Error(getErrorMessage(res));
-    }
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
 
-    return res.data?.data!;
-  };
+  return res.data?.data!;
+};

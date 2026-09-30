@@ -1,6 +1,8 @@
 import { fetchTrialBalance } from "@/api/accounting";
 import InfoTooltip from "@/components/info-tooltip";
+import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
+import { useActiveStore } from "@/lib/store-context";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import Info from "@expo/material-symbols/info.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -23,6 +25,8 @@ const TrialBalance = () => {
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
 
+  const { activeStoreId } = useActiveStore();
+
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -42,8 +46,8 @@ const TrialBalance = () => {
     refetch,
     isRefetching,
   } = useQuery({
-    queryKey: ["trial-balance", asAtDate],
-    queryFn: () => fetchTrialBalance(asAtDate),
+    queryKey: ["trial-balance", asAtDate, activeStoreId],
+    queryFn: () => fetchTrialBalance(asAtDate, activeStoreId),
   });
 
   const totalDebit = items.reduce((sum, item) => sum + item.debit, 0);
@@ -105,6 +109,11 @@ const TrialBalance = () => {
         onVisibleChange={setShowInfo}
         trigger={false}
       />
+
+      {/* Store Filter */}
+      <View style={styles.switcherRow}>
+        <StoreSwitcher mode="all" />
+      </View>
 
       {/* Date Picker */}
       <View style={styles.dateContainer}>
@@ -268,6 +277,10 @@ export default TrialBalance;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  switcherRow: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
   dateContainer: {
     paddingHorizontal: 16,
     marginBottom: 12,

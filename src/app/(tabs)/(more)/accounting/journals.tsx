@@ -1,7 +1,9 @@
 import { fetchJournals, createJournal, fetchAccounts } from "@/api/accounting";
 import AddJournalSheet from "@/components/accounting/add-journal-sheet";
 import InfoTooltip from "@/components/info-tooltip";
+import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
+import { useActiveStore } from "@/lib/store-context";
 import Add from "@expo/material-symbols/add.xml";
 import Info from "@expo/material-symbols/info.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -30,6 +32,8 @@ const Journals = () => {
   const colors = Colors[isDark ? "dark" : "light"];
   const queryClient = useQueryClient();
 
+  const { activeStoreId } = useActiveStore();
+
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
 
@@ -41,8 +45,8 @@ const Journals = () => {
     isLoading,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ["journals"],
-    queryFn: ({ pageParam = 1 }) => fetchJournals(pageParam, 20),
+    queryKey: ["journals", activeStoreId],
+    queryFn: ({ pageParam = 1 }) => fetchJournals(pageParam, 20, activeStoreId),
     getNextPageParam: (lastPage, allPages) => {
       const loaded = allPages.reduce((sum, p) => sum + p.items.length, 0);
       return loaded < lastPage.total ? allPages.length + 1 : undefined;
@@ -61,7 +65,8 @@ const Journals = () => {
   });
 
   const { mutate: addJournal, isPending: isAdding } = useMutation({
-    mutationFn: createJournal,
+    mutationFn: (data: Parameters<typeof createJournal>[0]) =>
+      createJournal({ ...data, store_id: activeStoreId ?? undefined }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       setShowAddSheet(false);
@@ -162,6 +167,11 @@ const Journals = () => {
         trigger={false}
       />
 
+      {/* Store Filter */}
+      <View style={styles.switcherRow}>
+        <StoreSwitcher mode="all" />
+      </View>
+
       {/* Journal List */}
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -234,6 +244,10 @@ export default Journals;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  switcherRow: {
+    paddingHorizontal: 16,
+    marginBottom: 12,
+  },
   card: {
     marginHorizontal: 16,
     marginBottom: 8,
