@@ -59,6 +59,12 @@ import BottomSheet, {
 import React, { Ref, useCallback, useEffect, useRef } from "react";
 import { useColorScheme } from "react-native";
 
+const swallow = (result: unknown) => {
+  if (result && typeof (result as Promise<unknown>).catch === "function") {
+    (result as Promise<unknown>).catch(() => {});
+  }
+};
+
 export default function AppBottomSheet({
   children,
   visible,
@@ -77,31 +83,30 @@ export default function AppBottomSheet({
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const internalRef = useRef<BottomSheet>(null);
-  const programmaticRef = useRef(false);
+  const isOpenRef = useRef(false);
 
   useEffect(() => {
     if (visible === true) {
-      programmaticRef.current = true;
-      internalRef.current?.present?.() ?? internalRef.current?.snapToIndex?.(0);
+      if (isOpenRef.current) return;
+      isOpenRef.current = true;
+      swallow(
+        internalRef.current?.present?.() ??
+          internalRef.current?.snapToIndex?.(0),
+      );
     } else if (visible === false) {
-      programmaticRef.current = true;
-      internalRef.current?.dismiss?.() ?? internalRef.current?.close?.();
+      // Skip when not open: dismissing an un-presented sheet makes the
+      // native ModalBottomSheetView.hide call reject (uncaught promise),
+      // which happened on mount and after gesture-dismissal.
+      if (!isOpenRef.current) return;
+      isOpenRef.current = false;
+      swallow(
+        internalRef.current?.dismiss?.() ?? internalRef.current?.close?.(),
+      );
     }
   }, [visible]);
 
-  const handleClose = useCallback(() => {
-    if (programmaticRef.current) {
-      programmaticRef.current = false;
-      return;
-    }
-    onVisibleChange?.(false);
-  }, [onVisibleChange]);
-
-  const handleDismiss = useCallback(() => {
-    if (programmaticRef.current) {
-      programmaticRef.current = false;
-      return;
-    }
+  const handleClosed = useCallback(() => {
+    isOpenRef.current = false;
     onVisibleChange?.(false);
   }, [onVisibleChange]);
 
@@ -119,8 +124,8 @@ export default function AppBottomSheet({
       snapPoints={snapPoints}
       enableDynamicSizing={enableDynamicSizing}
       enablePanDownToClose
-      onClose={handleClose}
-      onDismiss={handleDismiss}
+      onClose={handleClosed}
+      onDismiss={handleClosed}
       backgroundStyle={{ backgroundColor: colors.card }}
     >
       <BottomSheetScrollView
