@@ -279,7 +279,7 @@ export const switchPaymentMethod = async (
   method: "card" | "transfer" | "cash",
   customerEmail: string,
 ) => {
-  const res = await apiClient.post<InitiatePaymentResult>(
+  const res = await apiClient.post<{ data: InitiatePaymentResult }>(
     `${URL}/switch-method/${intentId}`,
     { method, customer_email: customerEmail },
   );
