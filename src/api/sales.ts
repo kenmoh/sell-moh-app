@@ -32,6 +32,7 @@ export const fetchSales = async (
   if (params.from_date) query.append("from_date", params.from_date);
   if (params.to_date) query.append("to_date", params.to_date);
   if (params.cashier_id) query.append("cashier_id", params.cashier_id);
+  if (params.store_id) query.append("store_id", params.store_id);
 
   const qs = query.toString();
   const url = `${URL}${qs ? `?${qs}` : ""}`;

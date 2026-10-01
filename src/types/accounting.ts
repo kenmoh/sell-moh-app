@@ -118,6 +118,7 @@ export interface CreateReceivableRequest {
   amount: number;
   due_date: string;
   invoice_id?: string;
+  store_id?: string | null;
 }
 
 export interface ReceivableResponse {
@@ -131,6 +132,7 @@ export interface ReceivableResponse {
   balance: number;
   due_date: string;
   status: string;
+  store_id?: string | null;
 }
 
 // ── Accounts Payable ───────────────────────────────────────────────────────
@@ -141,6 +143,7 @@ export interface CreatePayableRequest {
   description?: string;
   amount: number;
   due_date: string;
+  store_id?: string | null;
 }
 
 export interface PayableResponse {
@@ -154,6 +157,7 @@ export interface PayableResponse {
   balance: number;
   due_date: string;
   status: string;
+  store_id?: string | null;
 }
 
 // ── Expenses ───────────────────────────────────────────────────────────────

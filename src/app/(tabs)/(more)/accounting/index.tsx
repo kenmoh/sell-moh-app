@@ -70,8 +70,8 @@ const AccountingScreen = () => {
     isRefetching: isRefetchingAR,
     refetch: refetchAR,
   } = useQuery({
-    queryKey: ["receivables"],
-    queryFn: () => fetchReceivables(),
+    queryKey: ["receivables", activeStoreId],
+    queryFn: () => fetchReceivables(undefined, activeStoreId),
   });
 
   const {
@@ -80,8 +80,8 @@ const AccountingScreen = () => {
     isRefetching: isRefetchingAP,
     refetch: refetchAP,
   } = useQuery({
-    queryKey: ["payables"],
-    queryFn: () => fetchPayables(),
+    queryKey: ["payables", activeStoreId],
+    queryFn: () => fetchPayables(undefined, activeStoreId),
   });
 
   const {

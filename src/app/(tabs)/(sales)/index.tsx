@@ -2,7 +2,9 @@ import { fetchSales } from "@/api/sales";
 import OrderCard from "@/components/order-card";
 import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
+import StoreSwitcher from "@/components/store-switcher";
 import { ColorPalette, Colors } from "@/constants/theme";
+import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
@@ -82,12 +84,19 @@ const SalesScreen = () => {
   const [activeFilter, setActiveFilter] = useState<FilterStatus>("All");
   const [search, setSearch] = useState("");
 
+  const { activeStoreId } = useActiveStore();
+
   const apiStatus =
     activeFilter === "All" ? undefined : activeFilter.toLowerCase();
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
-    queryKey: ["sales", apiStatus],
-    queryFn: () => fetchSales({ status: apiStatus, page_size: 100 }),
+    queryKey: ["sales", apiStatus, activeStoreId],
+    queryFn: () =>
+      fetchSales({
+        status: apiStatus,
+        page_size: 100,
+        store_id: activeStoreId ?? undefined,
+      }),
   });
 
   const orders = useMemo(() => {
@@ -202,6 +211,11 @@ const SalesScreen = () => {
                 >
                   <Lucide name="sparkles" size={20} color="#2563eb" />
                 </Pressable>
+              </View>
+
+              {/* Store Filter */}
+              <View style={styles.switcherRow}>
+                <StoreSwitcher mode="all" />
               </View>
 
               {/* Summary Metrics Row */}
@@ -448,6 +462,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
+  },
+  switcherRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
   },
   headerTitle: {
     fontSize: 24,

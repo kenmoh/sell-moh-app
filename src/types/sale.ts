@@ -58,4 +58,5 @@ export interface SaleQueryParams {
   from_date?: string;
   to_date?: string;
   cashier_id?: string;
+  store_id?: string;
 }

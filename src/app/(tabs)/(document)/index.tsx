@@ -4,6 +4,7 @@ import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
+import { useActiveStore } from "@/lib/store-context";
 import {
   Document,
   DocumentCreateRequest,
@@ -74,6 +75,7 @@ const DocumentListScreen = () => {
   const [showAddSheet, setShowAddSheet] = useState(false);
   const queryClient = useQueryClient();
   const { user } = useSession();
+  const { activeStoreId } = useActiveStore();
 
   const {
     data: documentsResponse,
@@ -107,6 +109,7 @@ const DocumentListScreen = () => {
       ...payload,
       tenant_id: user?.business_id ?? "",
       actor_id: user?.user_id ?? "",
+      store_id: activeStoreId ?? undefined,
     });
   };
 

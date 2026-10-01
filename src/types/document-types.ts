@@ -28,6 +28,7 @@ export interface DocumentCreateRequest {
 
   // Optional linking
   linked_sale_id?: string;
+  store_id?: string;
 
   // Optional tracing
   correlation_id?: string;

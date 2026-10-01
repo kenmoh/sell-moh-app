@@ -223,10 +223,14 @@ export const fetchCashFlow = async (
 
 export const fetchReceivables = async (
   status?: string,
+  storeId?: string | null,
 ): Promise<ReceivableResponse[]> => {
-  const qs = status ? `?status=${status}` : "";
+  const params = new URLSearchParams();
+  if (status) params.append("status", status);
+  if (storeId) params.append("store_id", storeId);
+  const qs = params.toString();
   const res = await apiClient.get<{ data: ReceivableResponse[] }>(
-    `${URL}/receivable${qs}`,
+    `${URL}/receivable${qs ? `?${qs}` : ""}`,
   );
 
   if (!res.ok) {
@@ -271,10 +275,14 @@ export const recordArPayment = async (
 
 export const fetchPayables = async (
   status?: string,
+  storeId?: string | null,
 ): Promise<PayableResponse[]> => {
-  const qs = status ? `?status=${status}` : "";
+  const params = new URLSearchParams();
+  if (status) params.append("status", status);
+  if (storeId) params.append("store_id", storeId);
+  const qs = params.toString();
   const res = await apiClient.get<{ data: PayableResponse[] }>(
-    `${URL}/payable${qs}`,
+    `${URL}/payable${qs ? `?${qs}` : ""}`,
   );
 
   if (!res.ok) {
