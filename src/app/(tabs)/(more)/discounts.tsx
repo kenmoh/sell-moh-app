@@ -11,6 +11,7 @@ import { Stack } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -338,17 +339,11 @@ const Discounts = () => {
     );
   };
 
-  const renderContent = () => {
-    if (activeTab === "promotions") {
-      if (discountsLoading) {
-        return (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#3b82f6" />
-          </View>
-        );
-      }
+  const isPromo = activeTab === "promotions";
+  const listLoading = isPromo ? discountsLoading : couponsLoading;
 
-      const filteredDiscounts = discounts.filter((d) => {
+  const filteredDiscounts = isPromo
+    ? discounts.filter((d) => {
         if (activeFilter === "All") return true;
         if (activeFilter === "Percentage")
           return d.discount_type === "percentage";
@@ -357,57 +352,36 @@ const Discounts = () => {
         if (activeFilter === "Buy X Get Y")
           return d.discount_type === "buy_x_get_y";
         return true;
-      });
+      })
+    : [];
+  const listData: (Discount | Coupon)[] = isPromo ? filteredDiscounts : coupons;
 
-      if (filteredDiscounts.length === 0) {
-        return (
-          <View style={styles.emptyContainer}>
-            <Lucide name="tag" size={40} color={colors.textSecondary} />
-            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              No promotions yet
-            </Text>
-            <Text
-              style={[styles.emptySubtext, { color: colors.textSecondary }]}
-            >
-              Create your first promotion to get started
-            </Text>
-          </View>
-        );
-      }
+  const listHeader = isPromo ? (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.filterTabs}
+      style={{ marginHorizontal: -20, marginBottom: 16 }}
+    >
+      {filters.map((f) => (
+        <Pill
+          key={f}
+          label={f}
+          active={f === activeFilter}
+          onPress={() => setActiveFilter(f)}
+          color="#3b82f6"
+        />
+      ))}
+    </ScrollView>
+  ) : null;
 
-      return (
-        <View style={styles.promoList}>
-          {filteredDiscounts.map(renderPromoCard)}
-        </View>
-      );
-    }
-
-    if (couponsLoading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#f97316" />
-        </View>
-      );
-    }
-
-    if (coupons.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Lucide name="ticket" size={40} color={colors.textSecondary} />
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            No coupons yet
-          </Text>
-          <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-            Create coupon codes for your customers
-          </Text>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.promoList}>{coupons.map(renderCouponCard)}</View>
-    );
-  };
+  const renderListItem = ({ item }: { item: Discount | Coupon }) => (
+    <View style={{ marginBottom: 10 }}>
+      {isPromo
+        ? renderPromoCard(item as Discount)
+        : renderCouponCard(item as Coupon)}
+    </View>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -459,43 +433,61 @@ const Discounts = () => {
         })}
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: insets.bottom + 20,
-          padding: 10,
-        }}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#3b82f6"
-          />
-        }
-      >
-        {activeTab === "promotions" && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.filterTabs}
-            style={{ marginHorizontal: -20, marginBottom: 16 }}
-          >
-            {filters.map((f) => (
-              <Pill
-                key={f}
-                label={f}
-                active={f === activeFilter}
-                onPress={() => setActiveFilter(f)}
-                color="#3b82f6"
-              />
-            ))}
-          </ScrollView>
-        )}
-
-        <Animated.View style={contentAnimatedStyle}>
-          {renderContent()}
-        </Animated.View>
-      </ScrollView>
+      <Animated.View style={[contentAnimatedStyle, { flex: 1 }]}>
+        <FlatList
+          data={listData}
+          keyExtractor={(item) => item.id}
+          renderItem={renderListItem}
+          ListHeaderComponent={listHeader}
+          ListEmptyComponent={
+            listLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator
+                  size="large"
+                  color={isPromo ? "#3b82f6" : "#f97316"}
+                />
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Lucide
+                  name={isPromo ? "tag" : "ticket"}
+                  size={40}
+                  color={colors.textSecondary}
+                />
+                <Text
+                  style={[styles.emptyText, { color: colors.textSecondary }]}
+                >
+                  {isPromo ? "No promotions yet" : "No coupons yet"}
+                </Text>
+                <Text
+                  style={[
+                    styles.emptySubtext,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  {isPromo
+                    ? "Create your first promotion to get started"
+                    : "Create coupon codes for your customers"}
+                </Text>
+              </View>
+            )
+          }
+          contentContainerStyle={{
+            paddingBottom: insets.bottom + 20,
+            padding: 10,
+          }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#3b82f6"
+            />
+          }
+          style={{ flex: 1 }}
+          initialNumToRender={10}
+          windowSize={7}
+        />
+      </Animated.View>
 
       <DiscountSheet
         visible={showDiscountSheet}

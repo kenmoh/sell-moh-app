@@ -24,6 +24,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -246,6 +247,23 @@ const Notifications = () => {
     return grouped;
   }, [notifs]);
 
+  type NotifListItem =
+    | { kind: "group"; label: "Today" | "Yesterday" | "Older" }
+    | { kind: "notif"; n: InAppNotification; last: boolean };
+
+  const listItems = useMemo<NotifListItem[]>(() => {
+    const items: NotifListItem[] = [];
+    for (const g of ["Today", "Yesterday", "Older"] as const) {
+      const list = groups[g];
+      if (list.length === 0) continue;
+      items.push({ kind: "group", label: g });
+      list.forEach((n, i) =>
+        items.push({ kind: "notif", n, last: i === list.length - 1 }),
+      );
+    }
+    return items;
+  }, [groups]);
+
   const renderRightActions = useCallback(
     (id: string) => {
       return (progress: Animated.AnimatedInterpolation<number>) => {
@@ -270,6 +288,151 @@ const Notifications = () => {
     },
     [handleSwipeDelete],
   );
+
+  const listHeader = (
+    <View style={{ gap: 16 }}>
+      {/* Notification Type Toggles */}
+      <View style={{ paddingHorizontal: 10, marginVertical: 5 }}>
+        <Text
+          style={[
+            styles.sectionLabel,
+            { color: colors.textSecondary, marginLeft: 15 },
+          ]}
+        >
+          NOTIFICATION TYPES
+        </Text>
+        <View style={[styles.typesCard, { backgroundColor: colors.card }]}>
+          {NOTIFICATION_TYPE_CONFIG.map((type, i) => (
+            <View
+              key={type.id}
+              style={[
+                styles.typeRow,
+                i < NOTIFICATION_TYPE_CONFIG.length - 1 && {
+                  borderBottomColor: colors.backgroundElement,
+                  borderBottomWidth: StyleSheet.hairlineWidth,
+                },
+              ]}
+            >
+              <View style={[styles.typeIcon, { backgroundColor: type.bg }]}>
+                <Lucide
+                  name={type.icon as any}
+                  size={16}
+                  color={type.color}
+                />
+              </View>
+              <Text style={[styles.typeLabel, { color: colors.text }]}>
+                {type.label}
+              </Text>
+              <Host matchContents>
+                <Switch
+                  value={
+                    type.id === "system"
+                      ? true
+                      : (typeTogglesFromServer[type.id] ?? true)
+                  }
+                  disabled={type.id === "system"}
+                  onValueChange={() => handleTogglePref(type.id)}
+                />
+              </Host>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      {/* Filter Tabs */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filterTabs}
+      >
+        {FILTERS.map((f) => (
+          <Pill
+            key={f}
+            label={f}
+            active={f === activeFilter}
+            onPress={() => setActiveFilter(f)}
+            color="#3b82f6"
+            badge={
+              f === "Unread" && unreadCount > 0 ? unreadCount : undefined
+            }
+          />
+        ))}
+      </ScrollView>
+    </View>
+  );
+
+  const renderListItem = ({ item }: { item: NotifListItem }) => {
+    if (item.kind === "group") {
+      return (
+        <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
+          <Text
+            style={[styles.sectionLabel, { color: colors.textSecondary }]}
+          >
+            {item.label.toUpperCase()}
+          </Text>
+        </View>
+      );
+    }
+    const n = item.n;
+    const config = getNotificationTypeConfig(n.type);
+    return (
+      <View style={{ paddingHorizontal: 20, marginBottom: item.last ? 0 : 8 }}>
+        <Swipeable
+          renderRightActions={
+            editMode ? undefined : renderRightActions(n.id)
+          }
+          enabled={!editMode}
+        >
+          <Pressable
+            style={[styles.notifCard, { backgroundColor: colors.card }]}
+            onPress={() => {
+              if (editMode) return;
+              handlePress(n);
+            }}
+          >
+            {editMode && (
+              <View style={styles.checkbox}>
+                <Host matchContents>
+                  <Checkbox
+                    value={selectedIds.has(n.id)}
+                    onValueChange={() => handlePress(n)}
+                  />
+                </Host>
+              </View>
+            )}
+            {!n.is_read && <View style={styles.unreadDot} />}
+            <View
+              style={[styles.iconBadge, { backgroundColor: config.bg }]}
+            >
+              <Lucide
+                name={config.icon as any}
+                size={18}
+                color={config.color}
+              />
+            </View>
+            <View style={styles.notifInfo}>
+              <Text
+                style={[styles.notifTitle, { color: colors.text }]}
+              >
+                {n.title}
+              </Text>
+              <Text
+                style={[styles.notifDesc, { color: colors.textSecondary }]}
+                numberOfLines={2}
+              >
+                {n.body}
+              </Text>
+            </View>
+            <Text
+              style={[styles.notifTime, { color: colors.textSecondary }]}
+            >
+              {formatTime(n.created_at)}
+            </Text>
+          </Pressable>
+        </Swipeable>
+      </View>
+    );
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -323,180 +486,28 @@ const Notifications = () => {
         </View>
       )}
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{
-          paddingBottom: insets.bottom + 20,
-          gap: 16,
-        }}
-      >
-        {/* Notification Type Toggles */}
-        <View style={{ paddingHorizontal: 10, marginVertical: 5 }}>
-          <Text
-            style={[
-              styles.sectionLabel,
-              { color: colors.textSecondary, marginLeft: 15 },
-            ]}
-          >
-            NOTIFICATION TYPES
-          </Text>
-          <View style={[styles.typesCard, { backgroundColor: colors.card }]}>
-            {NOTIFICATION_TYPE_CONFIG.map((type, i) => (
-              <View
-                key={type.id}
-                style={[
-                  styles.typeRow,
-                  i < NOTIFICATION_TYPE_CONFIG.length - 1 && {
-                    borderBottomColor: colors.backgroundElement,
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                  },
-                ]}
-              >
-                <View style={[styles.typeIcon, { backgroundColor: type.bg }]}>
-                  <Lucide
-                    name={type.icon as any}
-                    size={16}
-                    color={type.color}
-                  />
-                </View>
-                <Text style={[styles.typeLabel, { color: colors.text }]}>
-                  {type.label}
-                </Text>
-                <Host matchContents>
-                  <Switch
-                    value={
-                      type.id === "system"
-                        ? true
-                        : (typeTogglesFromServer[type.id] ?? true)
-                    }
-                    disabled={type.id === "system"}
-                    onValueChange={() => handleTogglePref(type.id)}
-                  />
-                </Host>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Filter Tabs */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.filterTabs}
-        >
-          {FILTERS.map((f) => (
-            <Pill
-              key={f}
-              label={f}
-              active={f === activeFilter}
-              onPress={() => setActiveFilter(f)}
+      <FlatList
+        data={listItems}
+        keyExtractor={(item) =>
+          item.kind === "group" ? `g-${item.label}` : `n-${item.n.id}`
+        }
+        renderItem={renderListItem}
+        ListHeaderComponent={listHeader}
+        ListEmptyComponent={
+          isLoading ? (
+            <ActivityIndicator
+              size="small"
               color="#3b82f6"
-              badge={
-                f === "Unread" && unreadCount > 0 ? unreadCount : undefined
-              }
+              style={{ marginTop: 40 }}
             />
-          ))}
-        </ScrollView>
-
-        {/* Notification Groups */}
-        {isLoading ? (
-          <ActivityIndicator
-            size="small"
-            color="#3b82f6"
-            style={{ marginTop: 40 }}
-          />
-        ) : (
-          (["Today", "Yesterday", "Older"] as const).map((group) => {
-            const items = groups[group];
-            if (items.length === 0) return null;
-            return (
-              <View key={group} style={{ paddingHorizontal: 20 }}>
-                <Text
-                  style={[styles.sectionLabel, { color: colors.textSecondary }]}
-                >
-                  {group.toUpperCase()}
-                </Text>
-                <View style={styles.notifList}>
-                  {items.map((n) => {
-                    const config = getNotificationTypeConfig(n.type);
-                    return (
-                      <Swipeable
-                        key={n.id}
-                        renderRightActions={
-                          editMode ? undefined : renderRightActions(n.id)
-                        }
-                        enabled={!editMode}
-                      >
-                        <Pressable
-                          style={[
-                            styles.notifCard,
-                            { backgroundColor: colors.card },
-                          ]}
-                          onPress={() => {
-                            if (editMode) return;
-                            handlePress(n);
-                          }}
-                        >
-                          {editMode && (
-                            <View style={styles.checkbox}>
-                              <Host matchContents>
-                                <Checkbox
-                                  value={selectedIds.has(n.id)}
-                                  onValueChange={() => handlePress(n)}
-                                />
-                              </Host>
-                            </View>
-                          )}
-                          {!n.is_read && <View style={styles.unreadDot} />}
-                          <View
-                            style={[
-                              styles.iconBadge,
-                              { backgroundColor: config.bg },
-                            ]}
-                          >
-                            <Lucide
-                              name={config.icon as any}
-                              size={18}
-                              color={config.color}
-                            />
-                          </View>
-                          <View style={styles.notifInfo}>
-                            <Text
-                              style={[
-                                styles.notifTitle,
-                                { color: colors.text },
-                              ]}
-                            >
-                              {n.title}
-                            </Text>
-                            <Text
-                              style={[
-                                styles.notifDesc,
-                                { color: colors.textSecondary },
-                              ]}
-                              numberOfLines={2}
-                            >
-                              {n.body}
-                            </Text>
-                          </View>
-                          <Text
-                            style={[
-                              styles.notifTime,
-                              { color: colors.textSecondary },
-                            ]}
-                          >
-                            {formatTime(n.created_at)}
-                          </Text>
-                        </Pressable>
-                      </Swipeable>
-                    );
-                  })}
-                </View>
-              </View>
-            );
-          })
-        )}
-      </ScrollView>
+          ) : null
+        }
+        contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
+        style={{ flex: 1 }}
+        initialNumToRender={12}
+        maxToRenderPerBatch={12}
+        windowSize={7}
+      />
 
       {/* Detail Card */}
       <NotificationDetailCard

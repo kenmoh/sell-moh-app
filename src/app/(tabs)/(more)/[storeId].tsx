@@ -8,9 +8,9 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   useColorScheme,
@@ -92,18 +92,8 @@ const StoreDetailScreen = () => {
 
   const { store, products, categories, stats } = details;
 
-  return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top", "left", "right"]}
-    >
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
-        }
-      >
+  const listHeader = (
+    <>
         {/* Header */}
         <View style={styles.header}>
           <Pressable
@@ -331,13 +321,12 @@ const StoreDetailScreen = () => {
             </View>
           </View>
         )}
-
         {/* Products */}
-        <View style={styles.section}>
+        <View style={[styles.section, { marginBottom: 0 }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             Products ({products.length})
           </Text>
-          {products.length === 0 ? (
+          {products.length === 0 && (
             <View
               style={[
                 styles.emptyCard,
@@ -371,10 +360,14 @@ const StoreDetailScreen = () => {
                 </Pressable>
               )}
             </View>
-          ) : (
-            products.map((product) => (
+          )}
+        </View>
+    </>
+  );
+
+  const renderProduct = ({ item }: { item: (typeof products)[number] }) => (
+    <View style={{ paddingHorizontal: 16 }}>
               <View
-                key={product.id}
                 style={[
                   styles.productCard,
                   {
@@ -386,16 +379,16 @@ const StoreDetailScreen = () => {
                 <View style={styles.productHeader}>
                   <View style={styles.productInfo}>
                     <Text style={[styles.productName, { color: colors.text }]}>
-                      {product.name}
+                      {item.name}
                     </Text>
-                    {product.sku && (
+                    {item.sku && (
                       <Text style={[styles.productSku, { color: colors.textSecondary }]}>
-                        {product.sku}
+                        {item.sku}
                       </Text>
                     )}
                   </View>
                   <Text style={[styles.productPrice, { color: colors.text }]}>
-                    ₦{product.selling_price.toLocaleString()}
+                    ₦{item.selling_price.toLocaleString()}
                   </Text>
                 </View>
                 <View style={[styles.productFooter, { borderTopColor: isDark ? "#282b32" : "#eef0f4" }]}>
@@ -405,42 +398,48 @@ const StoreDetailScreen = () => {
                         styles.stockDot,
                         {
                           backgroundColor:
-                            product.available <= 0
+                            item.available <= 0
                               ? "#ef4444"
-                              : product.available < 5
+                              : item.available < 5
                                 ? "#f59e0b"
                                 : "#10b981",
                         },
                       ]}
                     />
                     <Text style={[styles.stockText, { color: colors.textSecondary }]}>
-                      {product.available} available
+                      {item.available} available
                     </Text>
                   </View>
                   <View style={styles.stockDetails}>
                     <Text style={[styles.stockDetail, { color: colors.textSecondary }]}>
-                      Qty: {product.qty}
+                      Qty: {item.qty}
                     </Text>
-                    {product.committed_qty > 0 && (
+                    {item.committed_qty > 0 && (
                       <Text style={[styles.stockDetail, { color: "#3b82f6" }]}>
-                        Sold: {product.committed_qty}
+                        Sold: {item.committed_qty}
                       </Text>
                     )}
-                    {product.reserved_qty > 0 && (
+                    {item.reserved_qty > 0 && (
                       <Text style={[styles.stockDetail, { color: "#f59e0b" }]}>
-                        Reserved: {product.reserved_qty}
+                        Reserved: {item.reserved_qty}
                       </Text>
                     )}
                   </View>
                 </View>
               </View>
-            ))
-          )}
-        </View>
+    </View>
+  );
 
+  const listFooter = (
+    <>
         {/* Top Products */}
         {stats?.top_products && stats.top_products.length > 0 && (
-          <View style={styles.section}>
+          <View
+            style={[
+              styles.section,
+              { marginTop: products.length === 0 ? 0 : 8 },
+            ]}
+          >
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               Top Products
             </Text>
@@ -509,7 +508,29 @@ const StoreDetailScreen = () => {
             </View>
           </View>
         )}
-      </ScrollView>
+    </>
+  );
+
+
+  return (
+    <SafeAreaView
+      style={[styles.container, { backgroundColor: colors.background }]}
+      edges={["top", "left", "right"]}
+    >
+      <FlatList
+        data={products}
+        keyExtractor={(item) => item.id}
+        renderItem={renderProduct}
+        ListHeaderComponent={listHeader}
+        ListFooterComponent={listFooter}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+        }
+        style={{ flex: 1 }}
+        initialNumToRender={8}
+        windowSize={7}
+      />
 
       <StoreSheet
         visible={sheetVisible}

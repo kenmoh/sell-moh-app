@@ -22,9 +22,10 @@ import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide, type LucideIconName } from "@react-native-vector-icons/lucide";
 import { useQueries } from "@tanstack/react-query";
 import { Stack } from "expo-router";
-import { Fragment, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  FlatList,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -37,7 +38,7 @@ type StatementKey = "pnl" | "cashflow" | "tb" | "bs" | "journals";
 
 const STATEMENTS: { key: StatementKey; label: string; icon: LucideIconName }[] =
   [
-    { key: "pnl", label: "P&L", icon: "trending-up" },
+    { key: "pnl", label: "Profit & Loss", icon: "trending-up" },
     { key: "cashflow", label: "Cash Flow", icon: "banknote" },
     { key: "tb", label: "Trial Balance", icon: "scale" },
     { key: "bs", label: "Balance Sheet", icon: "landmark" },
@@ -71,6 +72,10 @@ interface Section {
   rows: Row[];
 }
 
+type TableItem =
+  | { kind: "section"; secIdx: number; section: Section }
+  | { kind: "row"; secIdx: number; idx: number; section: Section; row: Row };
+
 type ItemMap = Map<string, { label: string; code?: string; value: number }>;
 
 const toLineMap = (items: PnLLineItem[] | undefined): ItemMap => {
@@ -100,6 +105,7 @@ const CompareStores = () => {
   const [statement, setStatement] = useState<StatementKey>("pnl");
   const [showInfo, setShowInfo] = useState(false);
   const [picker, setPicker] = useState<null | "from" | "to" | "asAt">(null);
+  const [tableScrollH, setTableScrollH] = useState(0);
 
   const [fromDate, setFromDate] = useState(() => {
     const d = new Date();
@@ -121,14 +127,17 @@ const CompareStores = () => {
     });
 
   const columns = useMemo<Column[]>(() => {
-    const cols: Column[] = [
-      { key: "all", label: "All Stores", storeId: null },
-    ];
+    const cols: Column[] = [{ key: "all", label: "All Stores", storeId: null }];
     for (const s of stores) {
       cols.push({ key: s.id, label: s.name, storeId: s.id });
     }
     if (stores.length > 0) {
-      cols.push({ key: "untagged", label: "Untagged", storeId: null, derived: true });
+      cols.push({
+        key: "untagged",
+        label: "Untagged",
+        storeId: null,
+        derived: true,
+      });
     }
     return cols;
   }, [stores]);
@@ -372,7 +381,11 @@ const CompareStores = () => {
             icon: "briefcase",
             rows: [
               ...makeRows((d) => toLineMap(d?.assets)),
-              totalRow("total_assets", "Total Assets", datas.map((d) => d?.total_assets ?? 0)),
+              totalRow(
+                "total_assets",
+                "Total Assets",
+                datas.map((d) => d?.total_assets ?? 0),
+              ),
             ],
           },
           {
@@ -381,7 +394,11 @@ const CompareStores = () => {
             icon: "credit-card",
             rows: [
               ...makeRows((d) => toLineMap(d?.liabilities)),
-              totalRow("total_liabilities", "Total Liabilities", datas.map((d) => d?.total_liabilities ?? 0)),
+              totalRow(
+                "total_liabilities",
+                "Total Liabilities",
+                datas.map((d) => d?.total_liabilities ?? 0),
+              ),
             ],
           },
           {
@@ -390,7 +407,11 @@ const CompareStores = () => {
             icon: "landmark",
             rows: [
               ...makeRows((d) => toLineMap(d?.equity)),
-              totalRow("total_equity", "Total Equity", datas.map((d) => d?.total_equity ?? 0)),
+              totalRow(
+                "total_equity",
+                "Total Equity",
+                datas.map((d) => d?.total_equity ?? 0),
+              ),
             ],
           },
           {
@@ -413,7 +434,9 @@ const CompareStores = () => {
               total: number;
             },
         );
-        const truncated = datas.some((d) => (d?.total ?? 0) > JOURNALS_PAGE_SIZE);
+        const truncated = datas.some(
+          (d) => (d?.total ?? 0) > JOURNALS_PAGE_SIZE,
+        );
         const mark = truncated ? "*" : "";
         const sumItems = (fn: (i: JournalListItem) => number) =>
           datas.map((d) => (d?.items ?? []).reduce((s, i) => s + fn(i), 0));
@@ -423,10 +446,26 @@ const CompareStores = () => {
             color: "#8b5cf6",
             icon: "file-text",
             rows: [
-              totalRow("count", "Journal Entries", datas.map((d) => d?.total ?? 0)),
-              totalRow("lines", `Entry Lines${mark}`, sumItems((i) => i.entry_count)),
-              totalRow("debits", `Total Debits${mark}`, sumItems((i) => i.total_debit)),
-              totalRow("credits", `Total Credits${mark}`, sumItems((i) => i.total_credit)),
+              totalRow(
+                "count",
+                "Journal Entries",
+                datas.map((d) => d?.total ?? 0),
+              ),
+              totalRow(
+                "lines",
+                `Entry Lines${mark}`,
+                sumItems((i) => i.entry_count),
+              ),
+              totalRow(
+                "debits",
+                `Total Debits${mark}`,
+                sumItems((i) => i.total_debit),
+              ),
+              totalRow(
+                "credits",
+                `Total Credits${mark}`,
+                sumItems((i) => i.total_credit),
+              ),
             ],
           },
         ];
@@ -458,6 +497,129 @@ const CompareStores = () => {
     }
     if (row.bold) return section.color;
     return colors.text;
+  };
+
+  const flatItems: TableItem[] = [];
+  sections.forEach((section, secIdx) => {
+    flatItems.push({ kind: "section", secIdx, section });
+    section.rows.forEach((row, idx) =>
+      flatItems.push({ kind: "row", secIdx, idx, section, row }),
+    );
+  });
+
+  const tableHeader = (
+    <View
+      style={[
+        styles.headerRow,
+        {
+          borderBottomColor: isDark ? "#282b32" : "#e5e7eb",
+          backgroundColor: colors.background,
+        },
+      ]}
+    >
+      <View style={styles.labelCell}>
+        <Text style={[styles.headerText, { color: colors.textSecondary }]}>
+          Statement
+        </Text>
+      </View>
+      {columns.map((c) => (
+        <View
+          key={c.key}
+          style={[styles.valueCell, c.derived && styles.derivedCol]}
+        >
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.headerText,
+              {
+                color: c.derived
+                  ? "#8b5cf6"
+                  : c.storeId === null
+                    ? colors.text
+                    : colors.textSecondary,
+              },
+              c.storeId === null && !c.derived && { fontWeight: "700" },
+            ]}
+          >
+            {c.label}
+          </Text>
+        </View>
+      ))}
+    </View>
+  );
+
+  const renderItem = ({ item }: { item: TableItem }) => {
+    if (item.kind === "section") {
+      return (
+        <View
+          style={[
+            styles.sectionRow,
+            { backgroundColor: `${item.section.color}12` },
+          ]}
+        >
+          <Lucide
+            name={item.section.icon}
+            size={13}
+            color={item.section.color}
+          />
+          <Text style={[styles.sectionTitle, { color: item.section.color }]}>
+            {item.section.title}
+          </Text>
+        </View>
+      );
+    }
+    const { section, row, idx } = item;
+    return (
+      <View
+        style={[
+          styles.dataRow,
+          {
+            borderBottomColor: isDark ? "#23252b" : "#f1f3f7",
+            backgroundColor:
+              idx % 2 === 1
+                ? isDark
+                  ? "#17181c"
+                  : "#fafbfc"
+                : "transparent",
+          },
+        ]}
+      >
+        <View style={styles.labelCell}>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.rowLabel,
+              { color: colors.text },
+              row.bold && { fontWeight: "700" },
+            ]}
+          >
+            {row.label}
+          </Text>
+          {row.code ? (
+            <Text style={[styles.rowCode, { color: colors.textSecondary }]}>
+              {row.code}
+            </Text>
+          ) : null}
+        </View>
+        {row.values.map((v, i) => (
+          <View
+            key={`${row.key}-${i}`}
+            style={[styles.valueCell, columns[i]?.derived && styles.derivedCol]}
+          >
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.valueText,
+                { color: cellColor(v, row, section) },
+                row.bold && { fontWeight: "700" },
+              ]}
+            >
+              {fmt(v)}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
   };
 
   const needsRange = statement === "pnl" || statement === "cashflow";
@@ -641,155 +803,42 @@ const CompareStores = () => {
           </Text>
           <Pressable
             onPress={() => results.forEach((r) => r.refetch())}
-            style={[styles.retryButton, { backgroundColor: colors.buttonPrimary }]}
+            style={[
+              styles.retryButton,
+              { backgroundColor: colors.buttonPrimary },
+            ]}
           >
             <Text style={styles.retryText}>Retry</Text>
           </Pressable>
         </View>
       ) : (
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 32 }}
-        >
+        <View style={styles.tableArea}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.tableScroll}
+            style={{ flex: 1 }}
+            onLayout={(e) => setTableScrollH(e.nativeEvent.layout.height)}
           >
-            <View
-              style={{
-                width: LABEL_WIDTH + columns.length * COL_WIDTH,
-              }}
-            >
-              {/* Header */}
-              <View
-                style={[
-                  styles.headerRow,
-                  {
-                    borderBottomColor: isDark ? "#282b32" : "#e5e7eb",
-                    backgroundColor: colors.background,
-                  },
-                ]}
-              >
-                <View style={styles.labelCell}>
-                  <Text
-                    style={[
-                      styles.headerText,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    Statement
-                  </Text>
-                </View>
-                {columns.map((c) => (
-                  <View
-                    key={c.key}
-                    style={[
-                      styles.valueCell,
-                      c.derived && styles.derivedCol,
-                    ]}
-                  >
-                    <Text
-                      numberOfLines={1}
-                      style={[
-                        styles.headerText,
-                        {
-                          color: c.derived
-                            ? "#8b5cf6"
-                            : c.storeId === null
-                              ? colors.text
-                              : colors.textSecondary,
-                        },
-                        c.storeId === null && !c.derived && { fontWeight: "700" },
-                      ]}
-                    >
-                      {c.label}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-
-              {sections.map((section) => (
-                <Fragment key={section.title}>
-                  <View
-                    style={[
-                      styles.sectionRow,
-                      { backgroundColor: `${section.color}12` },
-                    ]}
-                  >
-                    <Lucide
-                      name={section.icon}
-                      size={13}
-                      color={section.color}
-                    />
-                    <Text
-                      style={[styles.sectionTitle, { color: section.color }]}
-                    >
-                      {section.title}
-                    </Text>
-                  </View>
-                  {section.rows.map((row, rowIdx) => (
-                    <View
-                      key={row.key}
-                      style={[
-                        styles.dataRow,
-                        {
-                          borderBottomColor: isDark ? "#23252b" : "#f1f3f7",
-                          backgroundColor:
-                            rowIdx % 2 === 1
-                              ? isDark
-                                ? "#17181c"
-                                : "#fafbfc"
-                              : "transparent",
-                        },
-                      ]}
-                    >
-                      <View style={styles.labelCell}>
-                        <Text
-                          numberOfLines={1}
-                          style={[
-                            styles.rowLabel,
-                            { color: colors.text },
-                            row.bold && { fontWeight: "700" },
-                          ]}
-                        >
-                          {row.label}
-                        </Text>
-                        {row.code ? (
-                          <Text
-                            style={[
-                              styles.rowCode,
-                              { color: colors.textSecondary },
-                            ]}
-                          >
-                            {row.code}
-                          </Text>
-                        ) : null}
-                      </View>
-                      {row.values.map((v, i) => (
-                        <View
-                          key={`${row.key}-${i}`}
-                          style={[
-                            styles.valueCell,
-                            columns[i]?.derived && styles.derivedCol,
-                          ]}
-                        >
-                          <Text
-                            numberOfLines={1}
-                            style={[
-                              styles.valueText,
-                              { color: cellColor(v, row, section) },
-                              row.bold && { fontWeight: "700" },
-                            ]}
-                          >
-                            {fmt(v)}
-                          </Text>
-                        </View>
-                      ))}
-                    </View>
-                  ))}
-                </Fragment>
-              ))}
+            <View style={{ width: LABEL_WIDTH + columns.length * COL_WIDTH }}>
+              {tableScrollH > 0 && (
+                <FlatList
+                  data={flatItems}
+                  keyExtractor={(item) =>
+                    item.kind === "section"
+                      ? `s-${item.secIdx}`
+                      : `r-${item.secIdx}-${item.idx}`
+                  }
+                  renderItem={renderItem}
+                  ListHeaderComponent={tableHeader}
+                  style={{ height: tableScrollH }}
+                  contentContainerStyle={{ paddingBottom: 16 }}
+                  initialNumToRender={24}
+                  maxToRenderPerBatch={16}
+                  windowSize={9}
+                  removeClippedSubviews
+                />
+              )}
             </View>
           </ScrollView>
 
@@ -798,7 +847,7 @@ const CompareStores = () => {
               ? "* Summed from the latest 500 journal entries per column."
               : "Untagged = All Stores − each store (journals and expenses with no store assigned)."}
           </Text>
-        </ScrollView>
+        </View>
       )}
     </View>
   );
@@ -808,6 +857,7 @@ export default CompareStores;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tableArea: { flex: 1 },
   center: {
     flex: 1,
     alignItems: "center",
