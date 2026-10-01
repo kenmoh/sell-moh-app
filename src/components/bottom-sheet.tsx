@@ -1,70 +1,26 @@
-// import { Colors } from "@/constants/theme";
-// import { BottomSheet, Host, RNHostView } from "@expo/ui";
-// import React from "react";
-// import { Dimensions, Platform, ScrollView, useColorScheme } from "react-native";
-
-// const SHEET_WIDTH = Dimensions.get("window").width;
-
-// const AppBottomSheet = ({
-//   children,
-//   visible,
-//   onVisibleChange,
-// }: {
-//   children: React.ReactNode;
-//   visible: boolean;
-//   onVisibleChange: (visible: boolean) => void;
-// }) => {
-//   const scheme = useColorScheme();
-//   const colors = Colors[scheme === "dark" ? "dark" : "light"];
-
-//   const content = (
-//     <ScrollView
-//       style={{ width: SHEET_WIDTH }}
-//       contentContainerStyle={{
-//         alignItems: "center",
-//         backgroundColor: colors.background,
-//       }}
-//       keyboardShouldPersistTaps="handled"
-//       showsVerticalScrollIndicator={false}
-//     >
-//       {children}
-//     </ScrollView>
-//   );
-
-//   return (
-//     <Host matchContents>
-//       <BottomSheet
-//         isPresented={visible}
-//         onDismiss={() => onVisibleChange(false)}
-//         showDragIndicator
-//         snapPoints={["half", "full"]}
-//       >
-//         {Platform.OS === "android" ? (
-//           <RNHostView matchContents>{content}</RNHostView>
-//         ) : (
-//           content
-//         )}
-//       </BottomSheet>
-//     </Host>
-//   );
-// };
-
-// export default AppBottomSheet;
-
 import { Colors } from "@/constants/theme";
 import BottomSheet, {
   BottomSheetMethods,
   BottomSheetScrollView,
 } from "@expo/ui/community/bottom-sheet";
-import React, { Ref, useCallback, useEffect, useRef } from "react";
+import React, { Ref, useCallback, useRef } from "react";
 import { useColorScheme } from "react-native";
 
-const swallow = (result: unknown) => {
-  if (result && typeof (result as Promise<unknown>).catch === "function") {
-    (result as Promise<unknown>).catch(() => {});
-  }
-};
-
+/**
+ * Visibility is driven purely by the `index` prop (-1 = closed, 0 = open),
+ * the declarative API of @expo/ui's BottomSheet on both platforms.
+ *
+ * Never call the imperative present()/dismiss()/close() from here: on Android
+ * those resolve to ModalBottomSheetView.hide(), whose promise rejects whenever
+ * the sheet is not currently shown (double close, close racing presentation,
+ * unmount during animation). The library does not catch that rejection, so it
+ * surfaces as "Uncaught (in promise) Error: Call to function
+ * 'ModalBottomSheetView.hide' has been rejected." — and the chained callbacks
+ * can then update React state on an unmounted parent.
+ *
+ * User-initiated closes (swipe, back button, scrim) flow back through
+ * onClose/onDismiss and are forwarded to onVisibleChange(false).
+ */
 export default function AppBottomSheet({
   children,
   visible,
@@ -83,30 +39,8 @@ export default function AppBottomSheet({
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const internalRef = useRef<BottomSheet>(null);
-  const isOpenRef = useRef(false);
-
-  useEffect(() => {
-    if (visible === true) {
-      if (isOpenRef.current) return;
-      isOpenRef.current = true;
-      swallow(
-        internalRef.current?.present?.() ??
-          internalRef.current?.snapToIndex?.(0),
-      );
-    } else if (visible === false) {
-      // Skip when not open: dismissing an un-presented sheet makes the
-      // native ModalBottomSheetView.hide call reject (uncaught promise),
-      // which happened on mount and after gesture-dismissal.
-      if (!isOpenRef.current) return;
-      isOpenRef.current = false;
-      swallow(
-        internalRef.current?.dismiss?.() ?? internalRef.current?.close?.(),
-      );
-    }
-  }, [visible]);
 
   const handleClosed = useCallback(() => {
-    isOpenRef.current = false;
     onVisibleChange?.(false);
   }, [onVisibleChange]);
 
@@ -120,7 +54,7 @@ export default function AppBottomSheet({
           (externalRef as any).current = node;
         }
       }}
-      index={-1}
+      index={visible ? 0 : -1}
       snapPoints={snapPoints}
       enableDynamicSizing={enableDynamicSizing}
       enablePanDownToClose
@@ -144,6 +78,5 @@ export default function AppBottomSheet({
         {children}
       </BottomSheetScrollView>
     </BottomSheet>
-    // </View>
   );
 }
