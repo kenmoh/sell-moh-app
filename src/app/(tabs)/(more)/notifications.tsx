@@ -26,6 +26,7 @@ import {
   Animated,
   FlatList,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -97,7 +98,12 @@ const Notifications = () => {
   );
 
   // Fetch notifications
-  const { data: notifData, isLoading } = useQuery({
+  const {
+    data: notifData,
+    isLoading,
+    isRefetching,
+    refetch: refetchNotifs,
+  } = useQuery({
     queryKey: [
       "notifications",
       activeFilter === "All" ? undefined : activeFilter,
@@ -114,11 +120,18 @@ const Notifications = () => {
   });
 
   // Fetch unread count
-  const { data: unreadCount = 0 } = useQuery({
+  const {
+    data: unreadCount = 0,
+    refetch: refetchUnread,
+  } = useQuery({
     queryKey: ["notifications-unread"],
     queryFn: fetchUnreadCount,
     refetchInterval: 30000,
   });
+
+  const onRefresh = useCallback(async () => {
+    await Promise.all([refetchNotifs(), refetchUnread()]);
+  }, [refetchNotifs, refetchUnread]);
 
   // Fetch notification settings
   const { data: bizSettings } = useQuery({
@@ -504,6 +517,13 @@ const Notifications = () => {
         }
         contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
         style={{ flex: 1 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={onRefresh}
+            tintColor="#3b82f6"
+          />
+        }
         initialNumToRender={12}
         maxToRenderPerBatch={12}
         windowSize={7}

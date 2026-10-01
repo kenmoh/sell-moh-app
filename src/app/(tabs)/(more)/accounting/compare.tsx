@@ -27,10 +27,12 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   useColorScheme,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -97,6 +99,7 @@ const toLineMap = (items: PnLLineItem[] | undefined): ItemMap => {
 
 const CompareStores = () => {
   const scheme = useColorScheme();
+  const { width: windowWidth } = useWindowDimensions();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
 
@@ -179,6 +182,8 @@ const CompareStores = () => {
 
   const isLoading = results.some((r) => r.isPending);
   const isError = results.some((r) => r.isError);
+  const isRefetching = results.some((r) => r.isRefetching);
+  const onRefresh = () => results.forEach((r) => r.refetch());
 
   const dataByCol: Record<string, any> = {};
   fetched.forEach((col, i) => {
@@ -507,161 +512,18 @@ const CompareStores = () => {
     );
   });
 
-  const tableHeader = (
-    <View
-      style={[
-        styles.headerRow,
-        {
-          borderBottomColor: isDark ? "#282b32" : "#e5e7eb",
-          backgroundColor: colors.background,
-        },
-      ]}
-    >
-      <View style={styles.labelCell}>
-        <Text style={[styles.headerText, { color: colors.textSecondary }]}>
-          Statement
-        </Text>
-      </View>
-      {columns.map((c) => (
-        <View
-          key={c.key}
-          style={[styles.valueCell, c.derived && styles.derivedCol]}
-        >
-          <Text
-            numberOfLines={1}
-            style={[
-              styles.headerText,
-              {
-                color: c.derived
-                  ? "#8b5cf6"
-                  : c.storeId === null
-                    ? colors.text
-                    : colors.textSecondary,
-              },
-              c.storeId === null && !c.derived && { fontWeight: "700" },
-            ]}
-          >
-            {c.label}
-          </Text>
-        </View>
-      ))}
-    </View>
-  );
-
-  const renderItem = ({ item }: { item: TableItem }) => {
-    if (item.kind === "section") {
-      return (
-        <View
-          style={[
-            styles.sectionRow,
-            { backgroundColor: `${item.section.color}12` },
-          ]}
-        >
-          <Lucide
-            name={item.section.icon}
-            size={13}
-            color={item.section.color}
-          />
-          <Text style={[styles.sectionTitle, { color: item.section.color }]}>
-            {item.section.title}
-          </Text>
-        </View>
-      );
-    }
-    const { section, row, idx } = item;
-    return (
-      <View
-        style={[
-          styles.dataRow,
-          {
-            borderBottomColor: isDark ? "#23252b" : "#f1f3f7",
-            backgroundColor:
-              idx % 2 === 1
-                ? isDark
-                  ? "#17181c"
-                  : "#fafbfc"
-                : "transparent",
-          },
-        ]}
-      >
-        <View style={styles.labelCell}>
-          <Text
-            numberOfLines={1}
-            style={[
-              styles.rowLabel,
-              { color: colors.text },
-              row.bold && { fontWeight: "700" },
-            ]}
-          >
-            {row.label}
-          </Text>
-          {row.code ? (
-            <Text style={[styles.rowCode, { color: colors.textSecondary }]}>
-              {row.code}
-            </Text>
-          ) : null}
-        </View>
-        {row.values.map((v, i) => (
-          <View
-            key={`${row.key}-${i}`}
-            style={[styles.valueCell, columns[i]?.derived && styles.derivedCol]}
-          >
-            <Text
-              numberOfLines={1}
-              style={[
-                styles.valueText,
-                { color: cellColor(v, row, section) },
-                row.bold && { fontWeight: "700" },
-              ]}
-            >
-              {fmt(v)}
-            </Text>
-          </View>
-        ))}
-      </View>
-    );
-  };
-
   const needsRange = statement === "pnl" || statement === "cashflow";
   const needsPoint = statement === "tb" || statement === "bs";
 
-  return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Toolbar placement="right">
-        <Stack.Toolbar.Button
-          icon={process.env.EXPO_OS === "ios" ? "info.circle" : Info}
-          onPress={() => setShowInfo(true)}
-        />
-      </Stack.Toolbar>
-      <InfoTooltip
-        title="Compare Stores"
-        message="See how each of your stores performs side by side. Every column shows the same statement for one store — plus All Stores and Untagged (journals and expenses not assigned to any store)."
-        visible={showInfo}
-        onVisibleChange={setShowInfo}
-        trigger={false}
-      />
-
-      {/* Statement Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.tabsRow}
-      >
-        {STATEMENTS.map((s) => (
-          <Pill
-            key={s.key}
-            label={s.label}
-            icon={s.icon}
-            size="sm"
-            active={statement === s.key}
-            onPress={() => setStatement(s.key)}
-          />
-        ))}
-      </ScrollView>
-
-      {/* Period Controls */}
+  const dateRow = (
+    <View
+      style={[
+        styles.dateRow,
+        { paddingHorizontal: 0, paddingTop: 4, maxWidth: windowWidth - 32 },
+      ]}
+    >
       {needsRange && (
-        <View style={styles.dateRow}>
+        <>
           <View style={styles.dateCol}>
             <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>
               From
@@ -740,10 +602,10 @@ const CompareStores = () => {
               />
             )}
           </View>
-        </View>
+        </>
       )}
       {needsPoint && (
-        <View style={styles.dateRow}>
+        <>
           <View style={styles.dateCol}>
             <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>
               As at
@@ -783,8 +645,160 @@ const CompareStores = () => {
               />
             )}
           </View>
-        </View>
+        </>
       )}
+    </View>
+  );
+
+  const tableHeader = (
+    <>
+      {(needsRange || needsPoint) && dateRow}
+      <View
+        style={[
+          styles.headerRow,
+          {
+            borderBottomColor: isDark ? "#282b32" : "#e5e7eb",
+            backgroundColor: colors.background,
+          },
+        ]}
+      >
+        <View style={styles.labelCell}>
+          <Text style={[styles.headerText, { color: colors.textSecondary }]}>
+            Statement
+          </Text>
+        </View>
+        {columns.map((c) => (
+          <View
+            key={c.key}
+            style={[styles.valueCell, c.derived && styles.derivedCol]}
+          >
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.headerText,
+                {
+                  color: c.derived
+                    ? "#8b5cf6"
+                    : c.storeId === null
+                      ? colors.text
+                      : colors.textSecondary,
+                },
+                c.storeId === null && !c.derived && { fontWeight: "700" },
+              ]}
+            >
+              {c.label}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </>
+  );
+
+  const renderItem = ({ item }: { item: TableItem }) => {
+    if (item.kind === "section") {
+      return (
+        <View
+          style={[
+            styles.sectionRow,
+            { backgroundColor: `${item.section.color}12` },
+          ]}
+        >
+          <Lucide
+            name={item.section.icon}
+            size={13}
+            color={item.section.color}
+          />
+          <Text style={[styles.sectionTitle, { color: item.section.color }]}>
+            {item.section.title}
+          </Text>
+        </View>
+      );
+    }
+    const { section, row, idx } = item;
+    return (
+      <View
+        style={[
+          styles.dataRow,
+          {
+            borderBottomColor: isDark ? "#23252b" : "#f1f3f7",
+            backgroundColor:
+              idx % 2 === 1 ? (isDark ? "#17181c" : "#fafbfc") : "transparent",
+          },
+        ]}
+      >
+        <View style={styles.labelCell}>
+          <Text
+            numberOfLines={1}
+            style={[
+              styles.rowLabel,
+              { color: colors.text },
+              row.bold && { fontWeight: "700" },
+            ]}
+          >
+            {row.label}
+          </Text>
+          {row.code ? (
+            <Text style={[styles.rowCode, { color: colors.textSecondary }]}>
+              {row.code}
+            </Text>
+          ) : null}
+        </View>
+        {row.values.map((v, i) => (
+          <View
+            key={`${row.key}-${i}`}
+            style={[styles.valueCell, columns[i]?.derived && styles.derivedCol]}
+          >
+            <Text
+              numberOfLines={1}
+              style={[
+                styles.valueText,
+                { color: cellColor(v, row, section) },
+                row.bold && { fontWeight: "700" },
+              ]}
+            >
+              {fmt(v)}
+            </Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "info.circle" : Info}
+          onPress={() => setShowInfo(true)}
+        />
+      </Stack.Toolbar>
+      <InfoTooltip
+        title="Compare Stores"
+        message="See how each of your stores performs side by side. Every column shows the same statement for one store — plus All Stores and Untagged (journals and expenses not assigned to any store)."
+        visible={showInfo}
+        onVisibleChange={setShowInfo}
+        trigger={false}
+      />
+
+      {/* Statement Tabs */}
+      <View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabsRow}
+        >
+          {STATEMENTS.map((s) => (
+            <Pill
+              key={s.key}
+              label={s.label}
+              icon={s.icon}
+              size="sm"
+              active={statement === s.key}
+              onPress={() => setStatement(s.key)}
+            />
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Table */}
       {isLoading ? (
@@ -812,7 +826,7 @@ const CompareStores = () => {
           </Pressable>
         </View>
       ) : (
-        <View style={styles.tableArea}>
+        <View style={[styles.tableArea]}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -820,7 +834,11 @@ const CompareStores = () => {
             style={{ flex: 1 }}
             onLayout={(e) => setTableScrollH(e.nativeEvent.layout.height)}
           >
-            <View style={{ width: LABEL_WIDTH + columns.length * COL_WIDTH }}>
+            <View
+              style={{
+                width: LABEL_WIDTH + columns.length * COL_WIDTH,
+              }}
+            >
               {tableScrollH > 0 && (
                 <FlatList
                   data={flatItems}
@@ -832,7 +850,16 @@ const CompareStores = () => {
                   renderItem={renderItem}
                   ListHeaderComponent={tableHeader}
                   style={{ height: tableScrollH }}
-                  contentContainerStyle={{ paddingBottom: 16 }}
+                  contentContainerStyle={{
+                    paddingBottom: 16,
+                  }}
+                  refreshControl={
+                    <RefreshControl
+                      refreshing={isRefetching}
+                      onRefresh={onRefresh}
+                      tintColor="#3b82f6"
+                    />
+                  }
                   initialNumToRender={24}
                   maxToRenderPerBatch={16}
                   windowSize={9}
@@ -875,7 +902,9 @@ const styles = StyleSheet.create({
   tabsRow: {
     paddingHorizontal: 16,
     gap: 8,
-    paddingBottom: 12,
+    paddingBottom: 4,
+    height: 50,
+    alignItems: "center",
   },
   dateRow: {
     flexDirection: "row",

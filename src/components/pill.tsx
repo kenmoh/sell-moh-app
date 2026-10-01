@@ -48,7 +48,11 @@ const AnimatedPressable = ({
           scale.value = withSpring(0.93, { damping: 15, stiffness: 400 });
         }}
         onPressOut={() => {
-          scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+          scale.value = withSpring(1, {
+            damping: 15,
+            stiffness: 400,
+            overshootClamping: true,
+          });
         }}
         onPress={onPress}
         disabled={disabled}
