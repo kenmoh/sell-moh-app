@@ -14,12 +14,7 @@ export default function DashboardLayout() {
       }}
     >
       <Stack.Screen name="index" />
-      <Stack.Screen
-        name="ai"
-        options={{
-          animation: "slide_from_right",
-        }}
-      />
+     
     </Stack>
   );
 }

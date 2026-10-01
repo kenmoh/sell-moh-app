@@ -1,10 +1,5 @@
 import { Colors } from "@/constants/theme";
 import { Lucide, LucideIconName } from "@react-native-vector-icons/lucide";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from "react-native-reanimated";
 import React from "react";
 import {
   Pressable,
@@ -13,6 +8,11 @@ import {
   useColorScheme,
   View,
 } from "react-native";
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from "react-native-reanimated";
 
 export interface PillProps {
   label: string;
@@ -152,7 +152,7 @@ const styles = StyleSheet.create({
   },
   pillSm: {
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 7,
     gap: 4,
   },
   label: {
