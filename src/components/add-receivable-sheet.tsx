@@ -2,6 +2,7 @@ import { createReceivable } from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -39,8 +40,11 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
   const [customerId, setCustomerId] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [amount, setAmount] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<ReceivableField, string>>>({});
+
+  const dueDateValue = dueDate ? dueDate.toISOString().split("T")[0] : "";
 
   const { mutate: createAR, isPending } = useMutation({
     mutationFn: () =>
@@ -49,7 +53,7 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
         customer_name: customerName,
         invoice_number: invoiceNumber,
         amount: parseFloat(amount),
-        due_date: dueDate,
+        due_date: dueDateValue,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["receivables"] });
@@ -64,7 +68,8 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
     setCustomerId("");
     setInvoiceNumber("");
     setAmount("");
-    setDueDate("");
+    setDueDate(null);
+    setShowDatePicker(false);
     setErrors({});
   };
 
@@ -74,7 +79,7 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
       customerId,
       invoiceNumber,
       amount,
-      dueDate,
+      dueDate: dueDateValue,
     });
     if (!result.success) {
       const fieldErrors: Partial<Record<ReceivableField, string>> = {};
@@ -166,13 +171,46 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
           {errors.amount && (
             <Text style={styles.errorText}>{errors.amount}</Text>
           )}
-          <AppTextInput
-            placeholder="Due date (YYYY-MM-DD)"
-            value={dueDate}
-            onChangeText={setDueDate}
-            leftIcon="calendar"
-            autoCapitalize="none"
-          />
+          <Pressable
+            style={[
+              styles.datePickerButton,
+              {
+                backgroundColor: colors.backgroundElement,
+                borderColor: colors.backgroundSelected,
+              },
+            ]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Lucide name="calendar" size={16} color={colors.textSecondary} />
+            <Text
+              style={[
+                styles.datePickerText,
+                { color: dueDate ? colors.text : colors.textSecondary },
+              ]}
+            >
+              {dueDate
+                ? dueDate.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "Select due date"}
+            </Text>
+            <Lucide name="chevron-down" size={16} color={colors.textSecondary} />
+          </Pressable>
+          {showDatePicker && (
+            <DateTimePicker
+              value={dueDate || new Date()}
+              mode="date"
+              display="compact"
+              presentation="dialog"
+              onValueChange={(_, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) setDueDate(selectedDate);
+              }}
+              onDismiss={() => setShowDatePicker(false)}
+            />
+          )}
           {errors.dueDate && (
             <Text style={styles.errorText}>{errors.dueDate}</Text>
           )}
@@ -215,6 +253,19 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   errorText: { fontSize: 12, color: "#DC2626", marginTop: -4 },
+  datePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  datePickerText: {
+    flex: 1,
+    fontSize: 14,
+  },
   createBtn: {
     flexDirection: "row",
     alignItems: "center",

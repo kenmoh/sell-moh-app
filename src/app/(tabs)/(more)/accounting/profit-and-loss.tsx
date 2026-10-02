@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   useColorScheme,
@@ -48,7 +49,7 @@ const ProfitAndLoss = () => {
       year: "numeric",
     });
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["profit-and-loss", from, to, activeStoreId],
     queryFn: () => fetchProfitAndLoss(from, to, activeStoreId),
   });
@@ -260,6 +261,13 @@ const ProfitAndLoss = () => {
             keyExtractor={(item) => item.title}
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 100 }}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching}
+                onRefresh={refetch}
+                tintColor="#3b82f6"
+              />
+            }
             renderItem={({ item }) => renderSection(item)}
             ListEmptyComponent={
               <View style={styles.emptyContainer}>

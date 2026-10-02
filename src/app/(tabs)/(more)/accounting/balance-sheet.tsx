@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   useColorScheme,
@@ -49,7 +50,7 @@ const BalanceSheet = () => {
     });
   };
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["balance-sheet", asAtDate, activeStoreId],
     queryFn: () => fetchBalanceSheet(asAtDate, activeStoreId),
   });
@@ -216,6 +217,13 @@ const BalanceSheet = () => {
           keyExtractor={(item) => item.title}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor="#3b82f6"
+            />
+          }
           renderItem={({ item }) => renderSection(item)}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

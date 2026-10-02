@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  RefreshControl,
   StyleSheet,
   Text,
   useColorScheme,
@@ -194,6 +195,13 @@ const TrialBalance = () => {
           keyExtractor={(item) => item.account_id}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 80 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              tintColor="#3b82f6"
+            />
+          }
           renderItem={renderItem}
           ItemSeparatorComponent={renderSeparator}
           ListFooterComponent={

@@ -65,6 +65,7 @@ interface Row {
   values: number[];
   bold?: boolean;
   tone?: "signed";
+  count?: boolean;
 }
 
 interface Section {
@@ -455,11 +456,13 @@ const CompareStores = () => {
                 "count",
                 "Journal Entries",
                 datas.map((d) => d?.total ?? 0),
+                { count: true },
               ),
               totalRow(
                 "lines",
                 `Entry Lines${mark}`,
                 sumItems((i) => i.entry_count),
+                { count: true },
               ),
               totalRow(
                 "debits",
@@ -493,6 +496,9 @@ const CompareStores = () => {
     const abs = Math.abs(v).toLocaleString();
     return v < 0 ? `-₦${abs}` : `₦${abs}`;
   };
+
+  const fmtCount = (v: number) =>
+    v === 0 ? "—" : Math.abs(v).toLocaleString();
 
   const cellColor = (v: number, row: Row, section: Section): string => {
     if (row.tone === "signed") {
@@ -756,7 +762,7 @@ const CompareStores = () => {
                 row.bold && { fontWeight: "700" },
               ]}
             >
-              {fmt(v)}
+              {row.count ? fmtCount(v) : fmt(v)}
             </Text>
           </View>
         ))}

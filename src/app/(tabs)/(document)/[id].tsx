@@ -186,8 +186,7 @@ const DocumentDetailScreen = () => {
   const doc = data?.data as Document | undefined;
 
   const statusMutation = useMutation({
-    mutationFn: (newStatus: string) =>
-      updateDocumentStatus(id!, newStatus),
+    mutationFn: (newStatus: string) => updateDocumentStatus(id!, newStatus),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["document", id] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
@@ -329,10 +328,16 @@ const DocumentDetailScreen = () => {
                 {downloadMutation.isPending ? (
                   <ActivityIndicator size={14} color={colors.textSecondary} />
                 ) : (
-                  <Lucide name="download" size={14} color={colors.textSecondary} />
+                  <Lucide
+                    name="download"
+                    size={14}
+                    color={colors.textSecondary}
+                  />
                 )}
               </Pressable>
-              <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+              <View
+                style={[styles.statusBadge, { backgroundColor: status.bg }]}
+              >
                 <View
                   style={[styles.statusDot, { backgroundColor: status.color }]}
                 />
@@ -444,7 +449,11 @@ const DocumentDetailScreen = () => {
             {
               backgroundColor: colors.card,
               borderTopColor: isDark ? "#282b32" : "#e5e7eb",
-              paddingBottom: insets.bottom + 12,
+              paddingBottom: 20,
+              alignItems: "center",
+              justifyContent: "center",
+              borderTopEndRadius: 25,
+              borderTopLeftRadius: 25,
             },
           ]}
         >
@@ -468,11 +477,7 @@ const DocumentDetailScreen = () => {
                   },
                 ]}
               >
-                <Lucide
-                  name={action.icon as any}
-                  size={16}
-                  color={textColor}
-                />
+                <Lucide name={action.icon as any} size={16} color={textColor} />
                 <Text style={[styles.actionBtnText, { color: textColor }]}>
                   {action.label}
                 </Text>
@@ -632,8 +637,7 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: "row",
     gap: 10,
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    padding: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   actionBtn: {
@@ -643,7 +647,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 6,
     paddingVertical: 14,
-    borderRadius: 12,
+    borderRadius: 50,
   },
   actionBtnText: {
     fontSize: 14,
