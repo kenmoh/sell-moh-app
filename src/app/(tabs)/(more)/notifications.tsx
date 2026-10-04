@@ -9,16 +9,18 @@ import {
 import NotificationDetailCard from "@/components/notification-detail-card";
 import Pill from "@/components/pill";
 import { Colors } from "@/constants/theme";
+import { getMenuIcon } from "@/types/notification-menu-icon";
 import {
   getNotificationTypeConfig,
   NOTIFICATION_TYPE_CONFIG,
   type InAppNotification,
   type NotificationType,
 } from "@/types/notifications";
-import { Checkbox, Host, Switch } from "@expo/ui";
+import MoreVert from "@expo/material-symbols/more_vert.xml";
+import { Checkbox, Host } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack, useRouter } from "expo-router";
+import { Stack } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -86,10 +88,8 @@ const Notifications = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   const [activeFilter, setActiveFilter] = useState<FilterType>("All");
-  const [typeToggles, setTypeToggles] = useState<Record<string, boolean>>({});
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [editMode, setEditMode] = useState(false);
   const [detailVisible, setDetailVisible] = useState(false);
@@ -120,10 +120,7 @@ const Notifications = () => {
   });
 
   // Fetch unread count
-  const {
-    data: unreadCount = 0,
-    refetch: refetchUnread,
-  } = useQuery({
+  const { data: unreadCount = 0, refetch: refetchUnread } = useQuery({
     queryKey: ["notifications-unread"],
     queryFn: fetchUnreadCount,
     refetchInterval: 30000,
@@ -303,84 +300,29 @@ const Notifications = () => {
   );
 
   const listHeader = (
-    <View style={{ gap: 16 }}>
-      {/* Notification Type Toggles */}
-      <View style={{ paddingHorizontal: 10, marginVertical: 5 }}>
-        <Text
-          style={[
-            styles.sectionLabel,
-            { color: colors.textSecondary, marginLeft: 15 },
-          ]}
-        >
-          NOTIFICATION TYPES
-        </Text>
-        <View style={[styles.typesCard, { backgroundColor: colors.card }]}>
-          {NOTIFICATION_TYPE_CONFIG.map((type, i) => (
-            <View
-              key={type.id}
-              style={[
-                styles.typeRow,
-                i < NOTIFICATION_TYPE_CONFIG.length - 1 && {
-                  borderBottomColor: colors.backgroundElement,
-                  borderBottomWidth: StyleSheet.hairlineWidth,
-                },
-              ]}
-            >
-              <View style={[styles.typeIcon, { backgroundColor: type.bg }]}>
-                <Lucide
-                  name={type.icon as any}
-                  size={16}
-                  color={type.color}
-                />
-              </View>
-              <Text style={[styles.typeLabel, { color: colors.text }]}>
-                {type.label}
-              </Text>
-              <Host matchContents>
-                <Switch
-                  value={
-                    type.id === "system"
-                      ? true
-                      : (typeTogglesFromServer[type.id] ?? true)
-                  }
-                  disabled={type.id === "system"}
-                  onValueChange={() => handleTogglePref(type.id)}
-                />
-              </Host>
-            </View>
-          ))}
-        </View>
-      </View>
-
-      {/* Filter Tabs */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterTabs}
-      >
-        {FILTERS.map((f) => (
-          <Pill
-            key={f}
-            label={f}
-            active={f === activeFilter}
-            onPress={() => setActiveFilter(f)}
-            color="#3b82f6"
-            badge={
-              f === "Unread" && unreadCount > 0 ? unreadCount : undefined
-            }
-          />
-        ))}
-      </ScrollView>
-    </View>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={styles.filterTabs}
+    >
+      {FILTERS.map((f) => (
+        <Pill
+          key={f}
+          label={f}
+          active={f === activeFilter}
+          onPress={() => setActiveFilter(f)}
+          color="#3b82f6"
+          badge={f === "Unread" && unreadCount > 0 ? unreadCount : undefined}
+        />
+      ))}
+    </ScrollView>
   );
 
   const renderListItem = ({ item }: { item: NotifListItem }) => {
     if (item.kind === "group") {
       return (
         <View style={{ paddingHorizontal: 20, marginTop: 16 }}>
-          <Text
-            style={[styles.sectionLabel, { color: colors.textSecondary }]}
-          >
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
             {item.label.toUpperCase()}
           </Text>
         </View>
@@ -391,9 +333,7 @@ const Notifications = () => {
     return (
       <View style={{ paddingHorizontal: 20, marginBottom: item.last ? 0 : 8 }}>
         <Swipeable
-          renderRightActions={
-            editMode ? undefined : renderRightActions(n.id)
-          }
+          renderRightActions={editMode ? undefined : renderRightActions(n.id)}
           enabled={!editMode}
         >
           <Pressable
@@ -414,9 +354,7 @@ const Notifications = () => {
               </View>
             )}
             {!n.is_read && <View style={styles.unreadDot} />}
-            <View
-              style={[styles.iconBadge, { backgroundColor: config.bg }]}
-            >
+            <View style={[styles.iconBadge, { backgroundColor: config.bg }]}>
               <Lucide
                 name={config.icon as any}
                 size={18}
@@ -424,9 +362,7 @@ const Notifications = () => {
               />
             </View>
             <View style={styles.notifInfo}>
-              <Text
-                style={[styles.notifTitle, { color: colors.text }]}
-              >
+              <Text style={[styles.notifTitle, { color: colors.text }]}>
                 {n.title}
               </Text>
               <Text
@@ -436,9 +372,7 @@ const Notifications = () => {
                 {n.body}
               </Text>
             </View>
-            <Text
-              style={[styles.notifTime, { color: colors.textSecondary }]}
-            >
+            <Text style={[styles.notifTime, { color: colors.textSecondary }]}>
               {formatTime(n.created_at)}
             </Text>
           </Pressable>
@@ -449,31 +383,48 @@ const Notifications = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen
-        options={{
-          headerRight: () => {
-            return editMode ? (
-              <Pressable
-                onPress={() => {
-                  setEditMode(false);
-                  setSelectedIds(new Set());
-                }}
-              >
-                <Text style={styles.markReadLink}>Done</Text>
+      <Stack.Toolbar placement="right" backgroundColor={colors.background}>
+        <Stack.Toolbar.Menu
+          icon={process.env.EXPO_OS === "ios" ? "ellipsis.circle" : MoreVert}
+        >
+          {NOTIFICATION_TYPE_CONFIG.map((type) => (
+            <Stack.Toolbar.MenuAction
+              key={type.id}
+              icon={getMenuIcon(type.id)}
+              isOn={
+                type.id === "system"
+                  ? true
+                  : (typeTogglesFromServer[type.id] ?? true)
+              }
+              disabled={type.id === "system"}
+              onPress={() => handleTogglePref(type.id)}
+            >
+              {type.label}
+            </Stack.Toolbar.MenuAction>
+          ))}
+        </Stack.Toolbar.Menu>
+        <Stack.Toolbar.View>
+          {editMode ? (
+            <Pressable
+              onPress={() => {
+                setEditMode(false);
+                setSelectedIds(new Set());
+              }}
+            >
+              <Text style={styles.markReadLink}>Done</Text>
+            </Pressable>
+          ) : (
+            <View style={styles.headerActions}>
+              <Pressable onPress={() => markAllMutation.mutate()}>
+                <Text style={styles.markReadLink}>Mark all read</Text>
               </Pressable>
-            ) : (
-              <View style={styles.headerActions}>
-                <Pressable onPress={() => markAllMutation.mutate()}>
-                  <Text style={styles.markReadLink}>Mark all read</Text>
-                </Pressable>
-                <Pressable onPress={() => setEditMode(true)} hitSlop={8}>
-                  <Lucide name="check-square" size={20} color="#3b82f6" />
-                </Pressable>
-              </View>
-            );
-          },
-        }}
-      />
+              <Pressable onPress={() => setEditMode(true)} hitSlop={8}>
+                <Lucide name="check-square" size={20} color="#3b82f6" />
+              </Pressable>
+            </View>
+          )}
+        </Stack.Toolbar.View>
+      </Stack.Toolbar>
 
       {/* Edit mode toolbar */}
       {editMode && (
@@ -569,22 +520,6 @@ const styles = StyleSheet.create({
   editToolbarLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   editToolbarText: { fontSize: 14, fontWeight: "500" },
   deleteLink: { color: "#dc2626", fontSize: 14, fontWeight: "600" },
-  typesCard: { borderRadius: 12, padding: 4 },
-  typeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 10,
-    gap: 10,
-  },
-  typeIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  typeLabel: { flex: 1, fontSize: 14, fontWeight: "500" },
   filterTabs: {
     paddingHorizontal: 10,
     gap: 8,
