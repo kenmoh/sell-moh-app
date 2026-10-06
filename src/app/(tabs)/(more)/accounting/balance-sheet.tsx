@@ -163,7 +163,11 @@ const BalanceSheet = () => {
       </Stack.Toolbar>
       <InfoTooltip
         title="Balance Sheet"
-        message="Your balance sheet is a snapshot of your business's financial health at a specific point in time. It shows what you own (assets), what you owe (liabilities), and what's left over (equity). The equation is always: Assets = Liabilities + Equity."
+        message={`Your balance sheet is a snapshot of your business's financial health at a specific point in time. It shows what you own (assets), what you owe (liabilities), and what's left over (equity). The equation is always: Assets = Liabilities + Equity.
+
+Every sale, invoice and payment is recorded twice in the books, so the two sides can never disagree with each other. Equity is the owner's capital plus revenue minus expenses — profit is not transferred into retained earnings at year end here, so it counts toward equity as it is earned.
+
+The panel above the figures reports two controls. The balance check (Assets − Liabilities − Equity) should be ₦0; anything else means a record reached the books on only one side. And the receivable and payable figures are compared with the ledger accounts behind them (1100 and 2000), so a bill or invoice saved without its journal shows up instead of quietly drifting.`}
         visible={showInfo}
         onVisibleChange={setShowInfo}
         trigger={false}

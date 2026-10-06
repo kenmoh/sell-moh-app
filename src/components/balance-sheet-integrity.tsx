@@ -30,7 +30,7 @@ type Props = {
 const BalanceSheetIntegrity = ({ data }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const balanced = Math.abs(data.balance_check) < 0.01;
   const arOk = Math.abs(data.receivable_difference) < 0.01;
@@ -109,11 +109,13 @@ const BalanceSheetIntegrity = ({ data }: Props) => {
           <Text style={[styles.title, { color: colors.text }]}>
             {allClear ? "Books are in balance" : "Books need attention"}
           </Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            {allClear
-              ? "Every transaction is recorded on both sides."
-              : "Some figures do not agree. Tap to see which."}
-          </Text>
+          {open && (
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              {allClear
+                ? "Every transaction is recorded on both sides."
+                : "Some figures do not agree. See which below."}
+            </Text>
+          )}
         </View>
         <Lucide
           name={open ? "chevron-up" : "chevron-down"}
