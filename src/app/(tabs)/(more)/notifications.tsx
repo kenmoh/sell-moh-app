@@ -21,11 +21,12 @@ import { Checkbox, Host } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
   Animated,
+  Easing,
   FlatList,
   Pressable,
   RefreshControl,
@@ -97,6 +98,19 @@ const Notifications = () => {
     null,
   );
 
+  // One driver for the whole select-mode transition: the toolbar fades and
+  // drops in, and every row's checkbox scales up with it. A state-held value
+  // keeps a stable identity for interpolation without reading a ref mid-render.
+  const selectAnim = useMemo(() => new Animated.Value(0), []);
+  useEffect(() => {
+    Animated.timing(selectAnim, {
+      toValue: editMode ? 1 : 0,
+      duration: 180,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [editMode, selectAnim]);
+
   // Fetch notifications
   const {
     data: notifData,
@@ -136,9 +150,11 @@ const Notifications = () => {
     queryFn: () => fetchBusinessSettings(),
   });
 
-  const notifs = notifData?.items ?? [];
-  const typeTogglesFromServer =
-    (bizSettings?.settings as any)?.notification_types ?? {};
+  const notifs = useMemo(() => notifData?.items ?? [], [notifData]);
+  const typeTogglesFromServer = useMemo(
+    () => (bizSettings?.settings as any)?.notification_types ?? {},
+    [bizSettings],
+  );
 
   const markReadMutation = useMutation({
     mutationFn: (ids: string[]) => markNotificationsRead(ids),
@@ -276,7 +292,9 @@ const Notifications = () => {
 
   const renderRightActions = useCallback(
     (id: string) => {
-      return (progress: Animated.AnimatedInterpolation<number>) => {
+      return function SwipeDeleteAction(
+        progress: Animated.AnimatedInterpolation<number>,
+      ) {
         const translateX = progress.interpolate({
           inputRange: [0, 1],
           outputRange: [80, 0],
@@ -303,6 +321,7 @@ const Notifications = () => {
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
+      style={styles.filterTabsWrap}
       contentContainerStyle={styles.filterTabs}
     >
       {FILTERS.map((f) => (
@@ -344,14 +363,29 @@ const Notifications = () => {
             }}
           >
             {editMode && (
-              <View style={styles.checkbox}>
+              <Animated.View
+                style={[
+                  styles.checkbox,
+                  {
+                    opacity: selectAnim,
+                    transform: [
+                      {
+                        scale: selectAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.7, 1],
+                        }),
+                      },
+                    ],
+                  },
+                ]}
+              >
                 <Host matchContents>
                   <Checkbox
                     value={selectedIds.has(n.id)}
                     onValueChange={() => handlePress(n)}
                   />
                 </Host>
-              </View>
+              </Animated.View>
             )}
             {!n.is_read && <View style={styles.unreadDot} />}
             <View style={[styles.iconBadge, { backgroundColor: config.bg }]}>
@@ -402,33 +436,33 @@ const Notifications = () => {
               {type.label}
             </Stack.Toolbar.MenuAction>
           ))}
+
+          {/* A custom toolbar view took the menu button with it, so the menu
+              holds only these toggles and the screen's own actions live in
+              the content below the header. */}
         </Stack.Toolbar.Menu>
-        <Stack.Toolbar.View>
-          {editMode ? (
-            <Pressable
-              onPress={() => {
-                setEditMode(false);
-                setSelectedIds(new Set());
-              }}
-            >
-              <Text style={styles.markReadLink}>Done</Text>
-            </Pressable>
-          ) : (
-            <View style={styles.headerActions}>
-              <Pressable onPress={() => markAllMutation.mutate()}>
-                <Text style={styles.markReadLink}>Mark all read</Text>
-              </Pressable>
-              <Pressable onPress={() => setEditMode(true)} hitSlop={8}>
-                <Lucide name="check-square" size={20} color="#3b82f6" />
-              </Pressable>
-            </View>
-          )}
-        </Stack.Toolbar.View>
       </Stack.Toolbar>
 
-      {/* Edit mode toolbar */}
-      {editMode && (
-        <View style={[styles.editToolbar, { backgroundColor: colors.card }]}>
+      {/* Screen actions — kept in the content rather than the header so they
+          are one tap away and survive without a custom toolbar view. */}
+      {editMode ? (
+        <Animated.View
+          style={[
+            styles.editToolbar,
+            {
+              backgroundColor: colors.card,
+              opacity: selectAnim,
+              transform: [
+                {
+                  translateY: selectAnim.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-8, 0],
+                  }),
+                },
+              ],
+            },
+          ]}
+        >
           <Pressable onPress={toggleSelectAll} style={styles.editToolbarLeft}>
             <Host matchContents>
               <Checkbox
@@ -442,11 +476,64 @@ const Notifications = () => {
                 : `${selectedIds.size} selected`}
             </Text>
           </Pressable>
-          {selectedIds.size > 0 && (
-            <Pressable onPress={handleBatchDelete} hitSlop={8}>
-              <Text style={styles.deleteLink}>Delete</Text>
+          <View style={styles.editToolbarRight}>
+            {selectedIds.size > 0 && (
+              <Pressable onPress={handleBatchDelete} hitSlop={8}>
+                <Text style={styles.deleteLink}>Delete</Text>
+              </Pressable>
+            )}
+            <Pressable
+              onPress={() => {
+                setEditMode(false);
+                setSelectedIds(new Set());
+              }}
+              hitSlop={8}
+            >
+              <Text style={styles.doneLink}>Done</Text>
             </Pressable>
-          )}
+          </View>
+        </Animated.View>
+      ) : (
+        <View
+          style={[styles.actionRow, { borderBottomColor: colors.backgroundElement }]}
+        >
+          <Pressable
+            style={styles.actionBtn}
+            onPress={() => markAllMutation.mutate()}
+            disabled={unreadCount === 0 || markAllMutation.isPending}
+            hitSlop={6}
+          >
+            <Lucide
+              name="check-check"
+              size={15}
+              color={unreadCount === 0 ? "#6b7280" : "#3b82f6"}
+            />
+            <Text
+              style={[
+                styles.actionBtnText,
+                {
+                  color: unreadCount === 0 ? "#6b7280" : "#3b82f6",
+                },
+              ]}
+            >
+              {markAllMutation.isPending
+                ? "Marking read..."
+                : unreadCount > 0
+                  ? `Mark all read (${unreadCount})`
+                  : "All caught up"}
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.actionBtn}
+            onPress={() => setEditMode(true)}
+            hitSlop={6}
+          >
+            <Lucide name="check-square" size={15} color="#3b82f6" />
+            <Text style={[styles.actionBtnText, { color: "#3b82f6" }]}>
+              Select
+            </Text>
+          </Pressable>
         </View>
       )}
 
@@ -507,8 +594,6 @@ const styles = StyleSheet.create({
   },
   headerLeft: { width: 40, alignItems: "flex-start" },
   headerTitle: { fontSize: 18, fontWeight: "700" },
-  headerActions: { flexDirection: "row", alignItems: "center", gap: 12 },
-  markReadLink: { color: "#3b82f6", fontSize: 13, fontWeight: "600" },
   editToolbar: {
     flexDirection: "row",
     alignItems: "center",
@@ -520,6 +605,31 @@ const styles = StyleSheet.create({
   editToolbarLeft: { flexDirection: "row", alignItems: "center", gap: 8 },
   editToolbarText: { fontSize: 14, fontWeight: "500" },
   deleteLink: { color: "#dc2626", fontSize: 14, fontWeight: "600" },
+  doneLink: { color: "#3b82f6", fontSize: 14, fontWeight: "600" },
+  editToolbarRight: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 16,
+  },
+  actionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+  },
+  actionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+  },
+  actionBtnText: { fontSize: 13, fontWeight: "600" },
+  filterTabsWrap: {
+    marginTop: 12,
+  },
   filterTabs: {
     paddingHorizontal: 10,
     gap: 8,

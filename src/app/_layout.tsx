@@ -1,5 +1,6 @@
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
 import { SessionProvider, useSession } from "@/lib/ctx";
+import { OnboardingProvider, useOnboarding } from "@/lib/onboarding-context";
 import { registerForPushNotifications } from "@/lib/push-notifications";
 import { SplashScreenController } from "@/lib/splash";
 import { ActiveStoreProvider } from "@/lib/store-context";
@@ -24,8 +25,10 @@ export default function RootLayout() {
           <ToastProvider>
             <SessionProvider>
               <ActiveStoreProvider>
-                <SplashScreenController />
-                <RootNavigator />
+                <OnboardingProvider>
+                  <SplashScreenController />
+                  <RootNavigator />
+                </OnboardingProvider>
               </ActiveStoreProvider>
             </SessionProvider>
           </ToastProvider>
@@ -38,6 +41,7 @@ export default function RootLayout() {
 function RootNavigator() {
   const dark = useColorScheme() === "dark";
   const { session } = useSession();
+  const { seen } = useOnboarding();
 
   useEffect(() => {
     if (dark) {
@@ -66,11 +70,14 @@ function RootNavigator() {
             contentStyle: { backgroundColor: dark ? "#1c1d22" : "#fff" },
           }}
         >
+          <Stack.Protected guard={!session && !seen}>
+            <Stack.Screen name="(onboarding)" options={{ headerShown: false }} />
+          </Stack.Protected>
+          <Stack.Protected guard={!session && seen}>
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          </Stack.Protected>
           <Stack.Protected guard={!!session}>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          </Stack.Protected>
-          <Stack.Protected guard={!session}>
-            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
           </Stack.Protected>
         </Stack>
       </View>

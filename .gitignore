@@ -47,3 +47,8 @@ example
 shape.md
 easignore
 qrcode.md
+
+# Firebase client config: contains an API key, kept local and supplied per
+# environment rather than committed.
+google-services.json
+googleServicesFile.json

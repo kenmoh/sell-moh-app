@@ -1,0 +1,14 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="See what's selling, in real time">
+  <rect x="0" y="0" width="400" height="400" fill="#14181A"/>
+  <circle cx="200" cy="220" r="128" fill="#1C2926"/>
+  
+    <line x1="130" y1="300" x2="286" y2="300" stroke="#3B4340" stroke-width="3" stroke-linecap="round"/>
+    <rect x="140" y="240" width="26" height="60" rx="6" fill="#303A36"/>
+<rect x="176" y="200" width="26" height="100" rx="6" fill="#3ED6AE"/>
+<rect x="212" y="224" width="26" height="76" rx="6" fill="#303A36"/>
+<rect x="248" y="170" width="26" height="130" rx="6" fill="#3ED6AE"/>
+    <path d="M140,190 L176,150 L212,168 L252,110" stroke="#FF9466" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="252" cy="110" r="9" fill="#FF9466"/>
+    <path d="M240,102 L254,96 L260,110" stroke="#FF9466" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    
+</svg>

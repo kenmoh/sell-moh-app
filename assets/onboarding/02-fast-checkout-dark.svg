@@ -1,0 +1,23 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Checkout in seconds">
+  <rect x="0" y="0" width="400" height="400" fill="#14181A"/>
+  <circle cx="200" cy="220" r="128" fill="#1C2926"/>
+  
+    <rect x="140" y="150" width="120" height="150" rx="16" fill="#1F2724" stroke="#303A36" stroke-width="2"/>
+    <rect x="156" y="168" width="88" height="60" rx="6" fill="#3ED6AE"/>
+    <rect x="156" y="240" width="24" height="10" rx="3" fill="#3B4340"/>
+    <rect x="188" y="240" width="24" height="10" rx="3" fill="#3B4340"/>
+    <rect x="220" y="240" width="24" height="10" rx="3" fill="#3B4340"/>
+    <rect x="156" y="258" width="24" height="10" rx="3" fill="#3B4340"/>
+    <rect x="188" y="258" width="24" height="10" rx="3" fill="#3B4340"/>
+    <rect x="220" y="258" width="24" height="10" rx="3" fill="#FF9466"/>
+    <g transform="translate(255,110) rotate(18)">
+      <rect x="0" y="0" width="70" height="46" rx="8" fill="#FF9466"/>
+      <rect x="10" y="12" width="20" height="14" rx="3" fill="#14181A"/>
+    </g>
+    <path d="M258,96 q10,-14 22,-8" stroke="#EDEFEE" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.5"/>
+    <path d="M266,88 q10,-16 24,-10" stroke="#EDEFEE" stroke-width="3" fill="none" stroke-linecap="round" opacity="0.3"/>
+    <path d="M150,300 q35,26 110,0 l-6,34 q-49,20 -98,0 Z" fill="#1F2724" stroke="#303A36" stroke-width="2"/>
+    <line x1="164" y1="316" x2="236" y2="316" stroke="#3B4340" stroke-width="3" stroke-linecap="round"/>
+    <line x1="164" y1="326" x2="216" y2="326" stroke="#3B4340" stroke-width="3" stroke-linecap="round"/>
+    
+</svg>

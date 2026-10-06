@@ -1,0 +1,27 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Stock synced across every store">
+  <rect x="0" y="0" width="400" height="400" fill="#14181A"/>
+  <circle cx="200" cy="220" r="128" fill="#1C2926"/>
+  
+    
+        <rect x="128" y="262" width="64" height="52" rx="8" fill="#1F2724"/>
+        <line x1="128" y1="280" x2="192" y2="280" stroke="#14181A" stroke-width="3"/>
+        <line x1="160" y1="262" x2="160" y2="280" stroke="#14181A" stroke-width="3"/>
+        
+    
+        <rect x="206" y="262" width="64" height="52" rx="8" fill="#3ED6AE"/>
+        <line x1="206" y1="280" x2="270" y2="280" stroke="#14181A" stroke-width="3"/>
+        <line x1="238" y1="262" x2="238" y2="280" stroke="#14181A" stroke-width="3"/>
+        
+    
+        <rect x="167" y="210" width="64" height="52" rx="8" fill="#FF9466"/>
+        <line x1="167" y1="228" x2="231" y2="228" stroke="#14181A" stroke-width="3"/>
+        <line x1="199" y1="210" x2="199" y2="228" stroke="#14181A" stroke-width="3"/>
+        
+    <g transform="translate(200,120)">
+      <path d="M-30,0 a30,30 0 1 1 8,20" stroke="#3ED6AE" stroke-width="7" fill="none" stroke-linecap="round"/>
+      <path d="M-24,10 -30,20 -38,8" stroke="#3ED6AE" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <circle cx="270" cy="200" r="9" fill="#FF9466"/>
+    <circle cx="140" cy="330" r="6" fill="#3B4340"/>
+    
+</svg>

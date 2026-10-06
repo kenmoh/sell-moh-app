@@ -1,0 +1,22 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Bring your whole team in, with the right access">
+  <rect x="0" y="0" width="400" height="400" fill="#14181A"/>
+  <circle cx="200" cy="220" r="128" fill="#1C2926"/>
+  
+    
+        <circle cx="140" cy="228" r="20" fill="#1F2724" stroke="#303A36" stroke-width="2"/>
+        <path d="M110,296 q0,-40 30,-40 q30,0 30,40 Z" fill="#1F2724" stroke="#303A36" stroke-width="2"/>
+        <rect x="116.0" y="302" width="48" height="16" rx="8" fill="#303A36"/>
+        
+    
+        <circle cx="200" cy="202" r="20" fill="#3ED6AE"/>
+        <path d="M170,270 q0,-40 30,-40 q30,0 30,40 Z" fill="#3ED6AE"/>
+        <rect x="170.0" y="276" width="60" height="16" rx="8" fill="#FF9466"/>
+        
+    
+        <circle cx="262" cy="228" r="20" fill="#1F2724" stroke="#303A36" stroke-width="2"/>
+        <path d="M232,296 q0,-40 30,-40 q30,0 30,40 Z" fill="#1F2724" stroke="#303A36" stroke-width="2"/>
+        <rect x="238.0" y="302" width="48" height="16" rx="8" fill="#303A36"/>
+        
+    <circle cx="200" cy="180" r="10" fill="#FF9466"/>
+    
+</svg>

@@ -25,7 +25,8 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.INTERNET"
       ],
-      "package": "com.kenmoh.sellmoh"
+      "package": "com.kenmoh.sellmoh",
+      "googleServicesFile": "./google-services.json"
     },
     "web": {
       "output": "static",

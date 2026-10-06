@@ -1,0 +1,17 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Every payment, one flow">
+  <rect x="0" y="0" width="400" height="400" fill="#14181A"/>
+  <circle cx="200" cy="220" r="128" fill="#1C2926"/>
+  
+    <g transform="translate(120,150) rotate(-8)">
+      <rect x="0" y="0" width="150" height="94" rx="14" fill="#3ED6AE"/>
+      <rect x="18" y="20" width="34" height="24" rx="5" fill="#14181A" opacity="0.85"/>
+      <line x1="18" y1="70" x2="86" y2="70" stroke="#14181A" stroke-width="5" stroke-linecap="round" opacity="0.6"/>
+    </g>
+    <circle cx="272" cy="150" r="34" fill="#FF9466"/>
+    <text x="272" y="161" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="700" text-anchor="middle" fill="#14181A">N</text>
+    <circle cx="150" cy="292" r="24" fill="#1F2724" stroke="#303A36" stroke-width="2"/>
+    <circle cx="182" cy="292" r="24" fill="#1F2724" stroke="#303A36" stroke-width="2"/>
+    <circle cx="214" cy="292" r="24" fill="#1F8A6E"/>
+    <path d="M204,292 l7,7 14,-15" stroke="#14181A" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    
+</svg>
