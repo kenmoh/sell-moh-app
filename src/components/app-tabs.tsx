@@ -1,4 +1,4 @@
-﻿import { NativeTabs } from "expo-router/unstable-native-tabs";
+import { NativeTabs } from "expo-router/unstable-native-tabs";
 import { useColorScheme } from "react-native";
 
 import { Colors } from "@/constants/theme";
@@ -8,7 +8,7 @@ import { useMemo } from "react";
 const staticPathList = [
   "/scan*",
   "/report*",
-  "/accounting",
+  "/accounting*",
   "/customers",
   "/notifications",
   "/store",
