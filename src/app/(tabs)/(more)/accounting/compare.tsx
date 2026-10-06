@@ -425,7 +425,7 @@ const CompareStores = () => {
             color: "#8b5cf6",
             icon: "check-check",
             rows: [
-              totalRow("balance_check", "Assets − L − E", checkVals, {
+              totalRow("balance_check", "Assets − Liabilities − Equity", checkVals, {
                 tone: "signed",
               }),
             ],
@@ -854,6 +854,7 @@ const CompareStores = () => {
                       : `r-${item.secIdx}-${item.idx}`
                   }
                   renderItem={renderItem}
+                  showsVerticalScrollIndicator={false}
                   ListHeaderComponent={tableHeader}
                   style={{ height: tableScrollH }}
                   contentContainerStyle={{
@@ -880,6 +881,43 @@ const CompareStores = () => {
               ? "* Summed from the latest 500 journal entries per column."
               : "Untagged = All Stores − each store (journals and expenses with no store assigned)."}
           </Text>
+
+          {statement === "bs" && (
+            <View
+              style={[
+                styles.legend,
+                {
+                  backgroundColor: colors.backgroundElement,
+                  borderColor: colors.backgroundSelected,
+                },
+              ]}
+            >
+              <Text style={[styles.legendTitle, { color: colors.text }]}>
+                Reading the Balance Check
+              </Text>
+              <Text style={[styles.legendBody, { color: colors.textSecondary }]}>
+                Every sale, invoice and payment is recorded twice in the books —
+                once as money coming in, once as money going out. Because of
+                that, what the business owns must always equal what it owes
+                plus what the owner has put in:
+              </Text>
+              <Text style={[styles.legendEquation, { color: colors.text }]}>
+                Assets = Liabilities + Equity
+              </Text>
+              <Text style={[styles.legendBody, { color: colors.textSecondary }]}>
+                The check subtracts liabilities and equity from assets and
+                subtracts the answer from what you expect. It should always be
+                ₦0. Anything else means a record reached the books on only one
+                side — the row turns red so you can chase it.
+              </Text>
+              <Text style={[styles.legendBody, { color: colors.textSecondary }]}>
+                Equity here is the owner&apos;s capital plus revenue minus
+expenses.
+                Profit is never transferred to retained earnings at year end
+                here, so it counts toward equity as it is earned.
+              </Text>
+            </View>
+          )}
         </View>
       )}
     </View>
@@ -986,9 +1024,26 @@ const styles = StyleSheet.create({
   rowCode: { fontSize: 10, marginTop: 1 },
   valueText: { fontSize: 13, fontWeight: "600" },
   footnote: {
-    fontSize: 11,
     paddingHorizontal: 20,
     marginTop: 14,
     textAlign: "center",
+    fontSize: 11,
   },
+  legend: {
+    marginTop: 14,
+    marginHorizontal: 20,
+    marginBottom: 8,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  legendTitle: { fontSize: 13, fontWeight: "700" },
+  legendEquation: {
+    fontSize: 14,
+    fontWeight: "800",
+    textAlign: "center",
+    marginVertical: 2,
+  },
+  legendBody: { fontSize: 12, lineHeight: 18 },
 });

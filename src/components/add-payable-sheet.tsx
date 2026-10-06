@@ -1,13 +1,20 @@
 import { createPayable } from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
+import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import {
+  DEFAULT_EXPENSE_CATEGORY,
+  EXPENSE_CATEGORIES,
+  type ExpenseCategoryId,
+} from "@/constants/expense-categories";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   useColorScheme,
@@ -40,6 +47,9 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState("");
+  const [category, setCategory] = useState<ExpenseCategoryId>(
+    DEFAULT_EXPENSE_CATEGORY,
+  );
   const [errors, setErrors] = useState<Partial<Record<PayableField, string>>>({});
 
   const { mutate: createAP, isPending } = useMutation({
@@ -50,6 +60,7 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
         description: description || undefined,
         amount: parseFloat(amount),
         due_date: dueDate,
+        expense_category: category,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payables"] });
@@ -65,6 +76,7 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
     setDescription("");
     setAmount("");
     setDueDate("");
+    setCategory(DEFAULT_EXPENSE_CATEGORY);
     setErrors({});
   };
 
@@ -140,6 +152,31 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
           {errors.billNumber && (
             <Text style={styles.errorText}>{errors.billNumber}</Text>
           )}
+          <Text
+            style={[styles.fieldLabel, { color: colors.textSecondary }]}
+          >
+            What the bill is for
+          </Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryRow}
+          >
+            {EXPENSE_CATEGORIES.map((c) => (
+              <Pill
+                key={c.id}
+                label={c.label}
+                active={c.id === category}
+                onPress={() => setCategory(c.id)}
+                color="#3b82f6"
+              />
+            ))}
+          </ScrollView>
+          <Text style={[styles.hint, { color: colors.textSecondary }]}>
+            {`Decides which expense the amount is charged to on the books. Currently: ${
+              EXPENSE_CATEGORIES.find((c) => c.id === category)?.label
+            }.`}
+          </Text>
           <AppTextInput
             placeholder="Description (optional)"
             value={description}
@@ -211,6 +248,9 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   errorText: { fontSize: 12, color: "#DC2626", marginTop: -4 },
+  fieldLabel: { fontSize: 12, marginTop: 4 },
+  categoryRow: { gap: 8, paddingVertical: 4 },
+  hint: { fontSize: 11, lineHeight: 16 },
   createBtn: {
     flexDirection: "row",
     alignItems: "center",

@@ -99,6 +99,25 @@ export interface BalanceSheetResponse {
   total_assets: number;
   total_liabilities: number;
   total_equity: number;
+
+  // Equity build-up. Earnings are not closed into Retained Earnings, so they
+  // stay in the revenue and expense accounts and count toward equity.
+  capital: number;
+  current_earnings: number;
+  total_revenue: number;
+  total_expenses: number;
+
+  // Assets - Liabilities - Equity. Zero means the books balance.
+  balance_check: number;
+
+  // Sub-ledger vs general-ledger control account. A non-zero difference means
+  // a receivable or payable is missing its journal entry.
+  receivable_subledger: number;
+  receivable_control: number;
+  receivable_difference: number;
+  payable_subledger: number;
+  payable_control: number;
+  payable_difference: number;
 }
 
 // ── Cash Flow ──────────────────────────────────────────────────────────────
@@ -154,6 +173,9 @@ export interface CreatePayableRequest {
   amount: number;
   due_date: string;
   store_id?: string | null;
+  // Which expense the bill relates to. The server resolves the counterpart
+  // account of the accrual journal (Dr expense / Cr 2000) from this.
+  expense_category?: string;
 }
 
 export interface PayableResponse {

@@ -1,4 +1,5 @@
 import { fetchBalanceSheet } from "@/api/accounting";
+import BalanceSheetIntegrity from "@/components/balance-sheet-integrity";
 import InfoTooltip from "@/components/info-tooltip";
 import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
@@ -217,6 +218,7 @@ const BalanceSheet = () => {
           keyExtractor={(item) => item.title}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
+          ListHeaderComponent={data ? <BalanceSheetIntegrity data={data} /> : null}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
