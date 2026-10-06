@@ -6,7 +6,6 @@ import {
   fetchPayables,
   fetchReceivables,
 } from "@/api/accounting";
-import AccountingContextMenu from "@/components/accounting-context-menu";
 import AddExpenseSheet from "@/components/add-expense-sheet";
 import AddPayableSheet from "@/components/add-payable-sheet";
 import AddReceivableSheet from "@/components/add-receivable-sheet";
@@ -16,9 +15,11 @@ import RecordPaymentSheet from "@/components/record-payment-sheet";
 import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
+import { getAccountingMenuIcon } from "@/types/accounting-menu-icon";
+import MoreVert from "@expo/material-symbols/more_vert.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -99,11 +100,10 @@ const AccountingScreen = () => {
     refetch: refetchExpenses,
   } = useQuery({
     queryKey: ["expenses", activeStoreId],
-    queryFn: () =>
-      fetchExpenses({ store_id: activeStoreId ?? undefined }),
+    queryFn: () => fetchExpenses({ store_id: activeStoreId ?? undefined }),
   });
 
-  const { data: expenseSummary = {}, isLoading: isLoadingSummary } = useQuery({
+  const { data: expenseSummary = {} } = useQuery({
     queryKey: ["expense-summary", activeStoreId],
     queryFn: () =>
       fetchExpenseSummary({ store_id: activeStoreId ?? undefined }),
@@ -174,44 +174,37 @@ const AccountingScreen = () => {
       {
         key: "chart-of-accounts",
         label: "Chart of Accounts",
-        icon: "book-open",
         onPress: () =>
           router.push("/(tabs)/(more)/accounting/chart-of-accounts"),
       },
       {
         key: "journals",
         label: "Journal Entries",
-        icon: "file-text",
         onPress: () => router.push("/(tabs)/(more)/accounting/journals"),
       },
       {
         key: "trial-balance",
         label: "Trial Balance",
-        icon: "scale",
         onPress: () => router.push("/(tabs)/(more)/accounting/trial-balance"),
       },
       {
         key: "profit-loss",
         label: "Profit & Loss",
-        icon: "trending-up",
         onPress: () => router.push("/(tabs)/(more)/accounting/profit-and-loss"),
       },
       {
         key: "balance-sheet",
         label: "Balance Sheet",
-        icon: "landmark",
         onPress: () => router.push("/(tabs)/(more)/accounting/balance-sheet"),
       },
       {
         key: "cash-flow",
         label: "Cash Flow",
-        icon: "banknote",
         onPress: () => router.push("/(tabs)/(more)/accounting/cash-flow"),
       },
       {
         key: "compare-stores",
         label: "Compare Stores",
-        icon: "git-compare",
         onPress: () => router.push("/(tabs)/(more)/accounting/compare"),
       },
     ],
@@ -319,9 +312,16 @@ const AccountingScreen = () => {
                     )
                   }
                 >
-                  <Lucide name="receipt" size={11} color={colors.textSecondary} />
+                  <Lucide
+                    name="receipt"
+                    size={11}
+                    color={colors.textSecondary}
+                  />
                   <Text
-                    style={[styles.paymentsLinkText, { color: colors.textSecondary }]}
+                    style={[
+                      styles.paymentsLinkText,
+                      { color: colors.textSecondary },
+                    ]}
                   >
                     {`${item.amount_paid > 0 ? "Paid " : ""}₦${item.amount_paid.toLocaleString()}`}
                   </Text>
@@ -427,9 +427,16 @@ const AccountingScreen = () => {
                     )
                   }
                 >
-                  <Lucide name="receipt" size={11} color={colors.textSecondary} />
+                  <Lucide
+                    name="receipt"
+                    size={11}
+                    color={colors.textSecondary}
+                  />
                   <Text
-                    style={[styles.paymentsLinkText, { color: colors.textSecondary }]}
+                    style={[
+                      styles.paymentsLinkText,
+                      { color: colors.textSecondary },
+                    ]}
                   >
                     {`Paid ₦${item.amount_paid.toLocaleString()}`}
                   </Text>
@@ -445,19 +452,19 @@ const AccountingScreen = () => {
           style={[
             styles.listCard,
             {
-backgroundColor: colors.card,
-                borderColor: isDark ? colors.backgroundElement : "#eef0f4",
-                borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
-              },
-            ]}
-          >
-            <View style={styles.listCardHeader}>
-              <View
-                style={[
-                  styles.listCardIcon,
-                  { backgroundColor: "rgba(239,68,68,0.12)" },
-                ]}
-              >
+              backgroundColor: colors.card,
+              borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+              borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
+            },
+          ]}
+        >
+          <View style={styles.listCardHeader}>
+            <View
+              style={[
+                styles.listCardIcon,
+                { backgroundColor: "rgba(239,68,68,0.12)" },
+              ]}
+            >
               <Lucide name="receipt" size={16} color="#ef4444" />
             </View>
             <View style={styles.listCardInfo}>
@@ -515,10 +522,25 @@ backgroundColor: colors.card,
   );
 
   return (
-    <SafeAreaView
-      style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top", "left", "right"]}
-    >
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* The statement screens live behind the native header menu, matching
+          the notifications screen. */}
+      <Stack.Toolbar placement="right" backgroundColor={colors.background}>
+        <Stack.Toolbar.Menu
+          icon={process.env.EXPO_OS === "ios" ? "ellipsis.circle" : MoreVert}
+        >
+          {menuItems.map((item) => (
+            <Stack.Toolbar.MenuAction
+              key={item.key}
+              icon={getAccountingMenuIcon(item.key)}
+              onPress={item.onPress}
+            >
+              {item.label}
+            </Stack.Toolbar.MenuAction>
+          ))}
+        </Stack.Toolbar.Menu>
+      </Stack.Toolbar>
+
       <FlatList
         data={currentList}
         keyExtractor={(item: any) => item.id}
@@ -526,26 +548,21 @@ backgroundColor: colors.card,
         contentContainerStyle={{ paddingBottom: 24 }}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.background }}>
-            {/* Header */}
-            <View style={styles.headerTitleRow}>
-              <View>
-                <Text style={[styles.headerTitle, { color: colors.text }]}>
-                  Accounting
-                </Text>
-                <Text
-                  style={[
-                    styles.headerSubtitle,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Financial overview
-                </Text>
-              </View>
-              <AccountingContextMenu items={menuItems} />
-            </View>
-
             {/* Store Filter */}
-            <View style={styles.switcherRow}>
+            <View
+              style={[
+                styles.switcherRow,
+                {
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  paddingHorizontal: 16,
+                  paddingTop: 12,
+                  marginBottom: 12,
+                },
+              ]}
+            >
+              <Text>Finacial Overview</Text>
               <StoreSwitcher mode="all" />
             </View>
 
@@ -788,7 +805,7 @@ backgroundColor: colors.card,
           totalPaid={historyItem.totalPaid}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -797,20 +814,11 @@ export default AccountingScreen;
 const styles = StyleSheet.create({
   container: { flex: 1 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  headerTitleRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 12,
-  },
   switcherRow: {
     paddingHorizontal: 16,
+    paddingTop: 12,
     marginBottom: 12,
   },
-  headerTitle: { fontSize: 24, fontWeight: "800", letterSpacing: -0.4 },
-  headerSubtitle: { fontSize: 13, marginTop: 2 },
   dashboardCard: {
     marginHorizontal: 16,
     marginBottom: 16,

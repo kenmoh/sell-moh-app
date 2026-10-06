@@ -15,7 +15,7 @@ const AccountingLayout = () => {
           animation: "slide_from_right",
         }}
       >
-        <Stack.Screen name="index" options={{ headerShown: false }} />
+        <Stack.Screen name="index" options={{ title: "Accounting" }} />
         <Stack.Screen
           name="chart-of-accounts"
           options={{ title: "Chart of Accounts" }}
