@@ -352,6 +352,43 @@ export const recordApPayment = async (
   return res.data?.data!;
 };
 
+/**
+ * Re-attribute a receivable or payable to another store (null = All Stores).
+ * This is a correction, not an edit: the server requires a supervisor PIN
+ * unless the caller is an owner, and records the change in the audit trail.
+ */
+const moveToStore = async <T>(
+  kind: "receivable" | "payable",
+  id: string,
+  storeId: string | null,
+  supervisorPin?: string,
+): Promise<T> => {
+  const res = await apiClient.patch<{ data: T }>(`${URL}/${kind}/${id}/store`, {
+    store_id: storeId,
+    ...(supervisorPin ? { supervisor_pin: supervisorPin } : {}),
+  });
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
+export const moveReceivableToStore = (
+  arId: string,
+  storeId: string | null,
+  supervisorPin?: string,
+): Promise<ReceivableResponse> =>
+  moveToStore<ReceivableResponse>("receivable", arId, storeId, supervisorPin);
+
+export const movePayableToStore = (
+  apId: string,
+  storeId: string | null,
+  supervisorPin?: string,
+): Promise<PayableResponse> =>
+  moveToStore<PayableResponse>("payable", apId, storeId, supervisorPin);
+
 // ── Expenses ───────────────────────────────────────────────────────────────
 
 export const fetchExpenses = async (params?: {

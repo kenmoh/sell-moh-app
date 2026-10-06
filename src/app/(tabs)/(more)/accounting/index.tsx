@@ -9,6 +9,7 @@ import {
 import AddExpenseSheet from "@/components/add-expense-sheet";
 import AddPayableSheet from "@/components/add-payable-sheet";
 import AddReceivableSheet from "@/components/add-receivable-sheet";
+import MoveToStoreSheet from "@/components/move-to-store-sheet";
 import PaymentHistorySheet from "@/components/payment-history-sheet";
 import Pill from "@/components/pill";
 import RecordPaymentSheet from "@/components/record-payment-sheet";
@@ -54,6 +55,12 @@ const AccountingScreen = () => {
   const [showAddPayable, setShowAddPayable] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showRecordPayment, setShowRecordPayment] = useState(false);
+  const [moveTarget, setMoveTarget] = useState<{
+    kind: "receivable" | "payable";
+    id: string;
+    reference: string;
+    storeId: string | null;
+  } | null>(null);
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
     name: string;
@@ -282,8 +289,35 @@ const AccountingScreen = () => {
                   {item.status}
                 </Text>
               </View>
+              <Pressable
+                style={[
+                  styles.moveButton,
+                  { backgroundColor: colors.backgroundElement },
+                ]}
+                onPress={() =>
+                  setMoveTarget({
+                    kind: "receivable",
+                    id: item.id,
+                    reference: item.invoice_number,
+                    storeId: item.store_id ?? null,
+                  })
+                }
+              >
+                <Lucide
+                  name="store"
+                  size={13}
+                  color={colors.textSecondary}
+                />
+              </Pressable>
             </View>
-            <View style={styles.listCardFooter}>
+            <View
+              style={[
+                styles.listCardFooter,
+                {
+                  borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
+                },
+              ]}
+            >
               <Text style={[styles.listCardAmount, { color: colors.text }]}>
                 ₦{item.amount.toLocaleString()}
               </Text>
@@ -397,8 +431,35 @@ const AccountingScreen = () => {
                   {item.status}
                 </Text>
               </View>
+              <Pressable
+                style={[
+                  styles.moveButton,
+                  { backgroundColor: colors.backgroundElement },
+                ]}
+                onPress={() =>
+                  setMoveTarget({
+                    kind: "payable",
+                    id: item.id,
+                    reference: item.bill_number,
+                    storeId: item.store_id ?? null,
+                  })
+                }
+              >
+                <Lucide
+                  name="store"
+                  size={13}
+                  color={colors.textSecondary}
+                />
+              </Pressable>
             </View>
-            <View style={styles.listCardFooter}>
+            <View
+              style={[
+                styles.listCardFooter,
+                {
+                  borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
+                },
+              ]}
+            >
               <Text style={[styles.listCardAmount, { color: colors.text }]}>
                 ₦{item.amount.toLocaleString()}
               </Text>
@@ -481,7 +542,14 @@ const AccountingScreen = () => {
               ₦{item.amount.toLocaleString()}
             </Text>
           </View>
-          <View style={styles.listCardFooter}>
+          <View
+            style={[
+              styles.listCardFooter,
+              {
+                borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
+              },
+            ]}
+          >
             <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
               {item.expense_date}
             </Text>
@@ -556,13 +624,11 @@ const AccountingScreen = () => {
                   flexDirection: "row",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  paddingHorizontal: 16,
-                  paddingTop: 12,
-                  marginBottom: 12,
+                  // paddingHorizontal: 16,
                 },
               ]}
             >
-              <Text>Finacial Overview</Text>
+              <Text style={{ color: colors.text }}>Finacial Overview</Text>
               <StoreSwitcher mode="all" />
             </View>
 
@@ -805,6 +871,19 @@ const AccountingScreen = () => {
           totalPaid={historyItem.totalPaid}
         />
       )}
+
+      {moveTarget && (
+        <MoveToStoreSheet
+          visible={!!moveTarget}
+          onVisibleChange={(visible) => {
+            if (!visible) setMoveTarget(null);
+          }}
+          kind={moveTarget.kind}
+          recordId={moveTarget.id}
+          reference={moveTarget.reference}
+          currentStoreId={moveTarget.storeId}
+        />
+      )}
     </View>
   );
 };
@@ -946,6 +1025,13 @@ const styles = StyleSheet.create({
     borderRadius: 100,
   },
   statusText: { fontSize: 11, fontWeight: "700" },
+  moveButton: {
+    width: 26,
+    height: 26,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   emptyContainer: {
     alignItems: "center",
     justifyContent: "center",
