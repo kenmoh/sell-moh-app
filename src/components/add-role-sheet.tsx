@@ -1,6 +1,7 @@
 import { createRole, getPermissions } from "@/api/auth";
 import AppBottomSheet from "@/components/bottom-sheet";
 import Pill from "@/components/pill";
+import InfoTooltip from "@/components/info-tooltip";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { CreateRole } from "@/types/auth";
@@ -23,7 +24,11 @@ type Props = {
   onVisibleChange: (visible: boolean) => void;
 };
 
-const RANK_OPTIONS = [20, 40, 60, 80, 100];
+/** The owner's rank. A role may not be ranked above it: anything at or
+ *  above clears an owner-only gate. The API rejects anything higher. */
+const MAX_RANK = 80;
+
+const RANK_OPTIONS = [20, 40, 60, 80].filter((r) => r <= MAX_RANK);
 
 const AddRoleSheet = ({ visible, onVisibleChange }: Props) => {
   const scheme = useColorScheme();
@@ -130,9 +135,19 @@ const AddRoleSheet = ({ visible, onVisibleChange }: Props) => {
 
         {/* Rank */}
         <View style={styles.section}>
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-            Rank
-          </Text>
+          <View style={styles.sectionHeader}>
+            <InfoTooltip
+              title="What rank does"
+              message="Rank decides how much a role can do on its own. Roles at or above the owner's rank are trusted with actions that normally need a supervisor's PIN, such as correcting a store's figures or rewriting a role's permissions.
+
+Rank does not grant access by itself — the permission chips below are what actually let staff reach each part of the app. Rank only decides who may approve and who may bypass a second signature.
+
+A role can never rank above the owner, so nothing can outrank the person who owns the business."
+            />
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              Rank
+            </Text>
+          </View>
           <View style={styles.rankRow}>
             {RANK_OPTIONS.map((r) => (
               <Pill
@@ -267,6 +282,13 @@ const styles = StyleSheet.create({
   section: {
     gap: 10,
     marginBottom: 20,
+  },
+  // The info trigger sits ahead of the label, so the row holds both.
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 2,
+    marginLeft: -6,
   },
   sectionLabel: {
     fontSize: 13,
