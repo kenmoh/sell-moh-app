@@ -135,6 +135,7 @@ const SettlementScreen = () => {
       <FlatList
         data={items}
         keyExtractor={(item) => item.id}
+        showsVerticalScrollIndicator={false}
         renderItem={renderItem}
         contentContainerStyle={{
           paddingHorizontal: 16,
