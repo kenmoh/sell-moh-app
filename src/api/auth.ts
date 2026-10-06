@@ -2,6 +2,7 @@ import {
   CreateEmployee,
   CreateRole,
   DataMessageResponse,
+  Employee,
   EmployeeResponse,
   FetchTenantRoles,
   LoginRequest,
@@ -116,6 +117,33 @@ export const updateRole = async (
   return res.data!;
 };
 
+/**
+ * Replace a role's permission set.
+ *
+ * Needs a supervisor PIN unless the caller is an owner, so `supervisorPin` is
+ * only sent once the server has asked for it — sending it eagerly would leak a
+ * credential the owner was never asked for.
+ */
+export const setRolePermissions = async (
+  roleId: string,
+  permissionIds: string[],
+  supervisorPin?: string,
+): Promise<FetchTenantRoles> => {
+  const res = await apiClient.put<{ data: FetchTenantRoles }>(
+    `${URL}/roles/${roleId}/permissions`,
+    {
+      permission_ids: permissionIds,
+      ...(supervisorPin ? { supervisor_pin: supervisorPin } : {}),
+    },
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!.data;
+};
+
 export const deleteRole = async (
   roleId: string,
 ): Promise<DataMessageResponse> => {
@@ -153,10 +181,8 @@ export const createEmployee = async (
   return res.data as EmployeeResponse;
 };
 
-export const getEmployees = async (): Promise<EmployeeResponse[]> => {
-  const res = await apiClient.get<{ data: EmployeeResponse[] }>(
-    `${URL}/employees`,
-  );
+export const getEmployees = async (): Promise<Employee[]> => {
+  const res = await apiClient.get<{ data: Employee[] }>(`${URL}/employees`);
 
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
@@ -180,6 +206,22 @@ export const updateEmployee = async (
 
   return res.data as EmployeeResponse;
 };
+/** Assign a role to an employee. Separate from updateEmployee, which cannot
+ *  change a role. */
+export const assignEmployeeRole = async (
+  employeeId: string,
+  roleName: string,
+): Promise<void> => {
+  const res = await apiClient.patch<{ message: string }>(`${URL}/employees/role`, {
+    user_id: employeeId,
+    new_role: roleName,
+  });
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+};
+
 export const setEmployeeStatus = async (
   employeeId: string,
   data: { status: "active" | "suspended" },

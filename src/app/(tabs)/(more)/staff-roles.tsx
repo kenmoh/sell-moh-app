@@ -1,13 +1,18 @@
-import { fetchTenantRoles } from "@/api/auth";
+import { fetchTenantRoles, getEmployees } from "@/api/auth";
+import EmployeeSheet from "@/components/employee-sheet";
 import AddEmployeeSheet from "@/components/add-employee-sheet";
 import AddRoleSheet from "@/components/add-role-sheet";
+import EditRoleSheet from "@/components/edit-role-sheet";
+import RoleCard from "@/components/role-card";
 import SearchInput from "@/components/search-input";
+import type { Employee, FetchTenantRoles } from "@/types/auth";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Pressable,
   StyleSheet,
@@ -17,105 +22,33 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-interface StaffMember {
-  id: string;
-  name: string;
-  initials: string;
-  avatarColor: string;
-  role: string;
-  roleColor: string;
-  roleBg: string;
-  active: boolean;
-}
 
-interface Role {
-  id: string;
-  name: string;
-  iconColor: string;
-  iconBg: string;
-  permissions: string;
-  memberCount: number;
-}
-
-const staff: StaffMember[] = [
-  {
-    id: "1",
-    name: "Amaka Okonkwo",
-    initials: "AO",
-    avatarColor: "#3b82f6",
-    role: "Store Manager",
-    roleColor: "#3b82f6",
-    roleBg: "rgba(59,130,246,0.1)",
-    active: true,
-  },
-  {
-    id: "2",
-    name: "Chidi Okafor",
-    initials: "CO",
-    avatarColor: "#ef4444",
-    role: "Cashier",
-    roleColor: "#6b7280",
-    roleBg: "rgba(107,114,128,0.1)",
-    active: true,
-  },
-  {
-    id: "3",
-    name: "Ngozi Adeyemi",
-    initials: "NA",
-    avatarColor: "#a855f7",
-    role: "Cashier",
-    roleColor: "#6b7280",
-    roleBg: "rgba(107,114,128,0.1)",
-    active: false,
-  },
-  {
-    id: "4",
-    name: "Emeka Bello",
-    initials: "EB",
-    avatarColor: "#f97316",
-    role: "Supervisor",
-    roleColor: "#d97706",
-    roleBg: "rgba(217,119,6,0.1)",
-    active: false,
-  },
-  {
-    id: "5",
-    name: "Fatima Yusuf",
-    initials: "FY",
-    avatarColor: "#14b8a6",
-    role: "Cashier",
-    roleColor: "#6b7280",
-    roleBg: "rgba(107,114,128,0.1)",
-    active: false,
-  },
+const ROLE_TINTS: { bg: string; fg: string }[] = [
+  { bg: "rgba(59,130,246,0.1)", fg: "#3b82f6" },
+  { bg: "rgba(168,85,247,0.1)", fg: "#a855f7" },
+  { bg: "rgba(249,115,22,0.1)", fg: "#f97316" },
+  { bg: "rgba(20,184,166,0.1)", fg: "#14b8a6" },
+  { bg: "rgba(107,114,128,0.1)", fg: "#6b7280" },
 ];
 
-const roles: Role[] = [
-  {
-    id: "1",
-    name: "Store Manager",
-    iconColor: "#3b82f6",
-    iconBg: "rgba(59,130,246,0.1)",
-    permissions: "Full access",
-    memberCount: 1,
-  },
-  {
-    id: "2",
-    name: "Supervisor",
-    iconColor: "#f97316",
-    iconBg: "rgba(249,115,22,0.1)",
-    permissions: "Limited admin",
-    memberCount: 1,
-  },
-  {
-    id: "3",
-    name: "Cashier",
-    iconColor: "#6b7280",
-    iconBg: "rgba(107,114,128,0.1)",
-    permissions: "POS only",
-    memberCount: 3,
-  },
-];
+const AVATAR_TINTS = ["#a855f7", "#f97316", "#14b8a6", "#3b82f6", "#ec4899"];
+
+const initialsOf = (fullName: string | null, email: string) => {
+  const source = (fullName ?? "").trim() || email.split("@")[0] || "?";
+  const parts = source.split(/[\s._-]+/).filter(Boolean);
+  if (parts.length === 0) return "?";
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+};
+
+/** Stable index for a string, so a role or person keeps the same colour. */
+const tintIndex = (key: string, length: number) => {
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  return hash % length;
+};
+
+const roleTint = (role: string) => ROLE_TINTS[tintIndex(role, ROLE_TINTS.length)];
 
 const StaffRoles = () => {
   const insets = useSafeAreaInsets();
@@ -123,23 +56,77 @@ const StaffRoles = () => {
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const [search, setSearch] = useState("");
   const [roleSheetVisible, setRoleSheetVisible] = useState(false);
+  const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null);
   const [employeeSheetVisible, setEmployeeSheetVisible] = useState(false);
+  const [editingRole, setEditingRole] = useState<FetchTenantRoles | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
 
-  const filteredStaff = staff.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()),
+  const {
+    data: rolesData,
+    isRefetching,
+    refetch: refetchRoles,
+  } = useQuery({
+    queryKey: ["roles"],
+    queryFn: fetchTenantRoles,
+  });
+  const { data: employees, isLoading: isLoadingStaff, refetch: refetchStaff } = useQuery({
+    queryKey: ["employees"],
+    queryFn: getEmployees,
+  });
+
+  const staff = useMemo(
+    () =>
+      (employees ?? []).map((employee) => {
+        const primaryRole = employee.role.split(",")[0].trim() || "No role";
+        const tint = roleTint(primaryRole);
+        return {
+          // Carried through so the row can hand the whole record to the sheet
+          // without the sheet having to match it back up by id.
+          employee,
+          id: employee.id,
+          name: employee.full_name?.trim() || employee.email,
+          initials: initialsOf(employee.full_name, employee.email),
+          avatarColor: AVATAR_TINTS[tintIndex(employee.id, AVATAR_TINTS.length)],
+          role: primaryRole,
+          roleColor: tint.fg,
+          roleBg: tint.bg,
+          active: employee.is_active,
+        };
+      }),
+    [employees],
   );
 
   const totalStaff = staff.length;
   const activeNow = staff.filter((s) => s.active).length;
-  const totalRoles = roles.length;
-  const { data: rolesData, isLoading: isLoadingRoles, isRefetching, refetch } = useQuery({
-    queryKey: ["roles"],
-    queryFn: fetchTenantRoles,
-  });
+
+  const totalRoles = rolesData?.length ?? 0;
+
+  // Holders per role, counted from the real employees. A user can hold several
+  // roles, so split the comma-joined list rather than matching on the whole.
+  const memberCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    (employees ?? []).forEach((employee) => {
+      employee.role
+        .split(",")
+        .map((r) => r.trim())
+        .filter(Boolean)
+        .forEach((role) => counts.set(role, (counts.get(role) ?? 0) + 1));
+    });
+    return counts;
+  }, [employees]);
+
+  const toggleRole = (roleId: string) =>
+    setExpandedRoleId((current) => (current === roleId ? null : roleId));
+
+  const filteredStaff = staff.filter(
+    (s) =>
+      s.name.toLowerCase().includes(search.toLowerCase()) ||
+      s.role.toLowerCase().includes(search.toLowerCase()),
+  );
 
   type ListItemType =
     | { type: "sticky_header" }
-    | { type: "staff_item"; data: StaffMember };
+    | { type: "staff_item"; data: (typeof staff)[number] };
 
   const flatListData: ListItemType[] = useMemo(() => {
     const items: ListItemType[] = [{ type: "sticky_header" }];
@@ -175,7 +162,10 @@ const StaffRoles = () => {
         showsVerticalScrollIndicator={false}
         stickyHeaderIndices={[1]}
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={() => {
+          void refetchStaff();
+          void refetchRoles();
+        }}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.background }}>
             {/* Stats Row - Scrolls away */}
@@ -248,7 +238,16 @@ const StaffRoles = () => {
           const { data: staffMember } = item;
           return (
             <Pressable
-              style={[styles.staffCard, { backgroundColor: colors.card }]}
+              onPress={() => setSelectedEmployee(staffMember.employee)}
+              style={[
+                styles.staffCard,
+                {
+                  backgroundColor: colors.card,
+                  // An inactive account still belongs here, but it should not
+                  // read as one that can be signed into.
+                  opacity: staffMember.active ? 1 : 0.55,
+                },
+              ]}
             >
               <View
                 style={[
@@ -264,22 +263,52 @@ const StaffRoles = () => {
                 <Text style={[styles.staffName, { color: colors.text }]}>
                   {staffMember.name}
                 </Text>
-                <View style={[styles.rolePill, { backgroundColor: staffMember.roleBg }]}>
-                  <Text style={[styles.roleText, { color: staffMember.roleColor }]}>
-                    {staffMember.role}
-                  </Text>
+                <View style={styles.pillRow}>
+                  <View
+                    style={[styles.rolePill, { backgroundColor: staffMember.roleBg }]}
+                  >
+                    <Text style={[styles.roleText, { color: staffMember.roleColor }]}>
+                      {staffMember.role}
+                    </Text>
+                  </View>
+                  {!staffMember.active && (
+                    <View
+                      style={[
+                        styles.rolePill,
+                        { backgroundColor: "rgba(107,114,128,0.1)" },
+                      ]}
+                    >
+                      <Text style={[styles.roleText, { color: "#6b7280" }]}>
+                        Inactive
+                      </Text>
+                    </View>
+                  )}
                 </View>
               </View>
-            <View style={styles.staffRight}>
-              <Lucide
-                name="chevron-right"
-                size={18}
-                color={colors.textSecondary}
-              />
-            </View>
-          </Pressable>
+              <View style={styles.staffRight}>
+                <Lucide
+                  name="chevron-right"
+                  size={18}
+                  color={colors.textSecondary}
+                />
+              </View>
+            </Pressable>
           );
         }}
+        ListEmptyComponent={
+          isLoadingStaff ? (
+            <ActivityIndicator style={{ marginTop: 32 }} color={colors.textSecondary} />
+          ) : (
+            <Text
+              style={[
+                styles.emptyState,
+                { color: colors.textSecondary },
+              ]}
+            >
+              No staff yet. Add an employee to give them a role.
+            </Text>
+          )
+        }
         ListFooterComponent={
           <View style={{ paddingTop: 24, gap: 10 }}>
             {/* Roles Label */}
@@ -318,32 +347,14 @@ const StaffRoles = () => {
 
             {/* Roles */}
             {rolesData?.map((role) => (
-              <Pressable
+              <RoleCard
                 key={role.id}
-                style={[styles.roleCard, { backgroundColor: colors.card }]}
-              >
-                <View
-                  style={[
-                    styles.roleIcon,
-                    { backgroundColor: "rgba(59,130,246,0.1)" },
-                  ]}
-                >
-                  <Lucide name="shield" size={20} color="#3b82f6" />
-                </View>
-                <View style={styles.roleInfo}>
-                  <Text style={[styles.roleName, { color: colors.text }]}>
-                    {role?.name}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.rolePermissions,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    {role?.description}
-                  </Text>
-                </View>
-              </Pressable>
+                role={role}
+                expanded={expandedRoleId === role.id}
+                onToggle={toggleRole}
+                memberCount={memberCounts.get(role.name)}
+                onEdit={() => setEditingRole(role)}
+              />
             ))}
           </View>
         }
@@ -356,6 +367,21 @@ const StaffRoles = () => {
         visible={roleSheetVisible}
         onVisibleChange={setRoleSheetVisible}
       />
+      {selectedEmployee && (
+        <EmployeeSheet
+          key={selectedEmployee.id}
+          employee={selectedEmployee}
+          roles={rolesData ?? []}
+          onClose={() => setSelectedEmployee(null)}
+        />
+      )}
+      {editingRole && (
+        <EditRoleSheet
+          key={editingRole.id}
+          role={editingRole}
+          onClose={() => setEditingRole(null)}
+        />
+      )}
       <AddEmployeeSheet
         visible={employeeSheetVisible}
         onVisibleChange={setEmployeeSheetVisible}
@@ -442,6 +468,8 @@ const styles = StyleSheet.create({
   },
   roleText: { fontSize: 11, fontWeight: "600" },
   staffRight: { alignItems: "flex-end", gap: 6 },
+  pillRow: { flexDirection: "row", gap: 6 },
+  emptyState: { textAlign: "center", fontSize: 13, marginTop: 32, paddingHorizontal: 24 },
   roleCard: {
     flexDirection: "row",
     alignItems: "center",

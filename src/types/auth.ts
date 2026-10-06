@@ -36,9 +36,24 @@ export interface CreateEmployee {
   password: string;
 }
 
+/** One row from GET /auth/employees. Mirrors the backend EmployeeListItem. */
+export interface Employee {
+  id: string;
+  email: string;
+  full_name: string | null;
+  phone: string | null;
+  /** Comma separated when a user holds more than one role. */
+  role: string;
+  status: string;
+  is_active: boolean;
+  store_id: string | null;
+  last_login_at: string | null;
+  created_at: string | null;
+}
+
 export interface EmployeeResponse {
   message: string;
-  data: Omit<CreateEmployee, "password">;
+  data: Employee[];
 }
 
 interface RoleResponse {
@@ -137,8 +152,19 @@ export interface CreateRole {
   permission_ids: string[];
 }
 
-export interface UpdateRole extends CreateRole {
+/**
+ * Fields PATCH /auth/roles/{id} actually reads.
+ *
+ * This used to extend CreateRole, so it demanded permission_ids — which the
+ * route ignores. A caller could send a full permission list and reasonably
+ * believe it had been saved. Permissions go through
+ * PUT /auth/roles/{id}/permissions instead.
+ */
+export interface UpdateRole {
   id: string;
+  name?: string;
+  rank?: number;
+  description?: string | null;
 }
 
 export interface FetchTenantRoles extends RoleResponse {
