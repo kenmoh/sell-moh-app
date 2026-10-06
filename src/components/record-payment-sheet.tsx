@@ -5,7 +5,7 @@ import { Colors } from "@/constants/theme";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -36,26 +36,34 @@ const RecordPaymentSheet = ({
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
 
-  const [amount, setAmount] = useState("");
-  const [paymentDate, setPaymentDate] = useState<Date | null>(null);
+  const [amount, setAmount] = useState(() =>
+    balance > 0 ? String(balance) : "",
+  );
+  const [paymentDate, setPaymentDate] = useState<Date | null>(() => new Date());
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [notes, setNotes] = useState("");
   const [amountError, setAmountError] = useState("");
 
   const isAr = type === "ar";
   const label = isAr ? "Receivable" : "Payable";
+  // Nothing left to collect: the form is dead rather than a chance to type a
+  // number that the API would reject anyway.
+  const isSettled = !(balance > 0);
 
-  // Start from the full balance, dated today — the common case is settling it
-  // in one go, and anything less is a part payment the user can dial in.
-  useEffect(() => {
-    if (visible) {
-      setAmount(balance > 0 ? String(balance) : "");
-      setPaymentDate(new Date());
-      setNotes("");
-      setAmountError("");
-      setShowDatePicker(false);
-    }
-  }, [visible, itemId, balance]);
+  // Opening the sheet (or switching to another row) starts a fresh form
+  // pre-filled with the full balance dated today — the common case is settling
+  // it in one go, and anything less is a part payment to dial in. Adjusting
+  // the draft during render, rather than in an effect, avoids showing a frame
+  // with the previously opened row's amount still in the field.
+  const [draftFor, setDraftFor] = useState<string | null>(null);
+  if (visible && draftFor !== itemId) {
+    setDraftFor(itemId);
+    setAmount(balance > 0 ? String(balance) : "");
+    setPaymentDate(new Date());
+    setNotes("");
+    setAmountError("");
+    setShowDatePicker(false);
+  }
 
   const parsedAmount = parseFloat(amount);
   const isValidAmount =
@@ -65,6 +73,9 @@ const RecordPaymentSheet = ({
 
   const { mutate: recordPayment, isPending } = useMutation({
     mutationFn: () => {
+      if (isSettled) {
+        throw new Error(`This ${label.toLowerCase()} has no outstanding balance`);
+      }
       const payload = {
         amount: parsedAmount,
         payment_date: paymentDate
@@ -88,6 +99,7 @@ const RecordPaymentSheet = ({
   });
 
   const reset = () => {
+    setDraftFor(null);
     setAmount("");
     setPaymentDate(null);
     setShowDatePicker(false);
@@ -96,6 +108,7 @@ const RecordPaymentSheet = ({
   };
 
   const handleRecord = () => {
+    if (isSettled) return;
     if (!isValidAmount) {
       setAmountError("Enter a valid amount");
       return;
@@ -112,7 +125,7 @@ const RecordPaymentSheet = ({
     recordPayment();
   };
 
-  const canSubmit = !isPending;
+  const canSubmit = !isPending && !isSettled;
 
   return (
     <AppBottomSheet
@@ -137,6 +150,22 @@ const RecordPaymentSheet = ({
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
             Payment
           </Text>
+
+          {isSettled && (
+            <View
+              style={[
+                styles.settledNotice,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
+              <Lucide name="check-circle-2" size={16} color="#10b981" />
+              <Text style={[styles.settledText, { color: colors.textSecondary }]}>
+                This {label.toLowerCase()} is fully paid — there is nothing left
+                to record.
+              </Text>
+            </View>
+          )}
+
           <AppTextInput
             placeholder="Amount"
             value={amount}
@@ -147,6 +176,7 @@ const RecordPaymentSheet = ({
             leftIcon="banknote"
             keyboardType="numeric"
             error={amountError || undefined}
+            editable={!isSettled}
           />
 
           {isValidAmount && !isFullPayment && (
@@ -187,8 +217,10 @@ const RecordPaymentSheet = ({
               {
                 backgroundColor: colors.backgroundElement,
                 borderColor: colors.backgroundSelected,
+                opacity: isSettled ? 0.5 : 1,
               },
             ]}
+            disabled={isSettled}
             onPress={() => setShowDatePicker(true)}
           >
             <Lucide name="calendar" size={16} color={colors.textSecondary} />
@@ -227,6 +259,7 @@ const RecordPaymentSheet = ({
             value={notes}
             onChangeText={setNotes}
             leftIcon="align-left"
+            editable={!isSettled}
           />
         </View>
       </View>
@@ -245,9 +278,11 @@ const RecordPaymentSheet = ({
           <>
             <Lucide name="check-circle" size={18} color="#fff" />
             <Text style={styles.recordBtnText}>
-              {isFullPayment
-                ? `Record Full ₦${Math.max(parsedAmount || 0, 0).toLocaleString()}`
-                : "Record Part Payment"}
+              {isSettled
+                ? "Nothing to Record"
+                : isFullPayment
+                  ? `Record Full ₦${Math.max(parsedAmount || 0, 0).toLocaleString()}`
+                  : "Record Part Payment"}
             </Text>
           </>
         )}
@@ -270,6 +305,15 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
+  settledNotice: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  settledText: { flex: 1, fontSize: 13 },
   remainingRow: {
     flexDirection: "row",
     alignItems: "center",

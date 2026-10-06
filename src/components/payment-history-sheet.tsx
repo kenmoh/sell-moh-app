@@ -4,7 +4,6 @@ import {
 } from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
 import { Colors } from "@/constants/theme";
-import { PaymentRecord } from "@/types/accounting";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
 import {
