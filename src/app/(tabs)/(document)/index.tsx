@@ -1,6 +1,7 @@
 import { createDocument, getDocuments } from "@/api/document";
 import AddDocumentSheet from "@/components/add-document-sheet";
 import Pill from "@/components/pill";
+import PillRow from "@/components/pill-row";
 import SearchInput from "@/components/search-input";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
@@ -154,20 +155,16 @@ const DocumentListScreen = () => {
         placeholder="Search documents..."
       />
 
-      <FlatList
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        data={DOC_TYPES}
-        keyExtractor={(item) => item.value}
-        contentContainerStyle={styles.filterRow}
-        renderItem={({ item }) => (
+      <PillRow inset={16}>
+        {DOC_TYPES.map((item) => (
           <Pill
+            key={item.value}
             label={item.label}
             active={activeType === item.value}
             onPress={() => setActiveType(item.value)}
           />
-        )}
-      />
+        ))}
+      </PillRow>
     </View>
   );
 
@@ -329,10 +326,6 @@ const styles = StyleSheet.create({
   stickyWrap: {
     paddingBottom: 10,
   },
-  filterRow: {
-    gap: 8,
-  },
-
   list: {
     gap: 10,
   },

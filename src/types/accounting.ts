@@ -169,6 +169,8 @@ export interface PaymentRecord {
 export interface CreatePayableRequest {
   bill_number: string;
   vendor_name: string;
+  /** Set when the vendor was picked from the vendor list rather than typed. */
+  vendor_id?: string;
   description?: string;
   amount: number;
   due_date: string;

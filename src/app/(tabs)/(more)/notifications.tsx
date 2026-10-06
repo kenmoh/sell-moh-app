@@ -8,6 +8,7 @@ import {
 } from "@/api/notifications";
 import NotificationDetailCard from "@/components/notification-detail-card";
 import Pill from "@/components/pill";
+import PillRow from "@/components/pill-row";
 import { Colors } from "@/constants/theme";
 import { getMenuIcon } from "@/types/notification-menu-icon";
 import {
@@ -30,7 +31,6 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
-  ScrollView,
   StyleSheet,
   Text,
   useColorScheme,
@@ -318,12 +318,7 @@ const Notifications = () => {
   );
 
   const listHeader = (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={styles.filterTabsWrap}
-      contentContainerStyle={styles.filterTabs}
-    >
+    <PillRow inset={20} style={styles.filterTabsWrap}>
       {FILTERS.map((f) => (
         <Pill
           key={f}
@@ -334,7 +329,7 @@ const Notifications = () => {
           badge={f === "Unread" && unreadCount > 0 ? unreadCount : undefined}
         />
       ))}
-    </ScrollView>
+    </PillRow>
   );
 
   const renderListItem = ({ item }: { item: NotifListItem }) => {
@@ -629,10 +624,6 @@ const styles = StyleSheet.create({
   actionBtnText: { fontSize: 13, fontWeight: "600" },
   filterTabsWrap: {
     marginTop: 12,
-  },
-  filterTabs: {
-    paddingHorizontal: 10,
-    gap: 8,
   },
   sectionLabel: {
     fontSize: 12,

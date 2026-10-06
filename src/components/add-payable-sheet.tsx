@@ -1,20 +1,23 @@
 import { createPayable } from "@/api/accounting";
+import { fetchCustomers } from "@/api/customer";
 import AppBottomSheet from "@/components/bottom-sheet";
 import Pill from "@/components/pill";
+import PillRow from "@/components/pill-row";
 import AppTextInput from "@/components/text-input";
-import { Colors } from "@/constants/theme";
 import {
   DEFAULT_EXPENSE_CATEGORY,
   EXPENSE_CATEGORIES,
   type ExpenseCategoryId,
 } from "@/constants/expense-categories";
+import { Colors } from "@/constants/theme";
+import type { Customer } from "@/types/customer";
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   useColorScheme,
@@ -43,23 +46,38 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
   const queryClient = useQueryClient();
 
   const [vendorName, setVendorName] = useState("");
+  const [vendor, setVendor] = useState<Customer | null>(null);
+  const [vendorSearch, setVendorSearch] = useState("");
   const [billNumber, setBillNumber] = useState("");
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [category, setCategory] = useState<ExpenseCategoryId>(
     DEFAULT_EXPENSE_CATEGORY,
   );
-  const [errors, setErrors] = useState<Partial<Record<PayableField, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<PayableField, string>>>(
+    {},
+  );
+
+  // Only vendors: a bill is for someone we buy from. Typed names still work
+  // for a one-off supplier who is not in the list.
+  const { data: vendorResults, isPending: isSearchingVendors } = useQuery({
+    queryKey: ["customers", "picker", "vendor", vendorSearch],
+    queryFn: () =>
+      fetchCustomers(1, 20, vendorSearch.trim() || undefined, "vendor"),
+    enabled: visible && !vendor && vendorSearch.trim().length >= 2,
+  });
 
   const { mutate: createAP, isPending } = useMutation({
     mutationFn: () =>
       createPayable({
         bill_number: billNumber,
         vendor_name: vendorName,
+        vendor_id: vendor?.id,
         description: description || undefined,
         amount: parseFloat(amount),
-        due_date: dueDate,
+        due_date: dueDateValue,
         expense_category: category,
       }),
     onSuccess: () => {
@@ -75,7 +93,8 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
     setBillNumber("");
     setDescription("");
     setAmount("");
-    setDueDate("");
+    setDueDate(null);
+    setShowDatePicker(false);
     setCategory(DEFAULT_EXPENSE_CATEGORY);
     setErrors({});
   };
@@ -86,7 +105,7 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
       billNumber,
       description,
       amount,
-      dueDate,
+      dueDate: dueDateValue,
     });
     if (!result.success) {
       const fieldErrors: Partial<Record<PayableField, string>> = {};
@@ -101,6 +120,8 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
     createAP();
   };
 
+  const dueDateValue = dueDate ? dueDate.toISOString().split("T")[0] : "";
+
   const canSubmit = !isPending;
 
   return (
@@ -113,9 +134,7 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
       }}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          New Payable
-        </Text>
+        <Text style={[styles.title, { color: colors.text }]}>New Payable</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Record an amount owed to a vendor
         </Text>
@@ -126,13 +145,125 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
             Vendor
           </Text>
-          <AppTextInput
-            placeholder="Vendor name"
-            value={vendorName}
-            onChangeText={setVendorName}
-            leftIcon="building-2"
-            autoCapitalize="words"
-          />
+
+          {vendor ? (
+            <View
+              style={[
+                styles.selectedRow,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.backgroundElement,
+                },
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.selectedName, { color: colors.text }]}>
+                  {vendor.name}
+                </Text>
+                {(vendor.phone || vendor.email) && (
+                  <Text
+                    style={[
+                      styles.selectedMeta,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {vendor.phone || vendor.email}
+                  </Text>
+                )}
+              </View>
+              <Pressable
+                onPress={() => {
+                  setVendor(null);
+                  setVendorName("");
+                }}
+                hitSlop={8}
+              >
+                <Lucide name="x" size={18} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              <AppTextInput
+                placeholder="Search vendors..."
+                value={vendorSearch}
+                onChangeText={setVendorSearch}
+                leftIcon="search"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {vendorSearch.trim().length >= 2 && (
+                <View
+                  style={[
+                    styles.dropdown,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.backgroundElement,
+                    },
+                  ]}
+                >
+                  {isSearchingVendors ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.buttonPrimary}
+                      style={{ paddingVertical: 12 }}
+                    />
+                  ) : vendorResults?.items.length ? (
+                    vendorResults.items.slice(0, 5).map((v) => (
+                      <Pressable
+                        key={v.id}
+                        style={[
+                          styles.dropdownItem,
+                          { borderBottomColor: colors.backgroundElement },
+                        ]}
+                        onPress={() => {
+                          setVendor(v);
+                          setVendorName(v.name);
+                          setVendorSearch("");
+                          setErrors((prev) => ({
+                            ...prev,
+                            vendorName: undefined,
+                          }));
+                        }}
+                      >
+                        <Text
+                          style={[styles.dropdownName, { color: colors.text }]}
+                        >
+                          {v.name}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.dropdownMeta,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
+                          {v.phone || v.email || "No contact"}
+                        </Text>
+                      </Pressable>
+                    ))
+                  ) : (
+                    <Text
+                      style={[
+                        styles.dropdownMeta,
+                        { color: colors.textSecondary, paddingVertical: 12 },
+                      ]}
+                    >
+                      No matching vendor — type the name below
+                    </Text>
+                  )}
+                </View>
+              )}
+              <AppTextInput
+                placeholder="Vendor name"
+                value={vendorName}
+                onChangeText={(v) => {
+                  setVendorName(v);
+                  setVendor(null);
+                }}
+                leftIcon="building-2"
+                autoCapitalize="words"
+              />
+            </>
+          )}
           {errors.vendorName && (
             <Text style={styles.errorText}>{errors.vendorName}</Text>
           )}
@@ -152,16 +283,10 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
           {errors.billNumber && (
             <Text style={styles.errorText}>{errors.billNumber}</Text>
           )}
-          <Text
-            style={[styles.fieldLabel, { color: colors.textSecondary }]}
-          >
+          <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>
             What the bill is for
           </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.categoryRow}
-          >
+          <PillRow inset={12}>
             {EXPENSE_CATEGORIES.map((c) => (
               <Pill
                 key={c.id}
@@ -171,7 +296,7 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
                 color="#3b82f6"
               />
             ))}
-          </ScrollView>
+          </PillRow>
           <Text style={[styles.hint, { color: colors.textSecondary }]}>
             {`Decides which expense the amount is charged to on the books. Currently: ${
               EXPENSE_CATEGORIES.find((c) => c.id === category)?.label
@@ -199,13 +324,46 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
           {errors.amount && (
             <Text style={styles.errorText}>{errors.amount}</Text>
           )}
-          <AppTextInput
-            placeholder="Due date (YYYY-MM-DD)"
-            value={dueDate}
-            onChangeText={setDueDate}
-            leftIcon="calendar"
-            autoCapitalize="none"
-          />
+          <Pressable
+            style={[
+              styles.datePickerButton,
+              {
+                backgroundColor: colors.backgroundElement,
+                borderColor: colors.backgroundSelected,
+              },
+            ]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Lucide name="calendar" size={16} color={colors.textSecondary} />
+            <Text
+              style={[
+                styles.datePickerText,
+                { color: dueDate ? colors.text : colors.textSecondary },
+              ]}
+            >
+              {dueDate
+                ? dueDate.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "Select due date"}
+            </Text>
+            <Lucide name="chevron-down" size={16} color={colors.textSecondary} />
+          </Pressable>
+          {showDatePicker && (
+            <DateTimePicker
+              value={dueDate || new Date()}
+              mode="date"
+              display="compact"
+              presentation="dialog"
+              onValueChange={(_, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) setDueDate(selectedDate);
+              }}
+              onDismiss={() => setShowDatePicker(false)}
+            />
+          )}
           {errors.dueDate && (
             <Text style={styles.errorText}>{errors.dueDate}</Text>
           )}
@@ -215,7 +373,10 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
       <Pressable
         style={[
           styles.createBtn,
-          { backgroundColor: colors.buttonPrimary, opacity: canSubmit ? 1 : 0.5 },
+          {
+            backgroundColor: colors.buttonPrimary,
+            opacity: canSubmit ? 1 : 0.5,
+          },
         ]}
         disabled={!canSubmit}
         onPress={handleCreate}
@@ -249,8 +410,35 @@ const styles = StyleSheet.create({
   },
   errorText: { fontSize: 12, color: "#DC2626", marginTop: -4 },
   fieldLabel: { fontSize: 12, marginTop: 4 },
-  categoryRow: { gap: 8, paddingVertical: 4 },
   hint: { fontSize: 11, lineHeight: 16 },
+  selectedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  selectedName: { fontSize: 14, fontWeight: "600" },
+  selectedMeta: { fontSize: 12, marginTop: 2 },
+  dropdown: { borderRadius: 12, borderWidth: 1, overflow: "hidden" },
+  dropdownItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+  },
+  dropdownName: { fontSize: 14, fontWeight: "600" },
+  dropdownMeta: { fontSize: 12, marginTop: 2 },
+  datePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  datePickerText: { flex: 1, fontSize: 14 },
   createBtn: {
     flexDirection: "row",
     alignItems: "center",

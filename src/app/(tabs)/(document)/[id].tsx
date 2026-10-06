@@ -305,7 +305,7 @@ const DocumentDetailScreen = () => {
             styles.identityCard,
             {
               backgroundColor: colors.card,
-              borderColor: isDark ? "#282b32" : "#e5e7eb",
+              borderColor: isDark ? colors.backgroundElement : "#eef0f4",
             },
           ]}
         >
@@ -366,7 +366,7 @@ const DocumentDetailScreen = () => {
           <View
             style={[
               styles.totalRow,
-              { borderTopColor: isDark ? "#282b32" : "#e5e7eb" },
+              { borderColor: isDark ? colors.backgroundElement : "#eef0f4" },
             ]}
           >
             <Text style={[styles.totalLabel, { color: colors.textSecondary }]}>
@@ -384,7 +384,7 @@ const DocumentDetailScreen = () => {
             styles.section,
             {
               backgroundColor: colors.card,
-              borderColor: isDark ? "#282b32" : "#e5e7eb",
+              borderColor: isDark ? colors.backgroundElement : "#eef0f4",
             },
           ]}
         >
@@ -397,8 +397,8 @@ const DocumentDetailScreen = () => {
               style={[
                 styles.itemRow,
                 i < doc.items.length - 1 && {
-                  borderBottomColor: isDark ? "#282b32" : "#e5e7eb",
-                  borderBottomWidth: 1,
+                  borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+                  borderBottomWidth: StyleSheet.hairlineWidth,
                 },
               ]}
             >
@@ -424,13 +424,19 @@ const DocumentDetailScreen = () => {
             styles.section,
             {
               backgroundColor: colors.card,
-              borderColor: isDark ? "#282b32" : "#e5e7eb",
+              borderColor: isDark ? colors.backgroundElement : "#eef0f4",
               borderBottomEndRadius: 16,
               borderBottomStartRadius: 16,
             },
           ]}
         >
-          <View style={[styles.summaryRow, styles.totalSummary]}>
+          <View
+            style={[
+              styles.summaryRow,
+              styles.totalSummary,
+              { borderTopColor: isDark ? colors.backgroundElement : "#eef0f4" },
+            ]}
+          >
             <Text style={[styles.totalSummaryLabel, { color: colors.text }]}>
               Total
             </Text>
@@ -448,7 +454,7 @@ const DocumentDetailScreen = () => {
             styles.actionBar,
             {
               backgroundColor: colors.card,
-              borderTopColor: isDark ? "#282b32" : "#e5e7eb",
+              borderColor: isDark ? colors.backgroundElement : "#eef0f4",
               paddingBottom: 20,
               alignItems: "center",
               justifyContent: "center",

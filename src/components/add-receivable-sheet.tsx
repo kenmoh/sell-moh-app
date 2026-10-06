@@ -2,6 +2,7 @@ import { createReceivable, fetchReceivables } from "@/api/accounting";
 import { createCustomer, fetchCustomers } from "@/api/customer";
 import { getDocuments } from "@/api/document";
 import AppBottomSheet from "@/components/bottom-sheet";
+import PillRow from "@/components/pill-row";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
@@ -63,9 +64,11 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
   const dueDateValue = dueDate ? dueDate.toISOString().split("T")[0] : "";
 
   // ── Existing customers (search) ────────────────────────────────────────
+  // Only customers: an invoice is raised against someone who buys from us.
   const { data: customerResults, isPending: isSearching } = useQuery({
-    queryKey: ["customers", "picker", customerSearch],
-    queryFn: () => fetchCustomers(1, 20, customerSearch.trim() || undefined),
+    queryKey: ["customers", "picker", "customer", customerSearch],
+    queryFn: () =>
+      fetchCustomers(1, 20, customerSearch.trim() || undefined, "customer"),
     enabled: visible && !customer && customerSearch.trim().length >= 2,
   });
 
@@ -394,11 +397,7 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
           ) : null}
 
           {customer && customerInvoices.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.invoiceRow}
-            >
+            <PillRow inset={12}>
               {customerInvoices.map((invoice) => (
                 <Pressable
                   key={invoice.id}
@@ -425,7 +424,7 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
                   </Text>
                 </Pressable>
               ))}
-            </ScrollView>
+            </PillRow>
           )}
 
           {customer && !isLoadingInvoices && customerInvoices.length === 0 && (
@@ -567,7 +566,6 @@ const styles = StyleSheet.create({
   },
   selectedName: { fontSize: 14, fontWeight: "600" },
   selectedMeta: { fontSize: 12, marginTop: 2 },
-  invoiceRow: { gap: 8, paddingVertical: 2 },
   invoiceChip: {
     borderRadius: 12,
     borderWidth: 1,

@@ -2,6 +2,7 @@ import {
   CreateCustomerRequest,
   Customer,
   CustomerListResponse,
+  CustomerType,
   UpdateCustomerRequest,
 } from "@/types/customer";
 import { getErrorMessage } from "./auth";
@@ -13,11 +14,13 @@ export const fetchCustomers = async (
   page = 1,
   pageSize = 50,
   search?: string,
+  type?: CustomerType,
 ): Promise<CustomerListResponse> => {
   const params = new URLSearchParams();
   params.append("page", String(page));
   params.append("page_size", String(pageSize));
   if (search) params.append("search", search);
+  if (type) params.append("type", type);
   const res = await apiClient.get<{
     data: Customer[];
     total: number;

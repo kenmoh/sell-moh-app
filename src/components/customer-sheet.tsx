@@ -1,11 +1,12 @@
 import { createCustomer, deleteCustomer, updateCustomer } from "@/api/customer";
 import AppBottomSheet from "@/components/bottom-sheet";
+import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
-import { Customer } from "@/types/customer";
+import { Customer, CustomerType } from "@/types/customer";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -16,6 +17,12 @@ import {
   View,
 } from "react-native";
 import { z } from "zod";
+
+/** Customers are someone we sell to; vendors are someone we buy from. */
+const TYPES: { id: CustomerType; label: string; icon: string }[] = [
+  { id: "customer", label: "Customer", icon: "users" },
+  { id: "vendor", label: "Vendor", icon: "truck" },
+];
 
 const customerSchema = z.object({
   name: z.string().trim().min(1, "Name is required"),
@@ -42,24 +49,49 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
+  const [type, setType] = useState<CustomerType>("customer");
   const [errors, setErrors] = useState<Partial<Record<CustomerField, string>>>({});
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-  useEffect(() => {
+  const reset = () => {
+    setSeededFor(null);
+    setName("");
+    setPhone("");
+    setEmail("");
+    setAddress("");
+    setType("customer");
+    setErrors({});
+    setShowDeleteConfirm(false);
+  };
+
+  // Load the row being edited, or clear the form for a new one. Done during
+  // render rather than in an effect so no frame shows the previous customer's
+  // details while the effect catches up.
+  const seed = visible ? (customer?.id ?? "new") : null;
+  const [seededFor, setSeededFor] = useState<string | null>(null);
+  if (seed && seededFor !== seed) {
+    setSeededFor(seed);
     if (customer) {
       setName(customer.name);
       setPhone(customer.phone || "");
       setEmail(customer.email || "");
       setAddress(customer.address || "");
+      setType(customer.type ?? "customer");
     } else {
-      reset();
+      setName("");
+      setPhone("");
+      setEmail("");
+      setAddress("");
+      setType("customer");
+      setErrors({});
     }
-  }, [customer, visible]);
+  }
 
   const { mutate: saveCustomer, isPending } = useMutation({
     mutationFn: () => {
       const payload = {
         name,
+        type,
         phone: phone || undefined,
         email: email || undefined,
         address: address || undefined,
@@ -83,15 +115,6 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
       reset();
     },
   });
-
-  const reset = () => {
-    setName("");
-    setPhone("");
-    setEmail("");
-    setAddress("");
-    setErrors({});
-    setShowDeleteConfirm(false);
-  };
 
   const handleSave = () => {
     const result = customerSchema.safeParse({ name, phone, email, address });
@@ -121,12 +144,20 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
     >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>
-          {isEditing ? "Edit Customer" : "Add Customer"}
+          {isEditing
+            ? type === "vendor"
+              ? "Edit Vendor"
+              : "Edit Customer"
+            : type === "vendor"
+              ? "Add Vendor"
+              : "Add Customer"}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {isEditing
-            ? "Update customer details"
-            : "Add a new customer to your records"}
+            ? "Update contact details"
+            : type === "vendor"
+              ? "Someone you buy from — for bills and payables"
+              : "Someone you sell to — for invoices and receivables"}
         </Text>
       </View>
 
@@ -134,6 +165,28 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.content}
       >
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            {type === "vendor" ? "Vendor" : "Customer"} Type
+          </Text>
+          <View style={styles.typeRow}>
+            {TYPES.map((t) => (
+              <Pill
+                key={t.id}
+                label={t.label}
+                active={t.id === type}
+                onPress={() => setType(t.id)}
+                color="#3b82f6"
+              />
+            ))}
+          </View>
+          <Text style={[styles.typeHint, { color: colors.textSecondary }]}>
+            {type === "vendor"
+              ? "Bills you owe them appear under Payables."
+              : "Invoices they owe you appear under Receivables."}
+          </Text>
+        </View>
+
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
             Personal Info
@@ -256,6 +309,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   errorText: { fontSize: 12, color: "#DC2626", marginTop: -4 },
+  typeRow: { flexDirection: "row", gap: 8, flexWrap: "wrap" },
+  typeHint: { fontSize: 11, lineHeight: 16 },
   saveBtn: {
     flexDirection: "row",
     alignItems: "center",
