@@ -10,6 +10,7 @@ import AccountingContextMenu from "@/components/accounting-context-menu";
 import AddExpenseSheet from "@/components/add-expense-sheet";
 import AddPayableSheet from "@/components/add-payable-sheet";
 import AddReceivableSheet from "@/components/add-receivable-sheet";
+import PaymentHistorySheet from "@/components/payment-history-sheet";
 import Pill from "@/components/pill";
 import RecordPaymentSheet from "@/components/record-payment-sheet";
 import StoreSwitcher from "@/components/store-switcher";
@@ -56,6 +57,13 @@ const AccountingScreen = () => {
     id: string;
     name: string;
     balance: number;
+    type: "ar" | "ap";
+  } | null>(null);
+  const [showPaymentHistory, setShowPaymentHistory] = useState(false);
+  const [historyItem, setHistoryItem] = useState<{
+    id: string;
+    name: string;
+    totalPaid: number;
     type: "ar" | "ap";
   } | null>(null);
 
@@ -139,6 +147,17 @@ const AccountingScreen = () => {
     [],
   );
 
+  const handleViewPayments = useCallback(
+    (
+      item: { id: string; name: string; totalPaid: number },
+      type: "ar" | "ap",
+    ) => {
+      setHistoryItem({ ...item, type });
+      setShowPaymentHistory(true);
+    },
+    [],
+  );
+
   const currentList = useMemo(() => {
     switch (activeTab) {
       case "receivables":
@@ -208,7 +227,7 @@ const AccountingScreen = () => {
               styles.listCard,
               {
                 backgroundColor: colors.card,
-                borderColor: isDark ? "#282b32" : "#eef0f4",
+                borderColor: isDark ? colors.backgroundElement : "#eef0f4",
               },
             ]}
             onPress={() =>
@@ -283,6 +302,31 @@ const AccountingScreen = () => {
               >
                 Balance: ₦{item.balance.toLocaleString()}
               </Text>
+              {item.amount_paid > 0 && (
+                <Pressable
+                  style={[
+                    styles.paymentsLink,
+                    { backgroundColor: colors.backgroundElement },
+                  ]}
+                  onPress={() =>
+                    handleViewPayments(
+                      {
+                        id: item.id,
+                        name: item.customer_name,
+                        totalPaid: item.amount_paid,
+                      },
+                      "ar",
+                    )
+                  }
+                >
+                  <Lucide name="receipt" size={11} color={colors.textSecondary} />
+                  <Text
+                    style={[styles.paymentsLinkText, { color: colors.textSecondary }]}
+                  >
+                    {`${item.amount_paid > 0 ? "Paid " : ""}₦${item.amount_paid.toLocaleString()}`}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </Pressable>
         );
@@ -295,7 +339,7 @@ const AccountingScreen = () => {
               styles.listCard,
               {
                 backgroundColor: colors.card,
-                borderColor: isDark ? "#282b32" : "#eef0f4",
+                borderColor: isDark ? colors.backgroundElement : "#eef0f4",
               },
             ]}
             onPress={() =>
@@ -366,6 +410,31 @@ const AccountingScreen = () => {
               >
                 Balance: ₦{item.balance.toLocaleString()}
               </Text>
+              {item.amount_paid > 0 && (
+                <Pressable
+                  style={[
+                    styles.paymentsLink,
+                    { backgroundColor: colors.backgroundElement },
+                  ]}
+                  onPress={() =>
+                    handleViewPayments(
+                      {
+                        id: item.id,
+                        name: item.vendor_name,
+                        totalPaid: item.amount_paid,
+                      },
+                      "ap",
+                    )
+                  }
+                >
+                  <Lucide name="receipt" size={11} color={colors.textSecondary} />
+                  <Text
+                    style={[styles.paymentsLinkText, { color: colors.textSecondary }]}
+                  >
+                    {`Paid ₦${item.amount_paid.toLocaleString()}`}
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </Pressable>
         );
@@ -376,18 +445,19 @@ const AccountingScreen = () => {
           style={[
             styles.listCard,
             {
-              backgroundColor: colors.card,
-              borderColor: isDark ? "#282b32" : "#eef0f4",
-            },
-          ]}
-        >
-          <View style={styles.listCardHeader}>
-            <View
-              style={[
-                styles.listCardIcon,
-                { backgroundColor: "rgba(239,68,68,0.12)" },
-              ]}
-            >
+backgroundColor: colors.card,
+                borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+                borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
+              },
+            ]}
+          >
+            <View style={styles.listCardHeader}>
+              <View
+                style={[
+                  styles.listCardIcon,
+                  { backgroundColor: "rgba(239,68,68,0.12)" },
+                ]}
+              >
               <Lucide name="receipt" size={16} color="#ef4444" />
             </View>
             <View style={styles.listCardInfo}>
@@ -419,7 +489,7 @@ const AccountingScreen = () => {
         </View>
       );
     },
-    [activeTab, colors, isDark, handleRecordPayment],
+    [activeTab, colors, isDark, handleRecordPayment, handleViewPayments],
   );
 
   if (isLoading) {
@@ -485,7 +555,7 @@ const AccountingScreen = () => {
                 styles.dashboardCard,
                 {
                   backgroundColor: colors.card,
-                  borderColor: isDark ? "#282b32" : "#eef0f4",
+                  borderColor: isDark ? colors.backgroundElement : "#eef0f4",
                 },
               ]}
             >
@@ -574,7 +644,7 @@ const AccountingScreen = () => {
                   styles.summaryCard,
                   {
                     backgroundColor: colors.card,
-                    borderColor: isDark ? "#282b32" : "#eef0f4",
+                    borderColor: isDark ? colors.backgroundElement : "#eef0f4",
                   },
                 ]}
               >
@@ -705,6 +775,17 @@ const AccountingScreen = () => {
           itemId={selectedItem.id}
           itemName={selectedItem.name}
           balance={selectedItem.balance}
+        />
+      )}
+
+      {historyItem && (
+        <PaymentHistorySheet
+          visible={showPaymentHistory}
+          onVisibleChange={setShowPaymentHistory}
+          type={historyItem.type}
+          itemId={historyItem.id}
+          itemName={historyItem.name}
+          totalPaid={historyItem.totalPaid}
         />
       )}
     </SafeAreaView>
@@ -840,8 +921,16 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: "#e5e7eb",
   },
+  paymentsLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  paymentsLinkText: { fontSize: 11, fontWeight: "600" },
   listCardBalance: { fontSize: 12, fontWeight: "500" },
   statusBadge: {
     paddingHorizontal: 10,

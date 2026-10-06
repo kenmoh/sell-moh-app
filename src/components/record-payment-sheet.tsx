@@ -2,9 +2,10 @@ import { recordApPayment, recordArPayment } from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -36,25 +37,49 @@ const RecordPaymentSheet = ({
   const queryClient = useQueryClient();
 
   const [amount, setAmount] = useState("");
-  const [paymentDate, setPaymentDate] = useState("");
+  const [paymentDate, setPaymentDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [notes, setNotes] = useState("");
   const [amountError, setAmountError] = useState("");
+
+  const isAr = type === "ar";
+  const label = isAr ? "Receivable" : "Payable";
+
+  // Start from the full balance, dated today — the common case is settling it
+  // in one go, and anything less is a part payment the user can dial in.
+  useEffect(() => {
+    if (visible) {
+      setAmount(balance > 0 ? String(balance) : "");
+      setPaymentDate(new Date());
+      setNotes("");
+      setAmountError("");
+      setShowDatePicker(false);
+    }
+  }, [visible, itemId, balance]);
+
+  const parsedAmount = parseFloat(amount);
+  const isValidAmount =
+    amount.trim() !== "" && Number.isFinite(parsedAmount) && parsedAmount > 0;
+  const remaining = isValidAmount ? balance - parsedAmount : balance;
+  const isFullPayment = isValidAmount && Math.abs(remaining) < 0.01;
 
   const { mutate: recordPayment, isPending } = useMutation({
     mutationFn: () => {
       const payload = {
-        amount: parseFloat(amount),
-        payment_date: paymentDate,
+        amount: parsedAmount,
+        payment_date: paymentDate
+          ? paymentDate.toISOString().split("T")[0]
+          : "",
         notes: notes || undefined,
       };
-      if (type === "ar") {
+      if (isAr) {
         return recordArPayment(itemId, payload);
       }
       return recordApPayment(itemId, payload) as any;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: [type === "ar" ? "receivables" : "payables"],
+        queryKey: [isAr ? "receivables" : "payables"],
       });
       queryClient.invalidateQueries({ queryKey: ["financial-dashboard"] });
       onVisibleChange(false);
@@ -64,18 +89,18 @@ const RecordPaymentSheet = ({
 
   const reset = () => {
     setAmount("");
-    setPaymentDate("");
+    setPaymentDate(null);
+    setShowDatePicker(false);
     setNotes("");
     setAmountError("");
   };
 
   const handleRecord = () => {
-    const numAmount = parseFloat(amount);
-    if (!amount || isNaN(numAmount) || numAmount <= 0) {
+    if (!isValidAmount) {
       setAmountError("Enter a valid amount");
       return;
     }
-    if (numAmount > balance) {
+    if (parsedAmount > balance) {
       setAmountError(`Amount cannot exceed ₦${balance.toLocaleString()}`);
       return;
     }
@@ -100,7 +125,7 @@ const RecordPaymentSheet = ({
     >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>
-          Record {type === "ar" ? "Receivable" : "Payable"} Payment
+          Record {label} Payment
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {itemName} — Balance: ₦{balance.toLocaleString()}
@@ -115,20 +140,88 @@ const RecordPaymentSheet = ({
           <AppTextInput
             placeholder="Amount"
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={(v) => {
+              setAmount(v);
+              setAmountError("");
+            }}
             leftIcon="banknote"
             keyboardType="numeric"
+            error={amountError || undefined}
           />
-          {amountError ? (
-            <Text style={styles.errorText}>{amountError}</Text>
-          ) : null}
-          <AppTextInput
-            placeholder="Payment date (YYYY-MM-DD)"
-            value={paymentDate}
-            onChangeText={setPaymentDate}
-            leftIcon="calendar"
-            autoCapitalize="none"
-          />
+
+          {isValidAmount && !isFullPayment && (
+            <View
+              style={[
+                styles.remainingRow,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
+              <Text style={[styles.remainingLabel, { color: colors.textSecondary }]}>
+                Part payment — {`₦${parsedAmount.toLocaleString()}`} of{" "}
+                {`₦${balance.toLocaleString()}`}
+              </Text>
+              <Text style={[styles.remainingValue, { color: colors.text }]}>
+                {`₦${Math.max(remaining, 0).toLocaleString()} left`}
+              </Text>
+            </View>
+          )}
+
+          {isValidAmount && !isFullPayment && (
+            <Pressable
+              style={styles.fullPaymentBtn}
+              onPress={() => {
+                setAmount(String(balance));
+                setAmountError("");
+              }}
+            >
+              <Lucide name="check-check" size={14} color="#3b82f6" />
+              <Text style={[styles.fullPaymentText, { color: "#3b82f6" }]}>
+                {`Pay full balance (₦${balance.toLocaleString()})`}
+              </Text>
+            </Pressable>
+          )}
+
+          <Pressable
+            style={[
+              styles.datePickerButton,
+              {
+                backgroundColor: colors.backgroundElement,
+                borderColor: colors.backgroundSelected,
+              },
+            ]}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Lucide name="calendar" size={16} color={colors.textSecondary} />
+            <Text
+              style={[
+                styles.datePickerText,
+                { color: paymentDate ? colors.text : colors.textSecondary },
+              ]}
+            >
+              {paymentDate
+                ? paymentDate.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "Select payment date"}
+            </Text>
+            <Lucide name="chevron-down" size={16} color={colors.textSecondary} />
+          </Pressable>
+          {showDatePicker && (
+            <DateTimePicker
+              value={paymentDate || new Date()}
+              mode="date"
+              display="compact"
+              presentation="dialog"
+              onValueChange={(_, selectedDate) => {
+                setShowDatePicker(false);
+                if (selectedDate) setPaymentDate(selectedDate);
+              }}
+              onDismiss={() => setShowDatePicker(false)}
+            />
+          )}
+
           <AppTextInput
             placeholder="Notes (optional)"
             value={notes}
@@ -151,7 +244,11 @@ const RecordPaymentSheet = ({
         ) : (
           <>
             <Lucide name="check-circle" size={18} color="#fff" />
-            <Text style={styles.recordBtnText}>Record Payment</Text>
+            <Text style={styles.recordBtnText}>
+              {isFullPayment
+                ? `Record Full ₦${Math.max(parsedAmount || 0, 0).toLocaleString()}`
+                : "Record Part Payment"}
+            </Text>
           </>
         )}
       </Pressable>
@@ -173,7 +270,34 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  errorText: { fontSize: 12, color: "#DC2626", marginTop: -4 },
+  remainingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 12,
+  },
+  remainingLabel: { flex: 1, fontSize: 12 },
+  remainingValue: { fontSize: 13, fontWeight: "700" },
+  fullPaymentBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 4,
+  },
+  fullPaymentText: { fontSize: 13, fontWeight: "600" },
+  datePickerButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  datePickerText: { flex: 1, fontSize: 14 },
   recordBtn: {
     flexDirection: "row",
     alignItems: "center",

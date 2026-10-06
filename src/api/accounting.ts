@@ -11,6 +11,7 @@ import {
   FinancialDashboardResponse,
   JournalCreatedResponse,
   JournalListItem,
+  PaymentRecord,
   PayableResponse,
   ProfitAndLossResponse,
   ReceivableResponse,
@@ -253,6 +254,34 @@ export const createReceivable = async (
   }
 
   return res.data?.data!;
+};
+
+export const fetchReceivablePayments = async (
+  arId: string,
+): Promise<PaymentRecord[]> => {
+  const res = await apiClient.get<{ data: PaymentRecord[] }>(
+    `${URL}/receivable/${arId}/payments`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? [];
+};
+
+export const fetchPayablePayments = async (
+  apId: string,
+): Promise<PaymentRecord[]> => {
+  const res = await apiClient.get<{ data: PaymentRecord[] }>(
+    `${URL}/payable/${apId}/payments`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? [];
 };
 
 export const recordArPayment = async (

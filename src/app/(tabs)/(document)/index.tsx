@@ -84,7 +84,7 @@ const DocumentListScreen = () => {
     refetch,
   } = useQuery({
     queryKey: ["documents"],
-    queryFn: getDocuments,
+    queryFn: () => getDocuments(),
   });
 
   const documents: Document[] = useMemo(() => {

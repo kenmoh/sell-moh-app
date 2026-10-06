@@ -17,6 +17,7 @@ export interface DocumentCreateRequest {
   items: DocumentItemLine[];
 
   // Optional customer info
+  customer_id?: string;
   customer_name?: string;
   customer_phone?: string;
   customer_address?: string;
@@ -50,13 +51,24 @@ export interface Document {
   doc_type: DocumentType;
   doc_number: string;
   status: string;
+  customer_id: string | null;
   customer_name: string;
   customer_email: string;
   customer_phone: string;
   total: number;
   item_count: number;
+  due_date: string | null;
+  store_id: string | null;
   items: DocumentItem[];
   created_at: string;
+}
+
+export interface DocumentListFilters {
+  doc_type?: DocumentType;
+  status?: string;
+  customer_id?: string;
+  page?: number;
+  page_size?: number;
 }
 
 // Response from the API

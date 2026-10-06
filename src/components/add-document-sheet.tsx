@@ -1,7 +1,9 @@
+import { fetchCustomers } from "@/api/customer";
 import AppBottomSheet from "@/components/bottom-sheet";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { Customer } from "@/types/customer";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import {
   DocumentCreateRequest,
@@ -9,6 +11,7 @@ import {
   DocumentType,
 } from "@/types/document-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -43,6 +46,8 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const [docType, setDocType] = useState<DocumentType>("invoice");
+  const [customer, setCustomer] = useState<Customer | null>(null);
+  const [customerSearch, setCustomerSearch] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
@@ -51,6 +56,13 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<DocumentItemLine[]>([emptyItem()]);
   const [isCreating, setIsCreating] = useState(false);
+
+  const { data: customerResults, isPending: isSearchingCustomers } = useQuery({
+    queryKey: ["customers", "picker", customerSearch],
+    queryFn: () => fetchCustomers(1, 20, customerSearch.trim() || undefined),
+    enabled:
+      visible && !customer && customerSearch.trim().length >= 2,
+  });
 
   const updateItem = (index: number, patch: Partial<DocumentItemLine>) => {
     setItems((current) =>
@@ -66,6 +78,8 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
 
   const reset = () => {
     setDocType("invoice");
+    setCustomer(null);
+    setCustomerSearch("");
     setCustomerName("");
     setCustomerPhone("");
     setCustomerAddress("");
@@ -82,6 +96,7 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
         tenant_id: "",
         actor_id: "",
         doc_type: docType,
+        customer_id: customer?.id,
         customer_name: customerName || undefined,
         customer_phone: customerPhone || undefined,
         customer_address: customerAddress || undefined,
@@ -146,27 +161,123 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
             Customer
           </Text>
-          <AppTextInput
-            placeholder="Customer name"
-            value={customerName}
-            onChangeText={setCustomerName}
-            leftIcon="user"
-            autoCapitalize="words"
-          />
-          <AppTextInput
-            placeholder="Phone"
-            value={customerPhone}
-            onChangeText={setCustomerPhone}
-            leftIcon="phone"
-            keyboardType="phone-pad"
-          />
-          <AppTextInput
-            placeholder="Address"
-            value={customerAddress}
-            onChangeText={setCustomerAddress}
-            leftIcon="map-pin"
-            autoCapitalize="words"
-          />
+
+          {customer ? (
+            <View
+              style={[
+                styles.selectedCustomer,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: colors.backgroundElement,
+                },
+              ]}
+            >
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.selectedCustomerName, { color: colors.text }]}>
+                  {customer.name}
+                </Text>
+                <Text
+                  style={[styles.selectedCustomerMeta, { color: colors.textSecondary }]}
+                >
+                  {customer.phone || customer.email || "No contact"}
+                </Text>
+              </View>
+              <Pressable onPress={() => setCustomer(null)} hitSlop={8}>
+                <Lucide name="x" size={18} color={colors.textSecondary} />
+              </Pressable>
+            </View>
+          ) : (
+            <>
+              <AppTextInput
+                placeholder="Search customers..."
+                value={customerSearch}
+                onChangeText={setCustomerSearch}
+                leftIcon="search"
+                autoCapitalize="none"
+                autoCorrect={false}
+              />
+              {customerSearch.trim().length >= 2 && (
+                <View
+                  style={[
+                    styles.customerDropdown,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.backgroundElement,
+                    },
+                  ]}
+                >
+                  {isSearchingCustomers ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={colors.buttonPrimary}
+                      style={{ paddingVertical: 12 }}
+                    />
+                  ) : customerResults?.items.length ? (
+                    customerResults.items.slice(0, 5).map((c) => (
+                      <Pressable
+                        key={c.id}
+                        style={[
+                          styles.customerDropdownItem,
+                          { borderBottomColor: colors.backgroundElement },
+                        ]}
+                        onPress={() => {
+                          setCustomer(c);
+                          setCustomerName(c.name);
+                          setCustomerPhone(c.phone ?? "");
+                          setCustomerAddress(c.address ?? "");
+                          setCustomerSearch("");
+                        }}
+                      >
+                        <Text style={[styles.customerName, { color: colors.text }]}>
+                          {c.name}
+                        </Text>
+                        <Text
+                          style={[styles.customerMeta, { color: colors.textSecondary }]}
+                        >
+                          {c.phone || c.email || "No contact"}
+                        </Text>
+                      </Pressable>
+                    ))
+                  ) : (
+                    <Text
+                      style={[
+                        styles.customerMeta,
+                        { color: colors.textSecondary, paddingVertical: 12 },
+                      ]}
+                    >
+                      No matching customer
+                    </Text>
+                  )}
+                </View>
+              )}
+            </>
+          )}
+
+          {!customer && (
+            <>
+              <AppTextInput
+                placeholder="Customer name"
+                value={customerName}
+                onChangeText={setCustomerName}
+                leftIcon="user"
+                autoCapitalize="words"
+              />
+              <AppTextInput
+                placeholder="Phone"
+                value={customerPhone}
+                onChangeText={setCustomerPhone}
+                leftIcon="phone"
+                keyboardType="phone-pad"
+              />
+              <AppTextInput
+                placeholder="Address"
+                value={customerAddress}
+                onChangeText={setCustomerAddress}
+                leftIcon="map-pin"
+                autoCapitalize="words"
+              />
+            </>
+          )}
         </View>
 
         {/* Items */}
@@ -369,6 +480,28 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
+  selectedCustomer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  selectedCustomerName: { fontSize: 14, fontWeight: "600" },
+  selectedCustomerMeta: { fontSize: 12, marginTop: 2 },
+  customerDropdown: {
+    borderRadius: 12,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  customerDropdownItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+  },
+  customerName: { fontSize: 14, fontWeight: "600" },
+  customerMeta: { fontSize: 12, marginTop: 2 },
   typeRow: {
     flexDirection: "row",
     flexWrap: "wrap",

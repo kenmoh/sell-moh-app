@@ -124,7 +124,7 @@ export interface CreateReceivableRequest {
 export interface ReceivableResponse {
   id: string;
   tenant_id: string;
-  customer_id: string;
+  customer_id: string | null;
   customer_name: string;
   invoice_number: string;
   amount: number;
@@ -133,6 +133,16 @@ export interface ReceivableResponse {
   due_date: string;
   status: string;
   store_id?: string | null;
+}
+
+/** One row from the payment ledger behind a receivable or payable. */
+export interface PaymentRecord {
+  id: string;
+  amount: number;
+  payment_date: string;
+  notes: string | null;
+  recorded_by: string | null;
+  created_at: string;
 }
 
 // ── Accounts Payable ───────────────────────────────────────────────────────
@@ -205,3 +215,6 @@ export interface FinancialDashboardResponse {
   total_expenses_this_month: number;
   expense_by_category: Record<string, number>;
 }
+
+
+

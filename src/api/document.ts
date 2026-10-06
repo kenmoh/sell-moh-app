@@ -1,6 +1,7 @@
 import { DataMessageResponse } from "@/types/auth";
 import {
   DocumentCreateRequest,
+  DocumentListFilters,
   DocumentResponse,
 } from "@/types/document-types";
 import * as FileSystem from "expo-file-system/legacy";
@@ -24,8 +25,18 @@ export const createDocument = async (data: DocumentCreateRequest) => {
   return res.data;
 };
 
-export const getDocuments = async () => {
-  const res = await apiClient.get<DocumentResponse>(`${DOCUMENT_URL}`);
+export const getDocuments = async (filters: DocumentListFilters = {}) => {
+  const params = new URLSearchParams();
+  if (filters.doc_type) params.append("doc_type", filters.doc_type);
+  if (filters.status) params.append("status", filters.status);
+  if (filters.customer_id) params.append("customer_id", filters.customer_id);
+  if (filters.page) params.append("page", String(filters.page));
+  if (filters.page_size) params.append("page_size", String(filters.page_size));
+  const qs = params.toString();
+
+  const res = await apiClient.get<DocumentResponse>(
+    `${DOCUMENT_URL}${qs ? `?${qs}` : ""}`,
+  );
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
   }

@@ -1,6 +1,9 @@
+export type CustomerType = "customer" | "vendor";
+
 export interface Customer {
   id: string;
   name: string;
+  type: CustomerType;
   phone: string | null;
   email: string | null;
   address: string | null;
@@ -10,6 +13,7 @@ export interface Customer {
 
 export interface CreateCustomerRequest {
   name: string;
+  type?: CustomerType;
   phone?: string | null;
   email?: string | null;
   address?: string | null;
@@ -17,6 +21,7 @@ export interface CreateCustomerRequest {
 
 export interface UpdateCustomerRequest {
   name?: string | null;
+  type?: CustomerType | null;
   phone?: string | null;
   email?: string | null;
   address?: string | null;
