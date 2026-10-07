@@ -177,24 +177,6 @@ const SettlementScreen = () => {
                     {formatCurrency(balance?.pending_balance ?? 0)}
                   </Text>
                 </View>
-                <View style={styles.dashItem}>
-                  <View
-                    style={[
-                      styles.dashIcon,
-                      { backgroundColor: "rgba(5,150,105,0.12)" },
-                    ]}
-                  >
-                    <Lucide name="check-circle" size={16} color="#059669" />
-                  </View>
-                  <Text
-                    style={[styles.dashLabel, { color: colors.textSecondary }]}
-                  >
-                    Deducted
-                  </Text>
-                  <Text style={[styles.dashValue, { color: "#059669" }]}>
-                    {formatCurrency(settlement?.total_deducted ?? 0)}
-                  </Text>
-                </View>
               </View>
 
               {/* Block Warning */}
@@ -226,11 +208,6 @@ const SettlementScreen = () => {
                 label="Pending"
                 active={filter === "pending"}
                 onPress={() => setFilter("pending")}
-              />
-              <Pill
-                label="Deducted"
-                active={filter === "deducted"}
-                onPress={() => setFilter("deducted")}
               />
             </View>
           </>
