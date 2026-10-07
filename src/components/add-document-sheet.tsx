@@ -1,8 +1,10 @@
 import { fetchCustomers } from "@/api/customer";
 import AppBottomSheet from "@/components/bottom-sheet";
 import Pill from "@/components/pill";
+import PillRow from "@/components/pill-row";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useActiveStore } from "@/lib/store-context";
 import { Customer } from "@/types/customer";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import {
@@ -45,7 +47,12 @@ const emptyItem = (): DocumentItemLine => ({
 const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
+  const { isOwner, stores, resolvedStoreId, resolvedStoreName } = useActiveStore();
+
   const [docType, setDocType] = useState<DocumentType>("invoice");
+  // Owners choose the store; everyone else is filed against their own by
+  // the server, so no store is sent for them at all.
+  const [storeId, setStoreId] = useState<string | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
   const [customerName, setCustomerName] = useState("");
@@ -102,6 +109,7 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
         customer_address: customerAddress || undefined,
         due_date: dueDate ? dueDate.toISOString() : undefined,
         notes: notes || undefined,
+        store_id: isOwner ? (storeId ?? resolvedStoreId) : undefined,
         items: items.filter((i) => i.description.trim() !== ""),
       });
       onVisibleChange(false);
@@ -279,6 +287,31 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
             </>
           )}
         </View>
+
+        {isOwner && (
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              Store
+            </Text>
+            <PillRow>
+              {stores.map((store) => (
+                <Pill
+                  key={store.id}
+                  label={store.name}
+                  icon="store"
+                  active={(storeId ?? resolvedStoreId) === store.id}
+                  onPress={() => setStoreId(store.id)}
+                />
+              ))}
+            </PillRow>
+            <Text style={[styles.helper, { color: colors.textSecondary }]}>
+              {`This becomes an invoice, payable or journal entry, and those are attributed to a store. Filing against ${
+                stores.find((x) => x.id === (storeId ?? resolvedStoreId))?.name ??
+                resolvedStoreName
+              }.`}
+            </Text>
+          </View>
+        )}
 
         {/* Items */}
         <View style={styles.section}>
@@ -474,6 +507,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
+  helper: { fontSize: 11, lineHeight: 16 },
   sectionLabel: {
     fontSize: 13,
     fontWeight: "600",

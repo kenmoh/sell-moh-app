@@ -28,7 +28,7 @@ const statusConfig: Record<string, { color: string; bg: string }> = {
   draft: { color: "#6B7280", bg: "rgba(107, 114, 128, 0.12)" },
   pending: { color: "#D97706", bg: "rgba(217, 119, 6, 0.12)" },
   paid: { color: "#059669", bg: "rgba(5, 150, 105, 0.12)" },
-  voided: { color: "#DC2626", bg: "rgba(220, 38, 38, 0.12)" },
+  void: { color: "#DC2626", bg: "rgba(220, 38, 38, 0.12)" },
   sent: { color: "#2563EB", bg: "rgba(37, 99, 235, 0.12)" },
   accepted: { color: "#059669", bg: "rgba(5, 150, 105, 0.12)" },
   expired: { color: "#6B7280", bg: "rgba(107, 114, 128, 0.12)" },
@@ -85,7 +85,7 @@ function getActions(docType: string, currentStatus: string): ActionDef[] {
     case "invoice":
       if (currentStatus === "draft")
         actions.push({
-          label: "Send Invoice",
+          label: "Issue Invoice",
           icon: "send",
           status: "sent",
           variant: "primary",
@@ -97,11 +97,11 @@ function getActions(docType: string, currentStatus: string): ActionDef[] {
           status: "paid",
           variant: "primary",
         });
-      if (!["paid", "voided", "overdue"].includes(currentStatus))
+      if (!["paid", "void", "overdue"].includes(currentStatus))
         actions.push({
-          label: "Void",
+          label: "Void Document",
           icon: "x-circle",
-          status: "voided",
+          status: "void",
           variant: "danger",
         });
       break;
@@ -109,7 +109,7 @@ function getActions(docType: string, currentStatus: string): ActionDef[] {
     case "quote":
       if (currentStatus === "draft")
         actions.push({
-          label: "Send Quote",
+          label: "Mark as Sent",
           icon: "send",
           status: "sent",
           variant: "primary",
@@ -121,11 +121,11 @@ function getActions(docType: string, currentStatus: string): ActionDef[] {
           status: "__convert__",
           variant: "primary",
         });
-      if (!["accepted", "expired", "voided"].includes(currentStatus))
+      if (!["accepted", "expired", "void"].includes(currentStatus))
         actions.push({
-          label: "Void",
+          label: "Void Document",
           icon: "x-circle",
-          status: "voided",
+          status: "void",
           variant: "danger",
         });
       break;
@@ -143,21 +143,21 @@ function getActions(docType: string, currentStatus: string): ActionDef[] {
     case "purchase_order":
       if (currentStatus === "draft")
         actions.push({
-          label: "Send PO",
+          label: "Mark as Sent",
           icon: "send",
           status: "sent",
           variant: "primary",
         });
       if (currentStatus === "sent")
         actions.push({
-          label: "Confirm",
+          label: "Confirm Order",
           icon: "check-circle",
           status: "confirmed",
           variant: "primary",
         });
       if (currentStatus === "confirmed")
         actions.push({
-          label: "Mark Received",
+          label: "Mark as Received",
           icon: "package-check",
           status: "received",
           variant: "primary",
@@ -167,6 +167,21 @@ function getActions(docType: string, currentStatus: string): ActionDef[] {
 
   return actions;
 }
+
+/** Turn a status slug into something worth reading in a sentence. */
+const newStatusLabel = (status: string): string => {
+  const labels: Record<string, string> = {
+    sent: "sent",
+    paid: "paid",
+    void: "void",
+    issued: "issued",
+    confirmed: "confirmed",
+    received: "received",
+    cancelled: "cancelled",
+    accepted: "accepted",
+  };
+  return labels[status] ?? status;
+};
 
 const DocumentDetailScreen = () => {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -187,13 +202,16 @@ const DocumentDetailScreen = () => {
 
   const statusMutation = useMutation({
     mutationFn: (newStatus: string) => updateDocumentStatus(id!, newStatus),
-    onSuccess: () => {
+    onSuccess: (_data, newStatus) => {
       queryClient.invalidateQueries({ queryKey: ["document", id] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
-      toast.success("Updated", "Document status updated");
+      toast.success(
+        "Status updated",
+        `This document is now ${newStatusLabel(newStatus)}.`,
+      );
     },
     onError: (e: Error) => {
-      toast.error("Failed", e.message || "Could not update status");
+      toast.error("Couldn't update status", e.message);
     },
   });
 
@@ -202,10 +220,10 @@ const DocumentDetailScreen = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["document", id] });
       queryClient.invalidateQueries({ queryKey: ["documents"] });
-      toast.success("Converted", "Document converted to sale");
+      toast.success("Converted to sale", "The sale has been created.");
     },
     onError: (e: Error) => {
-      toast.error("Failed", e.message || "Could not convert document");
+      toast.error("Couldn't convert to a sale", e.message);
     },
   });
 
@@ -240,17 +258,10 @@ const DocumentDetailScreen = () => {
     }
 
     if (action.status === "__convert__") {
-      Alert.alert(
-        "Convert to Sale",
-        "This will create a sale from this document's items. Continue?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Convert",
-            onPress: () => convertMutation.mutate(),
-          },
-        ],
-      );
+      // No confirmation dialog: the toast reports the outcome like every other
+      // action here. The server refuses a second conversion, so the dialog was
+      // guarding against something a check now covers properly.
+      convertMutation.mutate();
       return;
     }
 
@@ -445,53 +456,51 @@ const DocumentDetailScreen = () => {
             </Text>
           </View>
         </View>
+        {/* Action Bar */}
+
+        {actions.length > 0 && (
+          <View style={[styles.actionBar]}>
+            {actions.map((action) => {
+              const isDanger = action.variant === "danger";
+              const bgColor = isDanger
+                ? "rgba(220, 38, 38, 0.12)"
+                : colors.buttonPrimary;
+              const textColor = isDanger ? "#DC2626" : "#fff";
+
+              return (
+                <Pressable
+                  key={action.status + action.label}
+                  onPress={() => handleAction(action)}
+                  disabled={isPending}
+                  style={({ pressed }) => [
+                    styles.actionBtn,
+                    {
+                      backgroundColor: bgColor,
+                      opacity: isPending ? 0.5 : pressed ? 0.75 : 1,
+                      transform: [{ scale: pressed ? 0.97 : 1 }],
+                    },
+                  ]}
+                >
+                  <Lucide
+                    name={action.icon as any}
+                    size={16}
+                    color={textColor}
+                  />
+                  <Text style={[styles.actionBtnText, { color: textColor }]}>
+                    {action.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        )}
+        {actions.length > 0 && (
+          <Text style={[styles.actionHint, { color: colors.textSecondary }]}>
+            These update the document status and its accounting. Nothing is
+            emailed to the customer.
+          </Text>
+        )}
       </ScrollView>
-
-      {/* Action Bar */}
-      {actions.length > 0 && (
-        <View
-          style={[
-            styles.actionBar,
-            {
-              backgroundColor: colors.card,
-              borderColor: isDark ? colors.backgroundElement : "#eef0f4",
-              paddingBottom: 20,
-              alignItems: "center",
-              justifyContent: "center",
-              borderTopEndRadius: 25,
-              borderTopLeftRadius: 25,
-            },
-          ]}
-        >
-          {actions.map((action) => {
-            const isDanger = action.variant === "danger";
-            const bgColor = isDanger
-              ? "rgba(220, 38, 38, 0.12)"
-              : colors.buttonPrimary;
-            const textColor = isDanger ? "#DC2626" : "#fff";
-
-            return (
-              <Pressable
-                key={action.status + action.label}
-                onPress={() => handleAction(action)}
-                disabled={isPending}
-                style={[
-                  styles.actionBtn,
-                  {
-                    backgroundColor: bgColor,
-                    opacity: isPending ? 0.5 : 1,
-                  },
-                ]}
-              >
-                <Lucide name={action.icon as any} size={16} color={textColor} />
-                <Text style={[styles.actionBtnText, { color: textColor }]}>
-                  {action.label}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
-      )}
     </View>
   );
 };
@@ -636,15 +645,15 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "700",
   },
+  actionHint: {
+    fontSize: 11,
+    lineHeight: 15,
+    textAlign: "center",
+  },
   actionBar: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
     flexDirection: "row",
     gap: 10,
-    padding: 16,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    marginTop: 50,
   },
   actionBtn: {
     flex: 1,

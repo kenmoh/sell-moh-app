@@ -13,6 +13,7 @@ import {
 } from "@/types/document-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { router, Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -83,10 +84,14 @@ const DocumentListScreen = () => {
     isPending,
     isRefetching,
     refetch,
+    isError,
+    error,
   } = useQuery({
     queryKey: ["documents"],
     queryFn: () => getDocuments(),
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load documents" });
 
   const documents: Document[] = useMemo(() => {
     const raw = documentsResponse?.data;
