@@ -1,5 +1,6 @@
 import { fetchTenantStores, type StoreData } from "@/api/store";
 import { useSession } from "@/lib/ctx";
+import { isOwnerRole } from "@/lib/roles";
 import { useStorageState } from "@/lib/useStorageState";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -45,7 +46,7 @@ export function useActiveStore(): ActiveStoreValue {
 
 export function ActiveStoreProvider({ children }: PropsWithChildren) {
   const { user, session, isLoading: sessionLoading } = useSession();
-  const isOwner = user?.role?.toLowerCase() === "owner";
+  const isOwner = isOwnerRole(user);
   const [[, storedStoreId], setStoredStoreId] = useStorageState("activeStoreId");
   const [sheetVisible, setSheetVisible] = useState(false);
 

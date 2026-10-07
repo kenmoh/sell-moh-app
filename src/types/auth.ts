@@ -115,7 +115,10 @@ export interface AuthUser {
   email: string;
   full_name: string;
   store_id: string | null;
+  /** Comma-joined role names, kept for display. */
   role: string;
+  /** Every role the user holds. Authoritative; role is its display form. */
+  roles?: string[];
   status: string;
   permissions: string[];
   totp_enabled: boolean;
