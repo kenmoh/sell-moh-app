@@ -4,6 +4,7 @@ import SearchInput from "@/components/search-input";
 import { Colors } from "@/constants/theme";
 import { Customer } from "@/types/customer";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useQuery } from "@tanstack/react-query";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -30,10 +31,12 @@ const CustomersScreen = () => {
     null,
   );
 
-  const { data, isLoading, isRefetching, refetch } = useQuery({
+  const { data, isLoading, isRefetching, refetch, isError, error } = useQuery({
     queryKey: ["customers", page, search],
     queryFn: () => fetchCustomers(page, 50, search || undefined),
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load customers" });
 
   const customers = useMemo(() => data?.items ?? [], [data]);
   const total = data?.total ?? 0;

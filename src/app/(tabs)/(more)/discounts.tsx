@@ -7,6 +7,7 @@ import type { Coupon, Discount } from "@/types/discount";
 import { Host, Switch } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack } from "expo-router";
 import { useCallback, useState } from "react";
 import {
@@ -63,10 +64,14 @@ const Discounts = () => {
     data: discountsData,
     isLoading: discountsLoading,
     refetch: refetchDiscounts,
+  isError,
+  error,
   } = useQuery({
     queryKey: ["discounts"],
     queryFn: () => fetchDiscounts(),
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load discounts" });
 
   // Fetch coupons
   const {

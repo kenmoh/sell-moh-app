@@ -7,6 +7,7 @@ import useCartStore from "@/hooks/use-cart-store";
 import { Customer } from "@/types/customer";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -66,7 +67,7 @@ const NewCartSheet = ({
     setSearch("");
   };
 
-  const { mutate: handleCreate, isPending } = useMutation({
+  const { mutate: handleCreate, isPending } = useApiMutation({
     mutationFn: async () => {
       let name = customerName.trim();
       let phone = customerPhone.trim() || undefined;

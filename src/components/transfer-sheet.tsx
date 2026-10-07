@@ -5,6 +5,7 @@ import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { StoreDistributePayload } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
@@ -65,6 +66,8 @@ export default function TransferSheet({
     }
   }, [visible]);
 
+  const toast = useToast();
+
   const { mutate, isPending } = useMutation({
     mutationFn: (data: StoreDistributePayload) =>
       distributeStock(currentStoreId, data),
@@ -73,8 +76,8 @@ export default function TransferSheet({
       queryClient.invalidateQueries({ queryKey: ["products"] });
       onVisibleChange(false);
     },
-    onError: (error: any) => {
-      console.error("Transfer failed", error);
+    onError: (error) => {
+      toast.error("Transfer failed", error.message);
     },
   });
 

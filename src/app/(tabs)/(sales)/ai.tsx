@@ -9,6 +9,7 @@ import { streamChat } from "@/lib/sse-client";
 import type { Recommendation, ToolCall } from "@/types/ai-chat";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useRouter } from "expo-router";
 import { Marked } from "marked";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -638,7 +639,7 @@ const AIScreen = () => {
     staleTime: 30_000,
   });
 
-  const deleteMutation = useMutation({
+  const deleteMutation = useApiMutation({
     mutationFn: deleteConversation,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ai-conversations"] });

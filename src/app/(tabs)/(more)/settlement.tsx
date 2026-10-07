@@ -7,6 +7,7 @@ import Pill from "@/components/pill";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -41,10 +42,12 @@ const SettlementScreen = () => {
   const colors = Colors[isDark ? "dark" : "light"];
   const [filter, setFilter] = useState<Filter>("all");
 
-  const { data: balance, isLoading: isLoadingBalance } = useQuery({
+  const { data: balance, isLoading: isLoadingBalance, isError, error } = useQuery({
     queryKey: ["settlement-balance"],
     queryFn: fetchSettlementBalance,
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load settlement" });
 
   const {
     data: settlement,

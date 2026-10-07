@@ -6,6 +6,7 @@ import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { CreateEmployee } from "@/types/auth";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -63,6 +64,8 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
     enabled: visible,
   });
 
+  const toast = useToast();
+
   const { mutate: createEmployeeMutation, isPending } = useMutation({
     mutationFn: (data: CreateEmployee) => createEmployee(data),
     onSuccess: () => {
@@ -71,7 +74,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
       reset();
     },
     onError: (error) => {
-      console.error("Failed to create employee", error);
+      toast.error("Couldn't create employee", error.message);
     },
   });
 

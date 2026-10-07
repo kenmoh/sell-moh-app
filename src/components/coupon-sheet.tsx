@@ -5,6 +5,7 @@ import { Colors } from "@/constants/theme";
 import { Coupon } from "@/types/discount";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -48,7 +49,7 @@ const CouponSheet = ({ visible, onVisibleChange, coupon }: Props) => {
     }
   }, [coupon, visible]);
 
-  const { mutate: saveCoupon, isPending } = useMutation({
+  const { mutate: saveCoupon, isPending } = useApiMutation({
     mutationFn: () => {
       const payload = {
         code: code.toUpperCase().trim(),
@@ -69,7 +70,7 @@ const CouponSheet = ({ visible, onVisibleChange, coupon }: Props) => {
     },
   });
 
-  const { mutate: removeCoupon, isPending: isDeleting } = useMutation({
+  const { mutate: removeCoupon, isPending: isDeleting } = useApiMutation({
     mutationFn: () => deleteCoupon(coupon!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["coupons"] });

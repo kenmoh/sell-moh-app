@@ -6,9 +6,11 @@ import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
+import { isOwnerRole } from "@/lib/roles";
 import { Discount } from "@/types/discount";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -43,7 +45,7 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
   const { user } = useSession();
-  const isOwner = user?.role === "owner";
+  const isOwner = isOwnerRole(user);
   const isEditing = !!discount;
 
   const [name, setName] = useState("");
@@ -90,7 +92,7 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
     }
   }, [discount, visible]);
 
-  const { mutate: saveDiscount, isPending } = useMutation({
+  const { mutate: saveDiscount, isPending } = useApiMutation({
     mutationFn: () => {
       const payload = {
         name,
@@ -114,7 +116,7 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
     },
   });
 
-  const { mutate: removeDiscount, isPending: isDeleting } = useMutation({
+  const { mutate: removeDiscount, isPending: isDeleting } = useApiMutation({
     mutationFn: () => deleteDiscount(discount!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["discounts"] });

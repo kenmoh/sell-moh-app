@@ -3,6 +3,7 @@ import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -47,6 +48,8 @@ const CategoryActionsSheet = ({ visible, onVisibleChange, category }: Props) => 
     {},
   );
 
+  const toast = useToast();
+
   const { mutate: updateMutation, isPending: isUpdating } = useMutation({
     mutationFn: (data: { id: string; name: string; description: string }) =>
       updateCategory(data.id, { name: data.name, description: data.description }),
@@ -56,7 +59,7 @@ const CategoryActionsSheet = ({ visible, onVisibleChange, category }: Props) => 
       reset();
     },
     onError: (error) => {
-      console.error("Failed to update category", error);
+      toast.error("Couldn't update category", error.message);
     },
   });
 
@@ -68,7 +71,7 @@ const CategoryActionsSheet = ({ visible, onVisibleChange, category }: Props) => 
       reset();
     },
     onError: (error) => {
-      console.error("Failed to delete category", error);
+      toast.error("Couldn't delete category", error.message);
     },
   });
 

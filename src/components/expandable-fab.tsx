@@ -6,6 +6,7 @@ import useCartStore from "@/hooks/use-cart-store";
 import { useSession } from "@/lib/ctx";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -141,7 +142,7 @@ const ExpandableFAB = ({ activeStoreId }: ExpandableFABProps) => {
     opacity: subFab2Opacity.value,
   }));
 
-  const { mutate: quickCreateCart, isPending } = useMutation({
+  const { mutate: quickCreateCart, isPending } = useApiMutation({
     mutationFn: () =>
       createCart({
         store_id: activeStoreId || user?.store_id || "",

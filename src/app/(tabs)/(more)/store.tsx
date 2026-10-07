@@ -2,6 +2,7 @@ import { fetchTenantStores } from "@/api/store";
 import SearchInput from "@/components/search-input";
 import StoreSheet from "@/components/store-sheet";
 import { Colors } from "@/constants/theme";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
 import { Stack, useRouter } from "expo-router";
@@ -42,10 +43,14 @@ const StoresScreen = () => {
     isLoading,
     isRefetching,
     refetch,
+    isError,
+    error,
   } = useQuery({
     queryKey: ["stores"],
     queryFn: fetchTenantStores,
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load stores" });
 
   const filteredStores = useMemo(() => {
     return stores.filter(
@@ -163,6 +168,29 @@ const StoresScreen = () => {
       >
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={colors.buttonPrimary} size="large" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+  if (error) {
+    return (
+      <SafeAreaView
+        style={[styles.container, { backgroundColor: colors.background }]}
+        edges={["top", "left", "right"]}
+      >
+        <View style={[styles.loadingContainer, { gap: 12 }]}>
+          <Lucide name="shield-ban" size={32} color={colors.error} />
+          <Text
+            style={{
+              color: colors.textSecondary,
+              fontSize: 18,
+              textAlign: "center",
+            }}
+          >
+            {error.message === `Permission denied: 'stores:read'`
+              ? "Permission denied"
+              : error.message}
+          </Text>
         </View>
       </SafeAreaView>
     );

@@ -21,6 +21,7 @@ import MoreVert from "@expo/material-symbols/more_vert.xml";
 import { Checkbox, Host } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -117,6 +118,8 @@ const Notifications = () => {
     isLoading,
     isRefetching,
     refetch: refetchNotifs,
+  isError,
+  error,
   } = useQuery({
     queryKey: [
       "notifications",
@@ -132,6 +135,8 @@ const Notifications = () => {
         limit: 100,
       }),
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load notifications" });
 
   // Fetch unread count
   const { data: unreadCount = 0, refetch: refetchUnread } = useQuery({

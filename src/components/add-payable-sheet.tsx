@@ -14,6 +14,7 @@ import type { Customer } from "@/types/customer";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -69,7 +70,7 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
     enabled: visible && !vendor && vendorSearch.trim().length >= 2,
   });
 
-  const { mutate: createAP, isPending } = useMutation({
+  const { mutate: createAP, isPending } = useApiMutation({
     mutationFn: () =>
       createPayable({
         bill_number: billNumber,

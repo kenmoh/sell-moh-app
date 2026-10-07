@@ -6,6 +6,7 @@ import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { CreateRole } from "@/types/auth";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -47,6 +48,8 @@ const AddRoleSheet = ({ visible, onVisibleChange }: Props) => {
     enabled: visible,
   });
 
+  const toast = useToast();
+
   const { mutate: createRoleMutation, isPending } = useMutation({
     mutationFn: (data: CreateRole) => createRole(data),
     onSuccess: () => {
@@ -55,8 +58,7 @@ const AddRoleSheet = ({ visible, onVisibleChange }: Props) => {
       reset();
     },
     onError: (error) => {
-      console.error("Failed to create role", error);
-      // Ideally show a toast here
+      toast.error("Couldn't create role", error.message);
     },
   });
 

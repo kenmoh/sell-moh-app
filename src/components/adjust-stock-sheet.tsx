@@ -6,6 +6,7 @@ import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
 import { AdjustProduct } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
@@ -68,6 +69,8 @@ const AdjustStockSheet = ({
     setUnitCostValue(String(unitCost));
   }, [unitCost]);
 
+  const toast = useToast();
+
   const { mutate: adjustMutation, isPending } = useMutation({
     mutationFn: (data: AdjustProduct) => adjustProduct(user?.store_id!, data),
 
@@ -78,7 +81,7 @@ const AdjustStockSheet = ({
       reset();
     },
     onError: (error) => {
-      console.error("Failed to adjust stock", error);
+      toast.error("Couldn't adjust stock", error.message);
     },
   });
 

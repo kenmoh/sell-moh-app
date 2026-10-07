@@ -10,6 +10,7 @@ import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { Host, Switch } from "@expo/ui";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useRouter } from "expo-router";
 import { useState } from "react";
 import {
@@ -42,10 +43,14 @@ export default function TaxSettings() {
     isLoading,
     isRefetching,
     refetch,
+  isError,
+  error,
   } = useQuery({
     queryKey: ["taxes"],
     queryFn: () => fetchTaxTypes(true),
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load tax settings" });
 
   const createMutation = useMutation({
     mutationFn: createTaxType,

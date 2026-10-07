@@ -5,6 +5,7 @@ import { Colors } from "@/constants/theme";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -71,7 +72,7 @@ const RecordPaymentSheet = ({
   const remaining = isValidAmount ? balance - parsedAmount : balance;
   const isFullPayment = isValidAmount && Math.abs(remaining) < 0.01;
 
-  const { mutate: recordPayment, isPending } = useMutation({
+  const { mutate: recordPayment, isPending } = useApiMutation({
     mutationFn: () => {
       if (isSettled) {
         throw new Error(`This ${label.toLowerCase()} has no outstanding balance`);

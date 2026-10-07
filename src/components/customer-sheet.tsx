@@ -6,6 +6,7 @@ import { Colors } from "@/constants/theme";
 import { Customer, CustomerType } from "@/types/customer";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -87,7 +88,7 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
     }
   }
 
-  const { mutate: saveCustomer, isPending } = useMutation({
+  const { mutate: saveCustomer, isPending } = useApiMutation({
     mutationFn: () => {
       const payload = {
         name,
@@ -107,7 +108,7 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
     },
   });
 
-  const { mutate: removeCustomer, isPending: isDeleting } = useMutation({
+  const { mutate: removeCustomer, isPending: isDeleting } = useApiMutation({
     mutationFn: () => deleteCustomer(customer!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customers"] });

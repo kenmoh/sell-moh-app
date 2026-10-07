@@ -9,6 +9,7 @@ import { useSession } from "@/lib/ctx";
 import { StockHistoryItem } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import * as FileSystem from "expo-file-system/legacy";
 import * as MediaLibrary from "expo-media-library";
 import { router, useLocalSearchParams } from "expo-router";
@@ -83,10 +84,12 @@ const ProductDetails = () => {
   const [qrSize, setQrSize] = useState<"small" | "medium" | "large">("small");
   const [qrBoxSize, setQrBoxSize] = useState("");
 
-  const { data: storesData } = useQuery({
+  const { data: storesData, isError, error } = useQuery({
     queryKey: ["stores"],
     queryFn: fetchTenantStores,
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load product" });
 
   const stores = storesData ?? [];
 

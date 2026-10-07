@@ -4,6 +4,7 @@ import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { CreateCategory } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -41,6 +42,8 @@ const AddCategorySheet = ({ visible, onVisibleChange, onCreated, storeId }: Prop
     {},
   );
 
+  const toast = useToast();
+
   const { mutate: createCategoryMutation, isPending } = useMutation({
     mutationFn: (data: CreateCategory) => createCategory(storeId, data),
     onSuccess: () => {
@@ -50,7 +53,7 @@ const AddCategorySheet = ({ visible, onVisibleChange, onCreated, storeId }: Prop
       reset();
     },
     onError: (error) => {
-      console.error("Failed to create category", error);
+      toast.error("Couldn't create category", error.message);
     },
   });
 

@@ -8,6 +8,7 @@ import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -64,7 +65,7 @@ const StoreSheet = ({ visible, onVisibleChange, store }: Props) => {
     }
   }, [store, visible]);
 
-  const { mutate: saveStore, isPending } = useMutation({
+  const { mutate: saveStore, isPending } = useApiMutation({
     mutationFn: () => {
       const payload = { name, address: address || undefined, is_warehouse: isWarehouse };
       return store
@@ -78,7 +79,7 @@ const StoreSheet = ({ visible, onVisibleChange, store }: Props) => {
     },
   });
 
-  const { mutate: deleteStore, isPending: isDeleting } = useMutation({
+  const { mutate: deleteStore, isPending: isDeleting } = useApiMutation({
     mutationFn: () => deleteTenantStore(store!.id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["stores"] });

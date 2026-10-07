@@ -10,6 +10,7 @@ import { Customer } from "@/types/customer";
 import { Document } from "@/types/document-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -127,7 +128,7 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
     setErrors({});
   };
 
-  const { mutate: submit, isPending } = useMutation({
+  const { mutate: submit, isPending } = useApiMutation({
     mutationFn: async () => {
       let customerId = customer?.id ?? "";
       let customerName = customer?.name ?? newCustomerName.trim();
