@@ -8,6 +8,7 @@ import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { CreateProduct } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -106,6 +107,8 @@ const AddProduct = () => {
     }
   }, [storeId, stores]);
 
+  const toast = useToast();
+
   const { mutate: createProductMutation, isPending } = useMutation({
     mutationFn: (data: CreateProduct) => createProduct(storeId, data),
     onSuccess: () => {
@@ -113,7 +116,7 @@ const AddProduct = () => {
       router.back();
     },
     onError: (error) => {
-      console.error("Failed to create product", error);
+      toast.error("Couldn't create product", error.message);
     },
   });
 

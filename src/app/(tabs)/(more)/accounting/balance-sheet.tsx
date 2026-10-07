@@ -8,6 +8,7 @@ import DateTimePicker from "@expo/ui/community/datetime-picker";
 import Info from "@expo/material-symbols/info.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack } from "expo-router";
 import { Fragment, useCallback, useState } from "react";
 import {
@@ -51,10 +52,12 @@ const BalanceSheet = () => {
     });
   };
 
-  const { data, isLoading, isRefetching, refetch } = useQuery({
+  const { data, isLoading, isRefetching, refetch, isError, error } = useQuery({
     queryKey: ["balance-sheet", asAtDate, activeStoreId],
     queryFn: () => fetchBalanceSheet(asAtDate, activeStoreId),
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load balance sheet" });
 
   const sections: Section[] = data
     ? [

@@ -13,6 +13,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -59,10 +60,12 @@ const Journals = () => {
     [data],
   );
 
-  const { data: accounts = [] } = useQuery({
+  const { data: accounts = [], isError, error } = useQuery({
     queryKey: ["accounts"],
     queryFn: fetchAccounts,
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load journals" });
 
   const { mutate: addJournal, isPending: isAdding } = useMutation({
     mutationFn: (data: Parameters<typeof createJournal>[0]) =>

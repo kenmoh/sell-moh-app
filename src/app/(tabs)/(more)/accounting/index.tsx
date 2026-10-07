@@ -20,6 +20,7 @@ import { getAccountingMenuIcon } from "@/types/accounting-menu-icon";
 import MoreVert from "@expo/material-symbols/more_vert.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack, useRouter } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -75,10 +76,12 @@ const AccountingScreen = () => {
     type: "ar" | "ap";
   } | null>(null);
 
-  const { data: dashboard, isLoading: isLoadingDashboard } = useQuery({
+  const { data: dashboard, isLoading: isLoadingDashboard, isError, error } = useQuery({
     queryKey: ["financial-dashboard", activeStoreId],
     queryFn: () => fetchFinancialDashboard(activeStoreId),
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load accounting" });
 
   const {
     data: receivables = [],

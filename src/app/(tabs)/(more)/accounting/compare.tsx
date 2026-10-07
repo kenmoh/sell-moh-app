@@ -21,6 +21,7 @@ import Info from "@expo/material-symbols/info.xml";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide, type LucideIconName } from "@react-native-vector-icons/lucide";
 import { useQueries } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -185,6 +186,14 @@ const CompareStores = () => {
   const isError = results.some((r) => r.isError);
   const isRefetching = results.some((r) => r.isRefetching);
   const onRefresh = () => results.forEach((r) => r.refetch());
+
+  // One result per column, so a failure can be in any of them. Report the first
+  // rather than only whichever column happened to be rendered first.
+  useApiErrorToast({
+    isError: results.some((r) => r.isError),
+    error: results.find((r) => r.error)?.error,
+    title: "Couldn't load comparison",
+  });
 
   const dataByCol: Record<string, any> = {};
   fetched.forEach((col, i) => {

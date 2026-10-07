@@ -16,6 +16,7 @@ import Add from "@expo/material-symbols/add.xml";
 import Info from "@expo/material-symbols/info.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import {
@@ -64,10 +65,14 @@ const ChartOfAccounts = () => {
     isLoading,
     isRefetching,
     refetch,
+  isError,
+  error,
   } = useQuery({
     queryKey: ["accounts"],
     queryFn: fetchAccounts,
   });
+
+  useApiErrorToast({ isError, error, title: "Couldn't load accounts" });
 
   const { mutate: addAccount, isPending: isAdding } = useMutation({
     mutationFn: createAccount,
