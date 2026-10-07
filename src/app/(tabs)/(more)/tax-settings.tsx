@@ -5,6 +5,7 @@ import {
     TaxType,
     updateTaxType,
 } from "@/api/taxes";
+import { fetchAccounts } from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -37,6 +38,9 @@ export default function TaxSettings() {
   const [editingTax, setEditingTax] = useState<TaxType | null>(null);
   const [taxName, setTaxName] = useState("");
   const [taxRate, setTaxRate] = useState("");
+  // Empty means "let the server pick from the name", which is how VAT ends up
+  // in 2300 and anything else in 2400.
+  const [accountCode, setAccountCode] = useState("");
 
   const {
     data: taxes = [],
@@ -52,6 +56,16 @@ export default function TaxSettings() {
 
   useApiErrorToast({ isError, error, title: "Couldn't load tax settings" });
 
+  const { data: accounts = [] } = useQuery({
+    queryKey: ["accounts"],
+    queryFn: fetchAccounts,
+  });
+  // A tax is owed to a liability account; anything else here would put the
+  // money where it does not belong.
+  const liabilityAccounts = accounts.filter((a) => a.account_type === "liability");
+  const accountName = (code: string | null | undefined) =>
+    liabilityAccounts.find((a) => a.code === code)?.name ?? null;
+
   const createMutation = useMutation({
     mutationFn: createTaxType,
     onSuccess: () => {
@@ -59,6 +73,7 @@ export default function TaxSettings() {
       setShowAddSheet(false);
       setTaxName("");
       setTaxRate("");
+      setAccountCode("");
     },
   });
 
@@ -68,13 +83,19 @@ export default function TaxSettings() {
       data,
     }: {
       id: string;
-      data: { name?: string; rate?: number; is_active?: boolean };
+      data: {
+        name?: string;
+        rate?: number;
+        is_active?: boolean;
+        account_code?: string;
+      };
     }) => updateTaxType(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["taxes"] });
       setEditingTax(null);
       setTaxName("");
       setTaxRate("");
+      setAccountCode("");
     },
   });
 
@@ -98,13 +119,15 @@ export default function TaxSettings() {
     const rate = parseFloat(taxRate);
     if (isNaN(rate) || rate < 0 || rate > 100) return;
 
+    const account = accountCode ? { account_code: accountCode } : {};
+
     if (editingTax) {
       updateMutation.mutate({
         id: editingTax.id,
-        data: { name: taxName.trim(), rate },
+        data: { name: taxName.trim(), rate, ...account },
       });
     } else {
-      createMutation.mutate({ name: taxName.trim(), rate });
+      createMutation.mutate({ name: taxName.trim(), rate, ...account });
     }
   };
 
@@ -112,6 +135,7 @@ export default function TaxSettings() {
     setEditingTax(tax);
     setTaxName(tax.name);
     setTaxRate(String(tax.rate));
+    setAccountCode(tax.account_code ?? "");
     setShowAddSheet(true);
   };
 
@@ -120,6 +144,7 @@ export default function TaxSettings() {
     setEditingTax(null);
     setTaxName("");
     setTaxRate("");
+    setAccountCode("");
   };
 
   return (
@@ -158,7 +183,7 @@ export default function TaxSettings() {
             No tax types configured
           </Text>
           <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
-            Create a tax type (e.g. VAT) to apply at checkout
+            Create a tax, then assign it to the products it applies to
           </Text>
         </View>
       ) : (
@@ -186,6 +211,15 @@ export default function TaxSettings() {
                   </Text>
                   <Text style={[styles.cardRate, { color: "#3b82f6" }]}>
                     {item.rate}%
+                  </Text>
+                  <Text
+                    style={[styles.cardAccount, { color: colors.textSecondary }]}
+                  >
+                    {item.account_code
+                      ? `Owed to ${item.account_code} ${
+                          accountName(item.account_code) ?? ""
+                        }`.trim()
+                      : "Owed to the default liability account"}
                   </Text>
                 </View>
                 <View style={styles.cardActions}>
@@ -266,6 +300,49 @@ export default function TaxSettings() {
             onChangeText={setTaxRate}
             keyboardType="decimal-pad"
           />
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            Liability account
+          </Text>
+          <Pressable
+            style={[
+              styles.accountList,
+              {
+                backgroundColor: colors.backgroundElement,
+                borderColor: isDark ? "#282b32" : "#e5e7eb",
+              },
+            ]}
+          >
+            {[{ code: "", name: "Default (chosen from the name)" }, ...liabilityAccounts].map(
+              (account) => {
+                const isSelected = accountCode === account.code;
+                return (
+                  <Pressable
+                    key={account.code || "default"}
+                    onPress={() => setAccountCode(account.code)}
+                    style={[
+                      styles.accountOption,
+                      isSelected && {
+                        backgroundColor: isDark ? "#282b32" : "#e5e7eb",
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.accountOptionText,
+                        { color: colors.text },
+                      ]}
+                    >
+                      {account.code ? `${account.code}  ` : ""}
+                      {account.name}
+                    </Text>
+                    {isSelected && (
+                      <Lucide name="check" size={16} color="#3b82f6" />
+                    )}
+                  </Pressable>
+                );
+              },
+            )}
+          </Pressable>
           <Pressable
             onPress={handleSave}
             disabled={createMutation.isPending || updateMutation.isPending}
@@ -321,6 +398,7 @@ const styles = StyleSheet.create({
   cardInfo: { flex: 1 },
   cardName: { fontSize: 16, fontWeight: "600" },
   cardRate: { fontSize: 14, fontWeight: "500", marginTop: 2 },
+  cardAccount: { fontSize: 12, marginTop: 4 },
   cardActions: {
     flexDirection: "row",
     alignItems: "center",
@@ -353,6 +431,20 @@ const styles = StyleSheet.create({
     padding: 12,
     fontSize: 15,
   },
+  accountList: {
+    borderWidth: 1,
+    borderRadius: 10,
+    borderColor: "#e5e7eb",
+    overflow: "hidden",
+  },
+  accountOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+  },
+  accountOptionText: { fontSize: 14, flex: 1 },
   saveBtn: {
     borderRadius: 12,
     padding: 14,

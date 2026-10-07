@@ -251,6 +251,17 @@ const ProductDetails = () => {
                   sku: product.sku ?? "",
                   category_id: product.category ?? "",
                   selling_price: String(product.selling_price),
+                  // The edit form validates cost and reorder point as
+                  // required, and saves in the store that owns this product.
+                  cost_price: String(product.cost_price),
+                  reorder_point: String(product.reorder_point),
+                  store_id: storeId,
+                  // Passed as ids so the edit form opens showing the taxes
+                  // this product already carries, without a second fetch.
+                  tax_ids: (product.taxes ?? [])
+                    .filter((t) => t.id)
+                    .map((t) => t.id)
+                    .join(","),
                 },
               })
             }

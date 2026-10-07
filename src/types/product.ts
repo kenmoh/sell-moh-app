@@ -31,6 +31,14 @@ export interface StockHistoryItem {
   created_at: string;
 }
 
+/** A tax as a product carries it: who it is, what it costs, where it is owed. */
+export interface TaxEntry {
+  id: string | null;
+  name: string;
+  rate: number;
+  account_code?: string;
+}
+
 export interface ProductResponse {
   id: string;
   name: string;
@@ -47,6 +55,7 @@ export interface ProductResponse {
   available: number;
   min_stock_level: number;
   unit_cost: number | null;
+  taxes: TaxEntry[];
   history: StockHistoryItem[];
 }
 
@@ -73,10 +82,24 @@ export interface CreateProduct {
   unit?: string | null;
   cost_price: number;
   selling_price: number;
-  tax_rate?: number | null;
+  /** The taxes this product carries. Empty means untaxed. */
+  tax_ids?: string[];
   reorder_point: number;
   qty?: number;
   metadata?: Record<string, any> | null;
+  store_id?: string | null;
+}
+
+/** Fields the catalog lets a store change after creation. */
+export interface UpdateProduct {
+  name?: string;
+  cost_price?: number;
+  selling_price?: number;
+  tax_ids?: string[];
+  reorder_point?: number;
+  category_id?: string | null;
+  description?: string | null;
+  unit?: string | null;
 }
 
 export interface AdjustProduct {

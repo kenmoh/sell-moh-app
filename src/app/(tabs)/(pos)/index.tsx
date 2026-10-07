@@ -128,6 +128,7 @@ const POSScreen = () => {
         in_stock: p.qty,
         reorder_point: p.reorder_point ?? 0,
         category: categories.find((c) => c.name === p.category),
+        taxes: p.taxes ?? [],
       })),
     [allProducts, categories],
   );

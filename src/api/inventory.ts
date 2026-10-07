@@ -16,6 +16,7 @@ import {
   StockMovementItem,
   StockMovementsPaginatedResponse,
   StoreDistributePayload,
+  UpdateProduct,
 } from "@/types/product";
 import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
@@ -156,6 +157,24 @@ export const updateProduct = async (id: string, data: CreateProduct) => {
   }
 
   return res.data!;
+};
+
+/** Change a product as one of its stores sees it. */
+export const updateStoreProduct = async (
+  storeId: string,
+  productId: string,
+  data: UpdateProduct,
+) => {
+  const res = await apiClient.patch<{ data: unknown }>(
+    `${INVENTORY_URL}/${storeId}/products/${productId}`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data;
 };
 
 export const deleteProduct = async (id: string) => {

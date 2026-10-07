@@ -1,12 +1,16 @@
-import { createProduct, fetchTenantCategories } from "@/api/inventory";
+import {
+  createProduct,
+  fetchTenantCategories,
+  updateStoreProduct,
+} from "@/api/inventory";
 import { fetchTenantStores } from "@/api/store";
-import { fetchTaxTypes, TaxType } from "@/api/taxes";
+import { fetchTaxTypes } from "@/api/taxes";
 import AddCategorySheet from "@/components/add-category-sheet";
 import AppBottomSheet from "@/components/bottom-sheet";
 import CategoryActionsSheet from "@/components/category-actions-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
-import { CreateProduct } from "@/types/product";
+import { CreateProduct, UpdateProduct } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -32,7 +36,6 @@ const productSchema = z.object({
   category_id: z.string().optional(),
   description: z.string().optional(),
   unit: z.string().optional(),
-  tax_rate: z.string().optional(),
 });
 
 type ProductField = keyof z.infer<typeof productSchema>;
@@ -51,19 +54,28 @@ const AddProduct = () => {
     sku?: string;
     category_id?: string;
     selling_price?: string;
+    cost_price?: string;
+    reorder_point?: string;
     store_id?: string;
+    tax_ids?: string;
   }>();
   const isEditing = Boolean(params.id);
 
   const [name, setName] = useState(params.name ?? "");
   const [description, setDescription] = useState("");
-  const [costPrice, setCostPrice] = useState("");
+  const [costPrice, setCostPrice] = useState(params.cost_price ?? "");
   const [sellingPrice, setSellingPrice] = useState(params.selling_price ?? "");
   const [unit, setUnit] = useState("");
-  const [taxRate, setTaxRate] = useState("");
-  const [selectedTax, setSelectedTax] = useState<TaxType | null>(null);
-  const [taxSheetVisible, setTaxSheetVisible] = useState(false);
-  const [reorderPoint, setReorderPoint] = useState("");
+  // A product can carry more than one tax, and every one of them applies when
+  // it is sold -- so this is a set, not a single choice. It starts from the
+  // ids the detail screen passed over, rather than being copied out of a query
+  // in an effect, which would render the form empty first.
+  const [selectedTaxIds, setSelectedTaxIds] = useState<string[]>(() =>
+    (params.tax_ids ?? "").split(",").filter(Boolean),
+  );
+  const [reorderPoint, setReorderPoint] = useState(
+    params.reorder_point ?? "",
+  );
   const [initialStock, setInitialStock] = useState("");
   const [trackInventory, setTrackInventory] = useState(true);
   const [categoryId, setCategoryId] = useState(params.category_id ?? "");
@@ -120,6 +132,21 @@ const AddProduct = () => {
     },
   });
 
+  const { mutate: updateProductMutation, isPending: isUpdating } = useMutation({
+    mutationFn: (data: UpdateProduct) =>
+      updateStoreProduct(storeId, params.id!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["products"] });
+      queryClient.invalidateQueries({ queryKey: ["product"] });
+      router.back();
+    },
+    onError: (error) => {
+      toast.error("Couldn't update product", error.message);
+    },
+  });
+
+  const isSaving = isPending || isUpdating;
+
   const categories = categoriesData ?? [];
 
   const addMetadataField = () => {
@@ -162,7 +189,6 @@ const AddProduct = () => {
       category_id: categoryId || undefined,
       description: description || undefined,
       unit: unit || undefined,
-      tax_rate: taxRate || undefined,
     });
 
     if (!result.success) {
@@ -177,24 +203,33 @@ const AddProduct = () => {
 
     setErrors({});
 
-    const payload = {
+    const shared = {
       name: result.data.name,
       cost_price: parseFloat(result.data.cost_price) || 0,
       selling_price: parseFloat(result.data.selling_price) || 0,
       reorder_point: parseInt(result.data.reorder_point, 10) || 0,
+    };
+
+    if (isEditing) {
+      // The catalog PATCH takes only the fields the detail screen can know
+      // about, so anything it cannot show (description, unit, category) is
+      // left alone rather than blanked.
+      updateProductMutation({ ...shared, tax_ids: selectedTaxIds });
+      return;
+    }
+
+    createProductMutation({
+      ...shared,
       qty: result.data.initial_stock
         ? parseFloat(result.data.initial_stock) || 0
         : 0,
       category_id: result.data.category_id || null,
       description: result.data.description || null,
       unit: result.data.unit || null,
-      tax_id: selectedTax?.id || null,
-      tax_rate: selectedTax ? selectedTax.rate : null,
+      tax_ids: selectedTaxIds,
       metadata: buildMetadataObject(),
       store_id: storeId || null,
-    };
-
-    createProductMutation(payload);
+    });
   };
 
   return (
@@ -273,7 +308,68 @@ const AddProduct = () => {
               )}
             </View>
           </View>
-          {/* Tax Rate — temporarily disabled, deciding between product-level vs cart-level tax */}
+          {/* Taxes */}
+          <Text
+            style={[styles.sectionLabel, { color: colors.textSecondary }]}
+          >
+            TAXES
+          </Text>
+          {taxes.filter((t) => t.is_active).length > 0 ? (
+            <View style={[styles.pills, { marginTop: 8 }]}>
+              {taxes
+                .filter((t) => t.is_active)
+                .map((tax) => {
+                  const isSelected = selectedTaxIds.includes(tax.id);
+                  return (
+                    <Pressable
+                      key={tax.id}
+                      style={[
+                        styles.pill,
+                        {
+                          backgroundColor: isSelected
+                            ? colors.buttonPrimary
+                            : colors.backgroundElement,
+                          borderWidth: 1,
+                          borderColor: isSelected
+                            ? colors.buttonPrimary
+                            : colors.backgroundSelected,
+                        },
+                      ]}
+                      onPress={() =>
+                        setSelectedTaxIds((current) =>
+                          isSelected
+                            ? current.filter((id) => id !== tax.id)
+                            : [...current, tax.id],
+                        )
+                      }
+                    >
+                      <Text
+                        style={[
+                          styles.pillText,
+                          { color: isSelected ? "#fff" : colors.text },
+                        ]}
+                      >
+                        {tax.name} ({tax.rate}%)
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+            </View>
+          ) : (
+            <Text
+              style={[
+                styles.taxHint,
+                { marginTop: 8, color: colors.textSecondary },
+              ]}
+            >
+              No tax rates configured yet
+            </Text>
+          )}
+          <Text style={[styles.taxHint, { color: colors.textSecondary }]}>
+            {selectedTaxIds.length
+              ? "All of these are charged when the product sells. Tap one to remove it."
+              : "Nothing selected, so the product sells untaxed."}
+          </Text>
           <AppTextInput
             leftIcon="package"
             placeholder="Reorder point"
@@ -445,13 +541,13 @@ const AddProduct = () => {
 
         {/* Save */}
         <Pressable
-          style={[styles.saveBtn, isPending && { opacity: 0.5 }]}
-          disabled={isPending}
+          style={[styles.saveBtn, isSaving && { opacity: 0.5 }]}
+          disabled={isSaving}
           onPress={handleSubmit}
         >
           <Lucide name="save" size={18} color="#fff" />
           <Text style={styles.saveBtnText}>
-            {isPending
+            {isSaving
               ? "Saving..."
               : isEditing
                 ? "Update Product"
@@ -585,85 +681,6 @@ const AddProduct = () => {
           </Text>
         )}
       </AppBottomSheet>
-      <AppBottomSheet
-        visible={taxSheetVisible}
-        onVisibleChange={setTaxSheetVisible}
-        snapPoints={["40%", "70%"]}
-      >
-        <View style={styles.sheetHeader}>
-          <Text style={[styles.sheetTitle, { color: colors.text }]}>
-            Select Tax Rate
-          </Text>
-          <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
-            Choose a tax rate for this product
-          </Text>
-        </View>
-        <Pressable
-          style={[
-            styles.pill,
-            {
-              backgroundColor: !selectedTax
-                ? colors.buttonPrimary
-                : colors.backgroundElement,
-              marginBottom: 8,
-            },
-          ]}
-          onPress={() => {
-            setSelectedTax(null);
-            setTaxRate("");
-            setTaxSheetVisible(false);
-          }}
-        >
-          <Text
-            style={[
-              styles.pillText,
-              { color: !selectedTax ? "#fff" : colors.text },
-            ]}
-          >
-            No tax
-          </Text>
-        </Pressable>
-        {taxes && taxes.length > 0 ? (
-          <View style={styles.pills}>
-            {taxes
-              .filter((t) => t.is_active)
-              .map((tax) => {
-                const isActive = selectedTax?.id === tax.id;
-                return (
-                  <Pressable
-                    key={tax.id}
-                    style={[
-                      styles.pill,
-                      {
-                        backgroundColor: isActive
-                          ? colors.buttonPrimary
-                          : colors.backgroundElement,
-                      },
-                    ]}
-                    onPress={() => {
-                      setSelectedTax(tax);
-                      setTaxRate(String(tax.rate));
-                      setTaxSheetVisible(false);
-                    }}
-                  >
-                    <Text
-                      style={[
-                        styles.pillText,
-                        { color: isActive ? "#fff" : colors.text },
-                      ]}
-                    >
-                      {tax.name} ({tax.rate}%)
-                    </Text>
-                  </Pressable>
-                );
-              })}
-          </View>
-        ) : (
-          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-            No tax rates available
-          </Text>
-        )}
-      </AppBottomSheet>
     </>
   );
 };
@@ -723,6 +740,11 @@ const styles = StyleSheet.create({
   headerActionText: {
     fontSize: 13,
     fontWeight: "600",
+  },
+  taxHint: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 8,
   },
   pills: {
     flexDirection: "row",

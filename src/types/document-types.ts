@@ -1,3 +1,5 @@
+import type { TaxBreakdownLine } from "@/types/payments";
+
 export type DocumentType = "quote" | "invoice" | "receipt" | "purchase_order";
 
 export interface DocumentItemLine {
@@ -7,6 +9,8 @@ export interface DocumentItemLine {
   unit_price: number;
   discount_pct?: number;
   tax_rate?: number;
+  /** Taxes chosen for this line. Sent as ids; the server owns the rates. */
+  tax_ids?: string[];
 }
 
 export interface DocumentCreateRequest {
@@ -43,6 +47,8 @@ interface DocumentItem {
   unit_price: number;
   discount_pct: number;
   tax_rate: number | null;
+  /** The tax snapshots this line was priced with, when there are any. */
+  taxes?: TaxBreakdownLine[];
   line_total: number;
 }
 
@@ -55,6 +61,11 @@ export interface Document {
   customer_name: string;
   customer_email: string;
   customer_phone: string;
+  subtotal?: number;
+  discount?: number;
+  tax?: number | string;
+  /** The line snapshots grouped by tax, for a breakdown under the total. */
+  tax_breakdown?: TaxBreakdownLine[];
   total: number;
   item_count: number;
   due_date: string | null;

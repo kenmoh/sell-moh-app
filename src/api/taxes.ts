@@ -9,6 +9,8 @@ export interface TaxType {
   name: string;
   rate: number;
   is_active: boolean;
+  /** Liability account the tax is owed to, e.g. "2300". */
+  account_code?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -16,12 +18,14 @@ export interface TaxType {
 export interface CreateTaxRequest {
   name: string;
   rate: number;
+  account_code?: string;
 }
 
 export interface UpdateTaxRequest {
   name?: string;
   rate?: number;
   is_active?: boolean;
+  account_code?: string;
 }
 
 export const fetchTaxTypes = async (

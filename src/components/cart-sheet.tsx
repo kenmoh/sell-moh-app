@@ -5,13 +5,13 @@ import {
   confirmPayment,
   recordSplitPayment,
 } from "@/api/payments";
-import { fetchTaxTypes, TaxType } from "@/api/taxes";
+import { computeCartTax, CartTaxLine } from "@/lib/cart-tax";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
 import { useSession } from "@/lib/ctx";
 import Lucide from "@react-native-vector-icons/lucide";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -748,6 +748,8 @@ interface CartSummaryCardProps {
   totalPrice: number;
   discountAmount: number;
   couponCode: string | null;
+  /** The taxes the cart's own lines carry, grouped the way a receipt shows. */
+  taxBreakdown: CartTaxLine[];
   colors: ColorPalette;
 }
 
@@ -756,19 +758,11 @@ export const CartSummaryCard = ({
   totalPrice,
   discountAmount,
   couponCode,
+  taxBreakdown,
   colors,
 }: CartSummaryCardProps) => {
-  const { data: taxes } = useQuery({
-    queryKey: ["taxes"],
-    queryFn: () => fetchTaxTypes(true),
-  });
-
-  const activeTaxes = taxes?.filter((t) => t.is_active) ?? [];
-  const totalTaxAmount = activeTaxes.reduce(
-    (sum, t) => sum + totalPrice * (t.rate / 100),
-    0,
-  );
-  const finalTotal = Math.max(0, totalPrice - discountAmount + totalTaxAmount);
+  const totalTaxAmount = taxBreakdown.reduce((sum, t) => sum + t.amount, 0);
+  const finalTotal = Math.max(0, totalPrice - discountAmount) + totalTaxAmount;
 
   return (
     <View
@@ -798,19 +792,16 @@ export const CartSummaryCard = ({
           </Text>
         </View>
       )}
-      {activeTaxes.map((t) => {
-        const amt = totalPrice * (t.rate / 100);
-        return (
-          <View key={t.id} style={styles.summaryRow}>
-            <Text style={{ color: colors.textSecondary }}>
-              {t.name} ({t.rate}%)
-            </Text>
-            <Text style={{ color: colors.text, fontWeight: "600" }}>
-              ₦{amt.toLocaleString()}
-            </Text>
-          </View>
-        );
-      })}
+      {taxBreakdown.map((t) => (
+        <View key={`${t.name}-${t.rate}`} style={styles.summaryRow}>
+          <Text style={{ color: colors.textSecondary }}>
+            {t.name} ({t.rate}%)
+          </Text>
+          <Text style={{ color: colors.text, fontWeight: "600" }}>
+            ₦{t.amount.toLocaleString()}
+          </Text>
+        </View>
+      ))}
       <View style={[styles.summaryRow, { marginTop: 8 }]}>
         <Text style={[styles.totalLabel, { color: colors.text }]}>
           Total Due
@@ -1029,6 +1020,7 @@ interface CartPaymentSectionProps {
   totalItemsCount: number;
   discountAmount: number;
   couponCode: string | null;
+  taxBreakdown: CartTaxLine[];
   paymentMethod: PaymentMethod;
   cashInput: string;
   transferInput: string;
@@ -1057,6 +1049,7 @@ export const CartPaymentSection = ({
   totalItemsCount,
   discountAmount,
   couponCode,
+  taxBreakdown,
   paymentMethod,
   cashInput,
   transferInput,
@@ -1079,7 +1072,8 @@ export const CartPaymentSection = ({
   onSplitEven,
   onCheckout,
 }: CartPaymentSectionProps) => {
-  const finalTotal = Math.max(0, totalPrice - discountAmount);
+  const totalTax = taxBreakdown.reduce((sum, t) => sum + t.amount, 0);
+  const finalTotal = Math.max(0, totalPrice - discountAmount) + totalTax;
 
   return (
     <View style={styles.paymentSection}>
@@ -1118,6 +1112,7 @@ export const CartPaymentSection = ({
         totalPrice={totalPrice}
         discountAmount={discountAmount}
         couponCode={couponCode}
+        taxBreakdown={taxBreakdown}
         colors={colors}
       />
 
@@ -1169,7 +1164,15 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     0,
   );
   const totalItemsCount = items.reduce((sum, i) => sum + i.quantity, 0);
-  const finalTotal = Math.max(0, totalPrice - discountAmount);
+
+  // Tax follows the products in the cart, and comes off a discounted base, so
+  // the figure the cashier validates against is the one the server will book.
+  const taxResult = useMemo(
+    () => computeCartTax(items, discountAmount),
+    [items, discountAmount],
+  );
+  const finalTotal =
+    Math.max(0, totalPrice - discountAmount) + taxResult.totalTax;
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [cashInput, setCashInput] = useState<string>("");
@@ -1709,6 +1712,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
                 totalItemsCount={totalItemsCount}
                 discountAmount={discountAmount}
                 couponCode={couponCode}
+                taxBreakdown={taxResult.breakdown}
                 paymentMethod={paymentMethod}
                 cashInput={cashInput}
                 transferInput={transferInput}

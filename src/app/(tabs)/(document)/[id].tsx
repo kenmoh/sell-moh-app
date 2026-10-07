@@ -441,6 +441,57 @@ const DocumentDetailScreen = () => {
             },
           ]}
         >
+          {Number(doc.subtotal ?? 0) > 0 && (
+            <View style={[styles.summaryRow, styles.summaryRowTight]}>
+              <Text
+                style={[styles.summaryLabel, { color: colors.textSecondary }]}
+              >
+                Subtotal
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {formatCurrency(Number(doc.subtotal))}
+              </Text>
+            </View>
+          )}
+          {Number(doc.discount ?? 0) > 0 && (
+            <View style={[styles.summaryRow, styles.summaryRowTight]}>
+              <Text
+                style={[styles.summaryLabel, { color: colors.textSecondary }]}
+              >
+                Discount
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                -{formatCurrency(Number(doc.discount))}
+              </Text>
+            </View>
+          )}
+          {(doc.tax_breakdown ?? []).map((line) => (
+            <View
+              key={`${line.name}-${line.rate}`}
+              style={[styles.summaryRow, styles.summaryRowTight]}
+            >
+              <Text
+                style={[styles.summaryLabel, { color: colors.textSecondary }]}
+              >
+                {line.name} ({line.rate}%)
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {formatCurrency(Number(line.amount))}
+              </Text>
+            </View>
+          ))}
+          {!doc.tax_breakdown?.length && Number(doc.tax ?? 0) > 0 && (
+            <View style={[styles.summaryRow, styles.summaryRowTight]}>
+              <Text
+                style={[styles.summaryLabel, { color: colors.textSecondary }]}
+              >
+                Tax
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {formatCurrency(Number(doc.tax))}
+              </Text>
+            </View>
+          )}
           <View
             style={[
               styles.summaryRow,
@@ -452,7 +503,7 @@ const DocumentDetailScreen = () => {
               Total
             </Text>
             <Text style={[styles.totalSummaryValue, { color: colors.text }]}>
-              {formatCurrency(doc.total)}
+              {formatCurrency(Number(doc.total))}
             </Text>
           </View>
         </View>
@@ -636,6 +687,17 @@ const styles = StyleSheet.create({
   totalSummary: {
     borderTopWidth: 1,
     paddingTop: 10,
+    marginTop: 4,
+  },
+  summaryRowTight: {
+    paddingVertical: 3,
+  },
+  summaryLabel: {
+    fontSize: 13,
+  },
+  summaryValue: {
+    fontSize: 13,
+    fontWeight: "600",
   },
   totalSummaryLabel: {
     fontSize: 15,

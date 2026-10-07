@@ -1,4 +1,5 @@
 import { fetchCustomers } from "@/api/customer";
+import { fetchTaxTypes } from "@/api/taxes";
 import AppBottomSheet from "@/components/bottom-sheet";
 import Pill from "@/components/pill";
 import PillRow from "@/components/pill-row";
@@ -42,6 +43,7 @@ const emptyItem = (): DocumentItemLine => ({
   description: "",
   qty: 1,
   unit_price: 0,
+  tax_ids: [],
 });
 
 const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
@@ -63,6 +65,11 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
   const [notes, setNotes] = useState("");
   const [items, setItems] = useState<DocumentItemLine[]>([emptyItem()]);
   const [isCreating, setIsCreating] = useState(false);
+  const { data: taxTypes = [] } = useQuery({
+    queryKey: ["taxes"],
+    queryFn: () => fetchTaxTypes(true),
+  });
+  const activeTaxes = taxTypes.filter((t) => t.is_active);
 
   const { data: customerResults, isPending: isSearchingCustomers } = useQuery({
     queryKey: ["customers", "picker", customerSearch],
@@ -78,6 +85,14 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
   };
 
   const addItem = () => setItems((current) => [...current, emptyItem()]);
+  const toggleLineTax = (index: number, taxId: string) => {
+    updateItem(index, {
+      tax_ids: (items[index].tax_ids ?? []).includes(taxId)
+        ? (items[index].tax_ids ?? []).filter((id) => id !== taxId)
+        : [...(items[index].tax_ids ?? []), taxId],
+    });
+  };
+
   const removeItem = (index: number) =>
     setItems((current) =>
       current.length > 1 ? current.filter((_, i) => i !== index) : current,
@@ -393,6 +408,48 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
                   <Lucide name="trash-2" size={18} color="#DC2626" />
                 </Pressable>
               </View>
+              {activeTaxes.length > 0 ? (
+                <View style={styles.lineTaxes}>
+                  {activeTaxes.map((tax) => {
+                    const isSelected = (item.tax_ids ?? []).includes(tax.id);
+                    return (
+                      <Pressable
+                        key={tax.id}
+                        onPress={() => toggleLineTax(index, tax.id)}
+                        style={[
+                          styles.taxChip,
+                          {
+                            backgroundColor: isSelected
+                              ? colors.buttonPrimary
+                              : colors.backgroundElement,
+                            borderColor: isSelected
+                              ? colors.buttonPrimary
+                              : colors.backgroundSelected,
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.taxChipText,
+                            { color: isSelected ? "#fff" : colors.text },
+                          ]}
+                        >
+                          {tax.name} ({tax.rate}%)
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              ) : (
+                <Text
+                  style={[
+                    styles.lineTaxHint,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  No tax rates configured yet
+                </Text>
+              )}
             </View>
           ))}
         </View>
@@ -477,6 +534,7 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
             : `Create ${DOC_TYPES.find((t) => t.value === docType)?.label}`}
         </Text>
       </Pressable>
+
     </AppBottomSheet>
   );
 };
@@ -570,6 +628,26 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.4,
+  },
+  lineTaxes: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 6,
+    marginTop: 8,
+  },
+  taxChip: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  taxChipText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  lineTaxHint: {
+    fontSize: 12,
+    marginTop: 8,
   },
   removeItemBtn: {
     width: 40,
