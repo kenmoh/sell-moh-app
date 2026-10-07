@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/theme";
+import SheetErrorBanner from "@/components/sheet-error-banner";
 import BottomSheet, {
   BottomSheetMethods,
   BottomSheetScrollView,
@@ -77,6 +78,7 @@ export default function AppBottomSheet({
       >
         {children}
       </BottomSheetScrollView>
+      {visible && <SheetErrorBanner />}
     </BottomSheet>
   );
 }

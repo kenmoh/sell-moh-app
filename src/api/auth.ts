@@ -22,11 +22,44 @@ interface DeleteResponse {
 /**
  * Extracts a readable error message from the API response
  */
+/**
+ * Pull a human-readable message out of a failed response.
+ *
+ * The backend is FastAPI, and FastAPI puts the reason under `detail` — an
+ * HTTPException gives a string, a 422 validation failure gives a list of
+ * {loc, msg} objects. Reading only `message` meant every failure fell through
+ * to apisauce's `problem`, so a 403 rendered as the word "CLIENT_ERROR" and a
+ * validation failure lost its field names entirely. Any toast built on this
+ * was useless, which is why so many call sites had no error handling at all:
+ * there was nothing useful to show.
+ */
 export const getErrorMessage = (res: any): string => {
-  if (res.data && typeof res.data === "object" && res.data.message) {
-    return res.data.message;
+  const body = res?.data;
+
+  // Some handlers answer with a plain {message}.
+  if (body && typeof body === "object" && typeof body.message === "string") {
+    return body.message;
   }
-  return res.problem || "An unknown error occurred";
+
+  const detail = body?.detail ?? body?.error;
+  if (typeof detail === "string" && detail.trim()) {
+    return detail;
+  }
+
+  // 422: a list of field errors. Name the fields so the user knows what to fix.
+  if (Array.isArray(detail) && detail.length) {
+    return detail
+      .map((item: any) => {
+        const field = Array.isArray(item?.loc)
+          ? item.loc.filter((part: unknown) => part !== "body").join(".")
+          : "";
+        const message = item?.msg ?? String(item);
+        return field ? `${field}: ${message}` : message;
+      })
+      .join("\n");
+  }
+
+  return res?.problem || "An unknown error occurred";
 };
 
 export const createTenant = async (
@@ -206,16 +239,52 @@ export const updateEmployee = async (
 
   return res.data as EmployeeResponse;
 };
-/** Assign a role to an employee. Separate from updateEmployee, which cannot
- *  change a role. */
+/**
+ * Role assignment, per employee.
+ *
+ * These hit the per-user routes rather than the older PATCH /employees/role:
+ * a user can hold several roles, so assignment has to be able to add one
+ * without disturbing the others, and removal needs its own call.
+ */
+export const getEmployeeRoles = async (
+  employeeId: string,
+): Promise<FetchTenantRoles[]> => {
+  const res = await apiClient.get<{ data: FetchTenantRoles[] }>(
+    `${URL}/employees/${employeeId}/roles`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? [];
+};
+
+/** Add a role. Returns false when the user already holds it. */
 export const assignEmployeeRole = async (
   employeeId: string,
   roleName: string,
+): Promise<boolean> => {
+  const res = await apiClient.post<{ message: string }>(
+    `${URL}/employees/${employeeId}/roles`,
+    { user_id: employeeId, new_role: roleName },
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return true;
+};
+
+/** Remove one role, leaving the others in place. */
+export const removeEmployeeRole = async (
+  employeeId: string,
+  roleName: string,
 ): Promise<void> => {
-  const res = await apiClient.patch<{ message: string }>(`${URL}/employees/role`, {
-    user_id: employeeId,
-    new_role: roleName,
-  });
+  const res = await apiClient.delete(
+    `${URL}/employees/${employeeId}/roles/${encodeURIComponent(roleName)}`,
+  );
 
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
