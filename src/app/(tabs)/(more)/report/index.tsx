@@ -10,13 +10,14 @@ import {
   fetchTopProducts,
 } from "@/api/reports";
 import AccountingContextMenu from "@/components/accounting-context-menu";
+import SegmentedToggle from "@/components/charts/SegmentedToggle";
 import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   RefreshControl,
@@ -28,7 +29,13 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const REPORT_DAYS = 30;
+type Period = "7" | "30" | "90";
+
+const PERIOD_OPTIONS: Array<{ value: Period; label: string }> = [
+  { value: "7", label: "7 days" },
+  { value: "30", label: "30 days" },
+  { value: "90", label: "90 days" },
+];
 
 const ReportsScreen = () => {
   const scheme = useColorScheme();
@@ -36,22 +43,25 @@ const ReportsScreen = () => {
   const colors = Colors[isDark ? "dark" : "light"];
   const router = useRouter();
   const { activeStoreId } = useActiveStore();
+  const [period, setPeriod] = useState<Period>("30");
 
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - REPORT_DAYS);
-    return d.toISOString().split("T")[0];
-  }, []);
-
-  const toDate = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const { fromDate, toDate } = useMemo(() => {
+    const now = new Date();
+    const from = new Date(now);
+    from.setUTCDate(from.getUTCDate() - Number(period) + 1);
+    return {
+      fromDate: from.toISOString().split("T")[0],
+      toDate: now.toISOString().split("T")[0],
+    };
+  }, [period]);
 
   const {
     data: dashboard,
     isLoading: isLoadingDash,
     refetch: refetchDash,
   } = useQuery({
-    queryKey: ["reports-dashboard", activeStoreId],
-    queryFn: () => fetchDashboard(REPORT_DAYS, activeStoreId),
+    queryKey: ["reports-dashboard", activeStoreId, period],
+    queryFn: () => fetchDashboard(Number(period), activeStoreId),
   });
 
   const {
@@ -59,8 +69,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingPay,
     refetch: refetchPay,
   } = useQuery({
-    queryKey: ["reports-payment-methods", activeStoreId],
-    queryFn: () => fetchPaymentMethods(today, toDate, activeStoreId),
+    queryKey: ["reports-payment-methods", activeStoreId, period],
+    queryFn: () => fetchPaymentMethods(fromDate, toDate, activeStoreId),
   });
 
   const {
@@ -68,8 +78,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingPL,
     refetch: refetchPL,
   } = useQuery({
-    queryKey: ["reports-profit-loss", activeStoreId],
-    queryFn: () => fetchProfitLoss(today, toDate, activeStoreId),
+    queryKey: ["reports-profit-loss", activeStoreId, period],
+    queryFn: () => fetchProfitLoss(fromDate, toDate, activeStoreId),
   });
 
   const {
@@ -86,8 +96,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingSales,
     refetch: refetchSales,
   } = useQuery({
-    queryKey: ["reports-sales-summary", activeStoreId],
-    queryFn: () => fetchSalesSummary(today, toDate, activeStoreId),
+    queryKey: ["reports-sales-summary", activeStoreId, period],
+    queryFn: () => fetchSalesSummary(fromDate, toDate, activeStoreId),
   });
 
   const {
@@ -95,8 +105,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingProducts,
     refetch: refetchProducts,
   } = useQuery({
-    queryKey: ["reports-top-products", activeStoreId],
-    queryFn: () => fetchTopProducts(today, toDate, 10, activeStoreId),
+    queryKey: ["reports-top-products", activeStoreId, period],
+    queryFn: () => fetchTopProducts(fromDate, toDate, 10, activeStoreId),
   });
 
   const {
@@ -104,8 +114,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingCashiers,
     refetch: refetchCashiers,
   } = useQuery({
-    queryKey: ["reports-cashier-performance", activeStoreId],
-    queryFn: () => fetchCashierPerformance(today, toDate, 20, activeStoreId),
+    queryKey: ["reports-cashier-performance", activeStoreId, period],
+    queryFn: () => fetchCashierPerformance(fromDate, toDate, 20, activeStoreId),
   });
 
   const {
@@ -113,8 +123,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingCustomers,
     refetch: refetchCustomers,
   } = useQuery({
-    queryKey: ["reports-customer-insights", activeStoreId],
-    queryFn: () => fetchCustomerInsights(today, toDate, activeStoreId),
+    queryKey: ["reports-customer-insights", activeStoreId, period],
+    queryFn: () => fetchCustomerInsights(fromDate, toDate, activeStoreId),
   });
 
   const {
@@ -122,8 +132,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingDocs,
     refetch: refetchDocs,
   } = useQuery({
-    queryKey: ["reports-document-summary", activeStoreId],
-    queryFn: () => fetchDocumentSummary(today, toDate, activeStoreId),
+    queryKey: ["reports-document-summary", activeStoreId, period],
+    queryFn: () => fetchDocumentSummary(fromDate, toDate, activeStoreId),
   });
 
   const isLoading =
@@ -198,7 +208,7 @@ const ReportsScreen = () => {
             <Text
               style={[styles.headerSubtitle, { color: colors.textSecondary }]}
             >
-              Last {REPORT_DAYS} days
+              Last {period} days
             </Text>
           </View>
           <AccountingContextMenu items={menuItems} />
@@ -207,6 +217,15 @@ const ReportsScreen = () => {
         {/* Store Filter */}
         <View style={styles.switcherRow}>
           <StoreSwitcher mode="all" />
+        </View>
+
+        {/* Period Filter */}
+        <View style={styles.periodRow}>
+          <SegmentedToggle
+            options={PERIOD_OPTIONS}
+            value={period}
+            onChange={setPeriod}
+          />
         </View>
 
         {/* Dashboard Stats — cards size to their numbers and scroll sideways
@@ -774,6 +793,10 @@ const styles = StyleSheet.create({
   switcherRow: {
     paddingHorizontal: 16,
     paddingBottom: 8,
+  },
+  periodRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 12,
   },
   statsRow: {
     flexDirection: "row",

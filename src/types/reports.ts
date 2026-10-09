@@ -113,17 +113,35 @@ export interface InventoryAlertsResult {
 
 // ── Profit & Loss ──────────────────────────────────────────────────────────
 
+export interface ProfitLossItem {
+  period: string;
+  revenue: number;
+  cogs: number;
+  gross_profit: number;
+  gross_margin_pct: number;
+  expenses: number;
+  net_profit: number;
+  net_margin_pct: number;
+}
+
+export interface ProfitLossTotals {
+  revenue: number;
+  cogs: number;
+  gross_profit: number;
+  gross_margin_pct: number;
+  expenses: number;
+  net_profit: number;
+  net_margin_pct: number;
+}
+
 export interface ProfitLossResult {
   revenue: number;
   cost_of_goods: number;
   gross_profit: number;
   expenses: number;
   net_profit: number;
-  items: Array<{
-    category: string;
-    amount: number;
-  }>;
-  totals: Record<string, number>;
+  items: ProfitLossItem[];
+  totals: ProfitLossTotals;
 }
 
 // ── Customer Insights ──────────────────────────────────────────────────────
