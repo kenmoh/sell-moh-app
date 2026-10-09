@@ -5,6 +5,7 @@ import {
   DocumentSummaryResult,
   InventoryAlertsResult,
   PaymentBreakdown,
+  ProductSalesSeries,
   ProfitLossResult,
   SalesSummary,
   TopProduct,
@@ -32,6 +33,23 @@ export const fetchSalesSummary = async (
 ): Promise<SalesSummary> => {
   const res = await apiClient.get<{ data: SalesSummary }>(
     `${URL}/sales-summary?from_date=${fromDate}&to_date=${toDate}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
+export const fetchProductSales = async (
+  storeId: string,
+  productId: string,
+  fromDate: string,
+  toDate: string,
+): Promise<ProductSalesSeries> => {
+  const res = await apiClient.get<{ data: ProductSalesSeries }>(
+    `${URL}/product-sales?store_id=${storeId}&product_id=${productId}&from_date=${fromDate}&to_date=${toDate}`,
   );
 
   if (!res.ok) {

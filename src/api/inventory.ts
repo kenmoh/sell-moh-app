@@ -10,6 +10,7 @@ import {
   PaginatedResponse,
   ProductQueryParams,
   ProductResponse,
+  ProductStockSeries,
   SetMinStockLevelPayload,
   StockBalanceItem,
   StockBalancesPaginatedResponse,
@@ -22,6 +23,23 @@ import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
 
 const INVENTORY_URL = "/inventory";
+
+export const fetchProductStockSeries = async (
+  storeId: string,
+  productId: string,
+  fromDate: string,
+  toDate: string,
+): Promise<ProductStockSeries> => {
+  const res = await apiClient.get<{ data: ProductStockSeries }>(
+    `${INVENTORY_URL}/${storeId}/products/${productId}/stock-series?from_date=${fromDate}&to_date=${toDate}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
 
 // _____________________________CATEGORY OPERATIONS_____________________________
 

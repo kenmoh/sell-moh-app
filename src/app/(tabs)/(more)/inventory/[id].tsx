@@ -1,10 +1,17 @@
 import { BASE_URL } from "@/api/client";
-import { getProductById } from "@/api/inventory";
+import { fetchProductStockSeries, getProductById } from "@/api/inventory";
+import { fetchProductSales } from "@/api/reports";
 import { fetchTenantStores } from "@/api/store";
-import AdjustStockSheet from "@/components/adjust-stock-sheet";
 import AppBottomSheet from "@/components/bottom-sheet";
+import BarChart from "@/components/charts/BarChart";
+import ChartCard from "@/components/charts/ChartCard";
+import LineChart from "@/components/charts/LineChart";
+import SegmentedToggle, {
+  type SegmentedOption,
+} from "@/components/charts/SegmentedToggle";
 import TransferSheet from "@/components/transfer-sheet";
 import { Colors } from "@/constants/theme";
+import { fillSalesSeries, fillStockSeries } from "@/lib/charts";
 import { useSession } from "@/lib/ctx";
 import { StockHistoryItem } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -68,6 +75,21 @@ function movementLabel(type: string): string {
   }
 }
 
+const METRIC_OPTIONS: Array<SegmentedOption<"units" | "revenue">> = [
+  { value: "units", label: "Units" },
+  { value: "revenue", label: "Revenue" },
+];
+
+const money = (n: number) => `₦${Math.round(n).toLocaleString()}`;
+
+function isoDayOffset(offsetDays: number): string {
+  const day = new Date();
+  day.setDate(day.getDate() + offsetDays);
+  const month = String(day.getMonth() + 1).padStart(2, "0");
+  const date = String(day.getDate()).padStart(2, "0");
+  return `${day.getFullYear()}-${month}-${date}`;
+}
+
 const ProductDetails = () => {
   const { id, storeId: storeIdParam } = useLocalSearchParams<{
     id: string;
@@ -78,7 +100,6 @@ const ProductDetails = () => {
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const { user } = useSession();
   const [storeId, setStoreId] = useState(storeIdParam ?? user?.store_id ?? "");
-  const [adjustVisible, setAdjustVisible] = useState(false);
   const [transferVisible, setTransferVisible] = useState(false);
   const [qrVisible, setQrVisible] = useState(false);
   const [qrSize, setQrSize] = useState<"small" | "medium" | "large">("small");
@@ -104,6 +125,43 @@ const ProductDetails = () => {
     queryFn: () => getProductById(id!, storeId),
     enabled: !!id && !!storeId,
   });
+
+  const [rangeDays, setRangeDays] = useState(30);
+  const [salesMetric, setSalesMetric] = useState<"units" | "revenue">("units");
+
+  const rangeTo = isoDayOffset(0);
+  const rangeFrom = isoDayOffset(-(rangeDays - 1));
+
+  const { data: salesSeries, isPending: isSalesPending } = useQuery({
+    queryKey: ["product-sales", id, storeId, rangeDays],
+    queryFn: () => fetchProductSales(storeId, id!, rangeFrom, rangeTo),
+    enabled: !!id && !!storeId,
+  });
+
+  const { data: stockSeries, isPending: isStockPending } = useQuery({
+    queryKey: ["product-stock-series", id, storeId, rangeDays],
+    queryFn: () => fetchProductStockSeries(storeId, id!, rangeFrom, rangeTo),
+    enabled: !!id && !!storeId,
+  });
+
+  const salesPoints = fillSalesSeries(
+    rangeFrom,
+    rangeTo,
+    salesSeries?.items ?? [],
+  );
+  const stockPoints = fillStockSeries(
+    rangeFrom,
+    rangeTo,
+    stockSeries?.items ?? [],
+  );
+  const salesBars = salesPoints.map((point) => ({
+    label: point.label,
+    value: salesMetric === "units" ? point.units : point.revenue,
+  }));
+  const stockLine = stockPoints.map((point) => ({
+    label: point.label,
+    value: point.balance,
+  }));
 
   const { mutate: downloadQR, isPending: isDownloading } = useMutation({
     mutationFn: async () => {
@@ -274,16 +332,6 @@ const ProductDetails = () => {
               styles.actionButton,
               { borderColor: colors.backgroundElement },
             ]}
-            onPress={() => setAdjustVisible(true)}
-          >
-            <Lucide name="package-plus" size={16} color="#3b82f6" />
-            <Text style={styles.actionButtonText}>Adjust Stock</Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.actionButton,
-              { borderColor: colors.backgroundElement },
-            ]}
             onPress={() => setTransferVisible(true)}
           >
             <Lucide name="arrow-right-left" size={16} color="#3b82f6" />
@@ -447,6 +495,79 @@ const ProductDetails = () => {
             </View>
           </View>
 
+          {/* Charts */}
+          <View style={styles.chartsSection}>
+            <ChartCard
+              title="Sales"
+              rangeDays={rangeDays}
+              onRangeChange={setRangeDays}
+              right={
+                <SegmentedToggle
+                  options={METRIC_OPTIONS}
+                  value={salesMetric}
+                  onChange={setSalesMetric}
+                />
+              }
+              caption={
+                salesSeries ? (
+                  <Text
+                    style={[
+                      styles.chartCaption,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {`${salesSeries.totals.units_sold} units - ${money(salesSeries.totals.revenue)} - last ${rangeDays}d`}
+                  </Text>
+                ) : null
+              }
+            >
+              <BarChart
+                data={salesBars}
+                color={colors.buttonPrimary}
+                formatValue={
+                  salesMetric === "revenue"
+                    ? (value) =>
+                        value >= 1000
+                          ? `₦${(value / 1000).toFixed(1)}k`
+                          : money(value)
+                    : undefined
+                }
+                emptyLabel={
+                  isSalesPending ? "Loading..." : "No sales in this period"
+                }
+              />
+            </ChartCard>
+            <ChartCard
+              title="Stock Level"
+              rangeDays={rangeDays}
+              onRangeChange={setRangeDays}
+              caption={
+                stockSeries ? (
+                  <Text
+                    style={[
+                      styles.chartCaption,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {`Balance ${stockSeries.totals.balance} - ${
+                      stockSeries.totals.qty_change >= 0 ? "+" : ""
+                    }${stockSeries.totals.qty_change} in period`}
+                  </Text>
+                ) : null
+              }
+            >
+              <LineChart
+                data={stockLine}
+                color={colors.buttonPrimary}
+                emptyLabel={
+                  isStockPending
+                    ? "Loading..."
+                    : "No stock movements in this period"
+                }
+              />
+            </ChartCard>
+          </View>
+
           {/* Stock History */}
           <View>
             <Text
@@ -541,14 +662,6 @@ const ProductDetails = () => {
           </View>
         </View>
       </ScrollView>
-
-      <AdjustStockSheet
-        visible={adjustVisible}
-        onVisibleChange={setAdjustVisible}
-        productId={id!}
-        storeId={storeId}
-        unitCost={product?.unit_cost ?? product?.cost_price ?? 0}
-      />
 
       <TransferSheet
         visible={transferVisible}
@@ -687,7 +800,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    borderRadius: 12,
+    borderRadius: 999,
     borderWidth: 1,
     paddingVertical: 12,
   },
@@ -724,6 +837,8 @@ const styles = StyleSheet.create({
   historyRight: { alignItems: "flex-end", gap: 2 },
   historyQty: { fontSize: 14, fontWeight: "700" },
   historyBalance: { fontSize: 11 },
+  chartsSection: { gap: 16 },
+  chartCaption: { fontSize: 12 },
   sheetTitle: { fontSize: 18, fontWeight: "700", marginBottom: 16 },
   sheetLabel: { fontSize: 13, fontWeight: "500", marginBottom: 6 },
   pillRow: { flexDirection: "row", gap: 8, marginBottom: 14 },

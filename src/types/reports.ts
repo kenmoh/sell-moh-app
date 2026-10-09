@@ -43,6 +43,22 @@ export interface SalesSummary {
   };
 }
 
+// ── Product sales series (per-day chart) ────────────────────────────────────
+
+export interface ProductSalesPoint {
+  period: string;
+  units_sold: number;
+  revenue: number;
+}
+
+export interface ProductSalesSeries {
+  items: ProductSalesPoint[];
+  totals: {
+    units_sold: number;
+    revenue: number;
+  };
+}
+
 // ── Top Products ───────────────────────────────────────────────────────────
 
 export interface TopProduct {

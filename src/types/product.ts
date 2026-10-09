@@ -180,6 +180,24 @@ export interface SetMinStockLevelPayload {
   min_stock_level: number;
 }
 
+// ── Stock series (per-day chart) ────────────────────────────────────────────
+
+export interface StockSeriesPoint {
+  date: string;
+  balance: number;
+  /** What the stock was before this day's first movement. */
+  balance_before: number;
+  qty_change: number;
+}
+
+export interface ProductStockSeries {
+  items: StockSeriesPoint[];
+  totals: {
+    balance: number;
+    qty_change: number;
+  };
+}
+
 export interface StockBalancesPaginatedResponse {
   data: StockBalanceItem[];
   total: number;
