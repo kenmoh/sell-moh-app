@@ -15,9 +15,15 @@ import { apiClient } from "./client";
 
 const URL = "/reports";
 
-export const fetchDashboard = async (days = 30): Promise<DashboardSummary> => {
+const withStore = (query: string, storeId?: string | null) =>
+  storeId ? `${query}&store_id=${storeId}` : query;
+
+export const fetchDashboard = async (
+  days = 30,
+  storeId?: string | null,
+): Promise<DashboardSummary> => {
   const res = await apiClient.get<{ data: DashboardSummary }>(
-    `${URL}/dashboard?days=${days}`,
+    withStore(`${URL}/dashboard?days=${days}`, storeId),
   );
 
   if (!res.ok) {
@@ -30,9 +36,10 @@ export const fetchDashboard = async (days = 30): Promise<DashboardSummary> => {
 export const fetchSalesSummary = async (
   fromDate: string,
   toDate: string,
+  storeId?: string | null,
 ): Promise<SalesSummary> => {
   const res = await apiClient.get<{ data: SalesSummary }>(
-    `${URL}/sales-summary?from_date=${fromDate}&to_date=${toDate}`,
+    withStore(`${URL}/sales-summary?from_date=${fromDate}&to_date=${toDate}`, storeId),
   );
 
   if (!res.ok) {
@@ -63,9 +70,13 @@ export const fetchTopProducts = async (
   fromDate: string,
   toDate: string,
   limit = 10,
+  storeId?: string | null,
 ): Promise<TopProduct[]> => {
   const res = await apiClient.get<{ data: TopProduct[] }>(
-    `${URL}/top-products?from_date=${fromDate}&to_date=${toDate}&limit=${limit}`,
+    withStore(
+      `${URL}/top-products?from_date=${fromDate}&to_date=${toDate}&limit=${limit}`,
+      storeId,
+    ),
   );
 
   if (!res.ok) {
@@ -78,9 +89,10 @@ export const fetchTopProducts = async (
 export const fetchPaymentMethods = async (
   fromDate: string,
   toDate: string,
+  storeId?: string | null,
 ): Promise<PaymentBreakdown> => {
   const res = await apiClient.get<{ data: PaymentBreakdown }>(
-    `${URL}/payment-methods?from_date=${fromDate}&to_date=${toDate}`,
+    withStore(`${URL}/payment-methods?from_date=${fromDate}&to_date=${toDate}`, storeId),
   );
 
   if (!res.ok) {
@@ -94,9 +106,13 @@ export const fetchCashierPerformance = async (
   fromDate: string,
   toDate: string,
   limit = 20,
+  storeId?: string | null,
 ): Promise<CashierPerformanceItem[]> => {
   const res = await apiClient.get<{ data: CashierPerformanceItem[] }>(
-    `${URL}/cashier-performance?from_date=${fromDate}&to_date=${toDate}&limit=${limit}`,
+    withStore(
+      `${URL}/cashier-performance?from_date=${fromDate}&to_date=${toDate}&limit=${limit}`,
+      storeId,
+    ),
   );
 
   if (!res.ok) {
@@ -107,9 +123,9 @@ export const fetchCashierPerformance = async (
 };
 
 export const fetchInventoryAlerts =
-  async (): Promise<InventoryAlertsResult> => {
+  async (storeId?: string | null): Promise<InventoryAlertsResult> => {
     const res = await apiClient.get<{ data: InventoryAlertsResult }>(
-      `${URL}/inventory-alerts`,
+      `${URL}/inventory-alerts${storeId ? `?store_id=${storeId}` : ""}`,
     );
 
     if (!res.ok) {
@@ -122,9 +138,10 @@ export const fetchInventoryAlerts =
 export const fetchProfitLoss = async (
   fromDate: string,
   toDate: string,
+  storeId?: string | null,
 ): Promise<ProfitLossResult> => {
   const res = await apiClient.get<{ data: ProfitLossResult }>(
-    `${URL}/profit-loss?from_date=${fromDate}&to_date=${toDate}`,
+    withStore(`${URL}/profit-loss?from_date=${fromDate}&to_date=${toDate}`, storeId),
   );
 
   if (!res.ok) {
@@ -137,9 +154,10 @@ export const fetchProfitLoss = async (
 export const fetchCustomerInsights = async (
   fromDate: string,
   toDate: string,
+  storeId?: string | null,
 ): Promise<CustomerInsightsResult> => {
   const res = await apiClient.get<{ data: CustomerInsightsResult }>(
-    `${URL}/customer-insights?from_date=${fromDate}&to_date=${toDate}`,
+    withStore(`${URL}/customer-insights?from_date=${fromDate}&to_date=${toDate}`, storeId),
   );
 
   if (!res.ok) {
@@ -152,9 +170,10 @@ export const fetchCustomerInsights = async (
 export const fetchDocumentSummary = async (
   fromDate: string,
   toDate: string,
+  storeId?: string | null,
 ): Promise<DocumentSummaryResult> => {
   const res = await apiClient.get<{ data: DocumentSummaryResult }>(
-    `${URL}/document-summary?from_date=${fromDate}&to_date=${toDate}`,
+    withStore(`${URL}/document-summary?from_date=${fromDate}&to_date=${toDate}`, storeId),
   );
 
   if (!res.ok) {

@@ -218,8 +218,13 @@ const SalesScreen = () => {
                 <StoreSwitcher mode="all" />
               </View>
 
-              {/* Summary Metrics Row */}
-              <View style={styles.statsRow}>
+              {/* Summary Metrics Row — cards size to their numbers and
+                  scroll sideways when the row outgrows the screen. */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.statsRow}
+              >
                 <Pressable
                   onPress={() => setActiveFilter("All")}
                   style={[
@@ -341,7 +346,7 @@ const SalesScreen = () => {
                     {pendingCount}
                   </Text>
                 </Pressable>
-              </View>
+              </ScrollView>
             </View>
           }
           renderItem={({ item }) => {
@@ -491,7 +496,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   statCard: {
-    flex: 1,
+    flexShrink: 0,
     borderRadius: 14,
     paddingVertical: 10,
     paddingHorizontal: 10,

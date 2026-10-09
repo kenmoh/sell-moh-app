@@ -10,7 +10,9 @@ import {
   fetchTopProducts,
 } from "@/api/reports";
 import AccountingContextMenu from "@/components/accounting-context-menu";
+import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
+import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -33,6 +35,7 @@ const ReportsScreen = () => {
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
   const router = useRouter();
+  const { activeStoreId } = useActiveStore();
 
   const today = useMemo(() => {
     const d = new Date();
@@ -47,8 +50,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingDash,
     refetch: refetchDash,
   } = useQuery({
-    queryKey: ["reports-dashboard"],
-    queryFn: () => fetchDashboard(REPORT_DAYS),
+    queryKey: ["reports-dashboard", activeStoreId],
+    queryFn: () => fetchDashboard(REPORT_DAYS, activeStoreId),
   });
 
   const {
@@ -56,8 +59,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingPay,
     refetch: refetchPay,
   } = useQuery({
-    queryKey: ["reports-payment-methods"],
-    queryFn: () => fetchPaymentMethods(today, toDate),
+    queryKey: ["reports-payment-methods", activeStoreId],
+    queryFn: () => fetchPaymentMethods(today, toDate, activeStoreId),
   });
 
   const {
@@ -65,8 +68,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingPL,
     refetch: refetchPL,
   } = useQuery({
-    queryKey: ["reports-profit-loss"],
-    queryFn: () => fetchProfitLoss(today, toDate),
+    queryKey: ["reports-profit-loss", activeStoreId],
+    queryFn: () => fetchProfitLoss(today, toDate, activeStoreId),
   });
 
   const {
@@ -74,8 +77,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingInv,
     refetch: refetchInv,
   } = useQuery({
-    queryKey: ["reports-inventory-alerts"],
-    queryFn: fetchInventoryAlerts,
+    queryKey: ["reports-inventory-alerts", activeStoreId],
+    queryFn: () => fetchInventoryAlerts(activeStoreId),
   });
 
   const {
@@ -83,8 +86,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingSales,
     refetch: refetchSales,
   } = useQuery({
-    queryKey: ["reports-sales-summary"],
-    queryFn: () => fetchSalesSummary(today, toDate),
+    queryKey: ["reports-sales-summary", activeStoreId],
+    queryFn: () => fetchSalesSummary(today, toDate, activeStoreId),
   });
 
   const {
@@ -92,8 +95,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingProducts,
     refetch: refetchProducts,
   } = useQuery({
-    queryKey: ["reports-top-products"],
-    queryFn: () => fetchTopProducts(today, toDate, 10),
+    queryKey: ["reports-top-products", activeStoreId],
+    queryFn: () => fetchTopProducts(today, toDate, 10, activeStoreId),
   });
 
   const {
@@ -101,8 +104,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingCashiers,
     refetch: refetchCashiers,
   } = useQuery({
-    queryKey: ["reports-cashier-performance"],
-    queryFn: () => fetchCashierPerformance(today, toDate),
+    queryKey: ["reports-cashier-performance", activeStoreId],
+    queryFn: () => fetchCashierPerformance(today, toDate, 20, activeStoreId),
   });
 
   const {
@@ -110,8 +113,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingCustomers,
     refetch: refetchCustomers,
   } = useQuery({
-    queryKey: ["reports-customer-insights"],
-    queryFn: () => fetchCustomerInsights(today, toDate),
+    queryKey: ["reports-customer-insights", activeStoreId],
+    queryFn: () => fetchCustomerInsights(today, toDate, activeStoreId),
   });
 
   const {
@@ -119,8 +122,8 @@ const ReportsScreen = () => {
     isLoading: isLoadingDocs,
     refetch: refetchDocs,
   } = useQuery({
-    queryKey: ["reports-document-summary"],
-    queryFn: () => fetchDocumentSummary(today, toDate),
+    queryKey: ["reports-document-summary", activeStoreId],
+    queryFn: () => fetchDocumentSummary(today, toDate, activeStoreId),
   });
 
   const isLoading =
@@ -201,8 +204,18 @@ const ReportsScreen = () => {
           <AccountingContextMenu items={menuItems} />
         </View>
 
-        {/* Dashboard Stats */}
-        <View style={styles.statsRow}>
+        {/* Store Filter */}
+        <View style={styles.switcherRow}>
+          <StoreSwitcher mode="all" />
+        </View>
+
+        {/* Dashboard Stats — cards size to their numbers and scroll sideways
+            when the row outgrows the screen. */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.statsRow}
+        >
           <View
             style={[
               styles.statCard,
@@ -277,69 +290,32 @@ const ReportsScreen = () => {
               ₦{dashboard?.avg_order_value?.current?.toLocaleString() ?? "0"}
             </Text>
           </View>
-        </View>
 
-        {/* Sales Summary Preview */}
-        {salesSummary && (
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
-                Sales Summary
-              </Text>
-            </View>
+          <View
+            style={[
+              styles.statCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? "#282b32" : "#eef0f4",
+              },
+            ]}
+          >
             <View
               style={[
-                styles.card,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: isDark ? "#282b32" : "#eef0f4",
-                },
+                styles.statIcon,
+                { backgroundColor: "rgba(245,158,11,0.12)" },
               ]}
             >
-              <View style={styles.summaryRow}>
-                <View style={styles.summaryItem}>
-                  <Text
-                    style={[
-                      styles.summaryLabel,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    Total Revenue
-                  </Text>
-                  <Text style={[styles.summaryValue, { color: "#10b981" }]}>
-                    ₦{salesSummary?.totals?.revenue.toLocaleString()}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text
-                    style={[
-                      styles.summaryLabel,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    Total Sales
-                  </Text>
-                  <Text style={[styles.summaryValue, { color: "#3b82f6" }]}>
-                    {salesSummary.totals.sales_count}
-                  </Text>
-                </View>
-                <View style={styles.summaryItem}>
-                  <Text
-                    style={[
-                      styles.summaryLabel,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    Discounts
-                  </Text>
-                  <Text style={[styles.summaryValue, { color: "#f59e0b" }]}>
-                    ₦{salesSummary.totals.discount_total.toLocaleString()}
-                  </Text>
-                </View>
-              </View>
+              <Lucide name="badge-percent" size={14} color="#f59e0b" />
             </View>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+              Discount
+            </Text>
+            <Text style={[styles.statValue, { color: "#f59e0b" }]}>
+              ₦{salesSummary?.totals?.discount_total?.toLocaleString() ?? "0"}
+            </Text>
           </View>
-        )}
+        </ScrollView>
 
         {/* Payment Breakdown */}
         {paymentBreakdown && (
@@ -795,6 +771,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 24, fontWeight: "800", letterSpacing: -0.4 },
   headerSubtitle: { fontSize: 13, marginTop: 2 },
+  switcherRow: {
+    paddingHorizontal: 16,
+    paddingBottom: 8,
+  },
   statsRow: {
     flexDirection: "row",
     paddingHorizontal: 16,
@@ -802,7 +782,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   statCard: {
-    flex: 1,
+    flexShrink: 0,
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 10,
