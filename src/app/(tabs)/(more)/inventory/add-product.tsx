@@ -255,6 +255,9 @@ const AddProduct = () => {
       >
         {/* Name */}
         <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            NAME
+          </Text>
           <AppTextInput
             leftIcon="tag"
             placeholder="Product name"
@@ -284,6 +287,11 @@ const AddProduct = () => {
           </Text>
           <View style={styles.row}>
             <View style={styles.halfField}>
+              <Text
+                style={[styles.sectionLabel, { color: colors.textSecondary }]}
+              >
+                COST PRICE
+              </Text>
               <AppTextInput
                 leftIcon="banknote"
                 placeholder="Cost price"
@@ -296,6 +304,11 @@ const AddProduct = () => {
               )}
             </View>
             <View style={styles.halfField}>
+              <Text
+                style={[styles.sectionLabel, { color: colors.textSecondary }]}
+              >
+                SELLING PRICE
+              </Text>
               <AppTextInput
                 leftIcon="banknote"
                 placeholder="Selling price"
@@ -370,6 +383,11 @@ const AddProduct = () => {
               ? "All of these are charged when the product sells. Tap one to remove it."
               : "Nothing selected, so the product sells untaxed."}
           </Text>
+          <Text
+            style={[styles.sectionLabel, { color: colors.textSecondary }]}
+          >
+            REORDER POINT
+          </Text>
           <AppTextInput
             leftIcon="package"
             placeholder="Reorder point"
@@ -384,9 +402,14 @@ const AddProduct = () => {
 
         {/* Initial Stock */}
         <View style={styles.section}>
+          <Text
+            style={[styles.sectionLabel, { color: colors.textSecondary }]}
+          >
+            INITIAL STOCK (OPTIONAL)
+          </Text>
           <AppTextInput
             leftIcon="package"
-            placeholder="Initial stock quantity (optional)"
+            placeholder="Initial stock quantity"
             value={initialStock}
             onChangeText={setInitialStock}
             keyboardType="decimal-pad"
@@ -395,6 +418,11 @@ const AddProduct = () => {
 
         {/* Unit */}
         <View style={styles.section}>
+          <Text
+            style={[styles.sectionLabel, { color: colors.textSecondary }]}
+          >
+            UNIT
+          </Text>
           <AppTextInput
             leftIcon="ruler"
             placeholder="Unit (e.g. pcs, kg, litre)"
