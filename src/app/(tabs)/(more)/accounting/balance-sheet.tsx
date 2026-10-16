@@ -30,6 +30,7 @@ type Section = {
   total: number;
   color: string;
   icon: string;
+  emptyHint?: string;
 };
 
 const BalanceSheet = () => {
@@ -81,6 +82,10 @@ const BalanceSheet = () => {
           total: data.total_equity,
           color: "#8b5cf6",
           icon: "shield",
+          emptyHint:
+            data.equity.length === 0 && data.current_earnings !== 0
+              ? `No capital accounts yet — this total is current earnings (revenue − expenses) of ₦${Math.abs(data.current_earnings).toLocaleString()}`
+              : undefined,
         },
       ]
     : [];
@@ -144,7 +149,7 @@ const BalanceSheet = () => {
         ))}
         {section.items.length === 0 && (
           <Text style={[styles.emptySection, { color: colors.textSecondary }]}>
-            No {section.title.toLowerCase()} recorded
+            {section.emptyHint ?? `No ${section.title.toLowerCase()} recorded`}
           </Text>
         )}
       </View>
