@@ -12,13 +12,14 @@ import {
   ProductResponse,
   ProductStockSeries,
   SetMinStockLevelPayload,
-  StockBalanceItem,
   StockBalancesPaginatedResponse,
-  StockMovementItem,
   StockMovementsPaginatedResponse,
   StoreDistributePayload,
   UpdateProduct,
 } from "@/types/product";
+import { File, Paths } from "expo-file-system";
+import { requestPermissionsAsync } from "expo-media-library";
+import { saveToLibraryAsync } from "expo-media-library/legacy";
 import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
 
@@ -220,26 +221,29 @@ export const adjustProduct = async (stooreId: string, data: AdjustProduct) => {
   return res.data!;
 };
 
-// /api/v1/inventory/{store_id}/products/{product_id}/qr
-export const downloadQRCode = async (
-  productId: string,
-  storeId: string,
-  params?: { size?: "small" | "medium" | "large"; box_size?: number },
-): Promise<string> => {
-  const query = new URLSearchParams();
-  if (params?.size) query.append("size", params.size);
-  if (params?.box_size) query.append("box_size", String(params.box_size));
-  const qs = query.toString();
-
-  const res = await apiClient.get<{ data: string }>(
-    `${INVENTORY_URL}/${storeId}/products/${productId}/qr${qs ? `?${qs}` : ""}`,
-  );
-
-  if (!res.ok) {
-    throw new Error(getErrorMessage(res));
+// Downloads a QR image URL to the salesos folder in app documents.
+export const downloadQrToGallery = async (
+  url: string,
+): Promise<{ savedToGallery: boolean }> => {
+  const output = await File.downloadFileAsync(url, Paths.cache, {
+    idempotent: true,
+  });
+  const file = new File(output.uri);
+  try {
+    const savedToGallery = await saveQrToGallery(file.uri);
+    return { savedToGallery };
+  } finally {
+    file.delete();
   }
+};
 
-  return res.data?.data ?? "";
+export const saveQrToGallery = async (fileUri: string): Promise<boolean> => {
+  const permission = await requestPermissionsAsync();
+  if (!permission.granted) {
+    return false;
+  }
+  await saveToLibraryAsync(fileUri);
+  return true;
 };
 
 // _____________________________STOCK OPERATIONS_____________________________
