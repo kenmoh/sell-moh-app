@@ -19,7 +19,10 @@ export interface SearchInputProps extends TextInputProps {
   height?: number;
 }
 
-export const SearchInput = React.forwardRef<TextInput, SearchInputProps>(
+export const SearchInput = React.forwardRef<
+  React.ComponentRef<typeof TextInput>,
+  SearchInputProps
+>(
   (
     {
       value,

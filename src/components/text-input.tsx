@@ -19,7 +19,10 @@ export interface AppTextInputProps extends RNTextInputProps {
   error?: string;
 }
 
-const AppTextInput = React.forwardRef<RNTextInput, AppTextInputProps>(
+const AppTextInput = React.forwardRef<
+  React.ComponentRef<typeof RNTextInput>,
+  AppTextInputProps
+>(
   (
     {
       label,

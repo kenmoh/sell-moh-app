@@ -12,7 +12,7 @@ interface ListItemProps {
 
 export default function AppListItem() {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const colors = Colors[scheme ?? "light"];
   return (
     <ListItem colors={{ containerColor: colors.card }}>
       <ListItem.HeadlineContent>

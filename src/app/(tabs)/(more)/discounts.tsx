@@ -443,7 +443,7 @@ const Discounts = () => {
           data={listData}
           keyExtractor={(item) => item.id}
           renderItem={renderListItem}
-          ListHeaderComponent={listHeader}
+          ListHeaderComponent={listHeader ?? undefined}
           ListEmptyComponent={
             listLoading ? (
               <View style={styles.loadingContainer}>

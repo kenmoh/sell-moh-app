@@ -5,7 +5,7 @@ import { Text } from "react-native";
 
 export default function SectionHeader({ title }: { title: string }) {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const colors = Colors[scheme ?? "light"];
 
   return (
     <Row style={{ paddingHorizontal: 16, paddingTop: 24, paddingBottom: 4 }}>

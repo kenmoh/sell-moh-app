@@ -183,7 +183,7 @@ const SalesScreen = () => {
           showsVerticalScrollIndicator={false}
           stickyHeaderIndices={[1]}
           refreshing={isRefetching}
-          onRefresh={refetch}
+          onRefresh={() => { refetch(); }}
           ListHeaderComponent={
             <View style={{ backgroundColor: colors.background }}>
               {/* Header Title Section */}

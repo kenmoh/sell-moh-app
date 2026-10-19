@@ -85,7 +85,7 @@ export default function StockBalanceScreen() {
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={() => { refetch(); }}
         ListHeaderComponent={
           <View style={styles.header}>
             {/* Store selector */}

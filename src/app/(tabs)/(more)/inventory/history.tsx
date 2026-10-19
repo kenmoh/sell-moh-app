@@ -95,7 +95,7 @@ export default function StockHistoryScreen() {
         onEndReached={handleEndReached}
         onEndReachedThreshold={0.5}
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={() => { refetch(); }}
         ListHeaderComponent={
           <View style={styles.header}>
             <StoreSwitcher mode="store" />

@@ -7,7 +7,7 @@ import { WrapperProps } from "./wrapper";
 
 export default function Wrapper({ children }: WrapperProps) {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const colors = Colors[scheme ?? "light"];
   return (
     <Column>
       <VStack

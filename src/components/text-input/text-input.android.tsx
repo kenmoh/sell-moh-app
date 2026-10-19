@@ -15,7 +15,7 @@ const TextInput = ({
   placeholder?: string;
 }) => {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const colors = Colors[scheme ?? "light"];
   const value = useNativeState("");
   return (
     <BasicTextField

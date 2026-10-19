@@ -13,10 +13,10 @@ export const apiClient = create({
 const SESSION_KEY = "session";
 
 let isRefreshing = false;
-let failedQueue: Array<{
+let failedQueue: {
   resolve: (token: string) => void;
   reject: (error: any) => void;
-}> = [];
+}[] = [];
 
 const processQueue = (error: any, token: string | null) => {
   failedQueue.forEach(({ resolve, reject }) => {

@@ -297,7 +297,7 @@ const POSScreen = () => {
               color={colors.buttonPrimary}
               style={{ paddingVertical: 20 }}
             />
-          ) : null
+          ) : undefined
         }
         ListEmptyComponent={
           isPending ? (

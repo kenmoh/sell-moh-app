@@ -5,9 +5,9 @@ import {
 } from "@/api/settlement";
 import Pill from "@/components/pill";
 import { Colors } from "@/constants/theme";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
-import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -42,7 +42,12 @@ const SettlementScreen = () => {
   const colors = Colors[isDark ? "dark" : "light"];
   const [filter, setFilter] = useState<Filter>("all");
 
-  const { data: balance, isLoading: isLoadingBalance, isError, error } = useQuery({
+  const {
+    data: balance,
+    isLoading: isLoadingBalance,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["settlement-balance"],
     queryFn: fetchSettlementBalance,
   });
@@ -76,7 +81,7 @@ const SettlementScreen = () => {
           styles.card,
           {
             backgroundColor: colors.card,
-            borderColor: colors.backgroundSelected,
+            // borderColor: isDark ? colors.backgroundElement : "#eef0f4",
           },
         ]}
       >
@@ -227,7 +232,7 @@ const SettlementScreen = () => {
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
-            onRefresh={refetch}
+            onRefresh={() => { refetch(); }}
             tintColor={colors.buttonPrimary}
           />
         }
@@ -295,7 +300,7 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   card: {
-    borderWidth: 1,
+    // borderWidth: 1,
     borderRadius: 12,
     padding: 14,
     gap: 10,

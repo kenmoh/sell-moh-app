@@ -263,7 +263,7 @@ const DocumentListScreen = () => {
         stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={() => { refetch(); }}
         contentContainerStyle={[
           styles.list,
           // { paddingBottom: insets.bottom + 20 },

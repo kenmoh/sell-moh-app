@@ -62,6 +62,8 @@ export interface StockChartPoint {
   date: string;
   label: string;
   balance: number;
+  /** Movements that landed on this day; 0 on a still day. */
+  qtyChange: number;
 }
 
 export function fillStockSeries(
@@ -71,7 +73,12 @@ export function fillStockSeries(
 ): StockChartPoint[] {
   const days = eachDay(fromDate, toDate);
   if (!items.length) {
-    return days.map((date) => ({ date, label: shortLabel(date), balance: 0 }));
+    return days.map((date) => ({
+      date,
+      label: shortLabel(date),
+      balance: 0,
+      qtyChange: 0,
+    }));
   }
 
   const byDate = new Map(items.map((item) => [item.date, item]));
@@ -80,6 +87,11 @@ export function fillStockSeries(
   return days.map((date) => {
     const hit = byDate.get(date);
     if (hit) carry = hit.balance;
-    return { date, label: shortLabel(date), balance: carry };
+    return {
+      date,
+      label: shortLabel(date),
+      balance: carry,
+      qtyChange: hit?.qty_change ?? 0,
+    };
   });
 }

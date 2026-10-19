@@ -24,6 +24,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Reanimated, {
+  interpolate,
+  type SharedValue,
+  useAnimatedStyle,
+} from "react-native-reanimated";
 import {
   ActivityIndicator,
   Alert,
@@ -37,7 +42,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import { Swipeable } from "react-native-gesture-handler";
+import Swipeable from "react-native-gesture-handler/ReanimatedSwipeable";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type FilterType =
@@ -83,6 +88,28 @@ function formatTime(iso: string): string {
   const ampm = h >= 12 ? "PM" : "AM";
   const h12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
   return `${h12}:${min} ${ampm}`;
+}
+
+function SwipeDeleteAction({
+  progress,
+  onDelete,
+}: {
+  progress: SharedValue<number>;
+  onDelete: () => void;
+}) {
+  const actionStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: interpolate(progress.value, [0, 1], [80, 0]) },
+    ],
+  }));
+  return (
+    <Reanimated.View style={[styles.deleteAction, actionStyle]}>
+      <Pressable style={styles.deleteActionInner} onPress={onDelete}>
+        <Lucide name="trash-2" size={18} color="#fff" />
+        <Text style={styles.deleteActionText}>Delete</Text>
+      </Pressable>
+    </Reanimated.View>
+  );
 }
 
 const Notifications = () => {
@@ -297,25 +324,12 @@ const Notifications = () => {
 
   const renderRightActions = useCallback(
     (id: string) => {
-      return function SwipeDeleteAction(
-        progress: Animated.AnimatedInterpolation<number>,
-      ) {
-        const translateX = progress.interpolate({
-          inputRange: [0, 1],
-          outputRange: [80, 0],
-        });
+      return function swipeDelete(progress: SharedValue<number>) {
         return (
-          <Animated.View
-            style={[styles.deleteAction, { transform: [{ translateX }] }]}
-          >
-            <Pressable
-              style={styles.deleteActionInner}
-              onPress={() => handleSwipeDelete(id)}
-            >
-              <Lucide name="trash-2" size={18} color="#fff" />
-              <Text style={styles.deleteActionText}>Delete</Text>
-            </Pressable>
-          </Animated.View>
+          <SwipeDeleteAction
+            progress={progress}
+            onDelete={() => handleSwipeDelete(id)}
+          />
         );
       };
     },
@@ -543,7 +557,7 @@ const Notifications = () => {
           item.kind === "group" ? `g-${item.label}` : `n-${item.n.id}`
         }
         renderItem={renderListItem}
-        ListHeaderComponent={listHeader}
+        ListHeaderComponent={listHeader ?? undefined}
         ListEmptyComponent={
           isLoading ? (
             <ActivityIndicator
@@ -551,7 +565,7 @@ const Notifications = () => {
               color="#3b82f6"
               style={{ marginTop: 40 }}
             />
-          ) : null
+          ) : undefined
         }
         contentContainerStyle={{ paddingBottom: insets.bottom + 20 }}
         style={{ flex: 1 }}

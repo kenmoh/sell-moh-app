@@ -947,7 +947,7 @@ const AIScreen = () => {
               messages.length > 0 &&
               !messages[messages.length - 1]?.content ? (
                 <TypingIndicator colors={colors} />
-              ) : null
+              ) : undefined
             }
             keyboardShouldPersistTaps="handled"
             onContentSizeChange={scrollToBottom}

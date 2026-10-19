@@ -525,7 +525,7 @@ const StoreDetailScreen = () => {
         ListFooterComponent={listFooter}
         contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} />
         }
         style={{ flex: 1 }}
         initialNumToRender={8}

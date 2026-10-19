@@ -1,6 +1,6 @@
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { type ComponentRef, useCallback, useEffect, useRef, useState } from "react";
 import {
   Dimensions,
   LayoutRectangle,
@@ -37,7 +37,7 @@ const AccountingContextMenu = ({ items }: Props) => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
-  const triggerRef = useRef<View>(null);
+  const triggerRef = useRef<ComponentRef<typeof View>>(null);
   const [visible, setVisible] = useState(false);
   const [menuLayout, setMenuLayout] = useState<LayoutRectangle | null>(null);
 

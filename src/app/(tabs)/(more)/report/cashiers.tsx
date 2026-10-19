@@ -71,7 +71,7 @@ const ReportCashiers = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} />
         }
       >
         {cashiers.map((item) => (

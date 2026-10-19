@@ -184,7 +184,7 @@ const CustomersScreen = () => {
         }
         renderItem={renderItem}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} />
         }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>

@@ -7,7 +7,7 @@ import { TextInputProps } from "./text-input.d";
 const TextInput = ({ placeholder }: TextInputProps) => {
   const scheme = useColorScheme();
   const value = useNativeState("");
-  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const colors = Colors[scheme ?? "light"];
   return (
     <TextField
       text={value}

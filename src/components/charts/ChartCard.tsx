@@ -1,8 +1,10 @@
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 import { useColorScheme } from "react-native";
 
 import { Colors } from "@/constants/theme";
+
+import PillButton from "./PillButton";
 
 export interface ChartCardProps {
   title: string;
@@ -43,35 +45,15 @@ export default function ChartCard({
           {title}
         </Text>
         <View style={styles.ranges}>
-          {RANGES.map((days) => {
-            const selected = days === rangeDays;
-            return (
-              <Pressable
-                key={days}
-                onPress={() => onRangeChange(days)}
-                style={[
-                  styles.rangeChip,
-                  {
-                    borderColor: selected
-                      ? colors.buttonPrimary
-                      : colors.backgroundElement,
-                    backgroundColor: selected
-                      ? colors.buttonPrimary
-                      : colors.backgroundElement,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.rangeText,
-                    { color: selected ? "#fff" : colors.textSecondary },
-                  ]}
-                >
-                  {days}d
-                </Text>
-              </Pressable>
-            );
-          })}
+          {RANGES.map((days) => (
+            <PillButton
+              key={days}
+              compact
+              label={`${days}d`}
+              selected={days === rangeDays}
+              onPress={() => onRangeChange(days)}
+            />
+          ))}
         </View>
       </View>
       {right ? <View style={styles.right}>{right}</View> : null}
@@ -103,16 +85,6 @@ const styles = StyleSheet.create({
   ranges: {
     flexDirection: "row",
     gap: 6,
-  },
-  rangeChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    borderWidth: 1,
-  },
-  rangeText: {
-    fontSize: 12,
-    fontWeight: "600",
   },
   right: {
     alignItems: "flex-start",

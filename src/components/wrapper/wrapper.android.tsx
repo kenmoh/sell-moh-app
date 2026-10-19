@@ -8,7 +8,7 @@ const WIDTH = Dimensions.get("window").width * 0.95;
 
 export default function Wrapper({ children }: WrapperProps) {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const colors = Colors[scheme ?? "light"];
   return (
     <Card colors={{ containerColor: colors.card }} modifiers={[width(WIDTH)]}>
       {children}

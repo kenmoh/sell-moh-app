@@ -10,7 +10,7 @@ const AppScrollView = ({ children }: { children: React.ReactNode }) => {
   const insets = useSafeAreaInsets();
 
   const scheme = useColorScheme();
-  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const colors = Colors[scheme ?? "light"];
   return (
     <View
       style={{

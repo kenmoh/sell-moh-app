@@ -264,7 +264,7 @@ const ProfitAndLoss = () => {
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}
-                onRefresh={refetch}
+                onRefresh={() => { refetch(); }}
                 tintColor="#3b82f6"
               />
             }

@@ -188,7 +188,7 @@ const Journals = () => {
           contentContainerStyle={{ paddingBottom: 24 }}
           renderItem={renderItem}
           refreshControl={
-            <RefreshControl refreshing={false} onRefresh={refetch} />
+            <RefreshControl refreshing={false} onRefresh={() => { refetch(); }} />
           }
           onEndReached={() => {
             if (hasNextPage && !isFetchingNextPage) {
@@ -203,7 +203,7 @@ const Journals = () => {
                 size="small"
                 style={{ paddingVertical: 16 }}
               />
-            ) : null
+            ) : undefined
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>

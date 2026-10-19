@@ -6,9 +6,13 @@ import { StyleSheet, useColorScheme } from "react-native";
 
 // const Stack = withLayoutContext(createBlankStackNavigator());
 
+export const unstable_settings = {
+  anchor: "sign-in",
+};
+
 const AuthLayout = () => {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const colors = Colors[scheme ?? "light"];
   return (
     <Stack
       screenOptions={{

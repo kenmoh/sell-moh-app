@@ -192,7 +192,7 @@ export default function TaxSettings() {
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.list}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} />
           }
           renderItem={({ item }) => (
             <View

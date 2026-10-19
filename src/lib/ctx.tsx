@@ -1,4 +1,4 @@
-import { use, createContext, useEffect, useState, type PropsWithChildren } from "react";
+import { use, createContext, useEffect, useMemo, type PropsWithChildren } from "react";
 import { useStorageState } from "@/lib/useStorageState";
 import { AuthUser } from "@/types/auth";
 import { apiClient, setLogoutHandler } from "@/api/client";
@@ -29,15 +29,13 @@ export function useSession() {
 export function SessionProvider({ children }: PropsWithChildren) {
   const [[isLoading, session], setSession] = useStorageState("session");
   const [[, userRaw], setUserRaw] = useStorageState("user");
-  const [userState, setUserState] = useState<AuthUser | null>(null);
 
-  useEffect(() => {
-    if (userRaw) {
-      try {
-        setUserState(JSON.parse(userRaw));
-      } catch {
-        setUserState(null);
-      }
+  const user = useMemo<AuthUser | null>(() => {
+    if (!userRaw) return null;
+    try {
+      return JSON.parse(userRaw);
+    } catch {
+      return null;
     }
   }, [userRaw]);
 
@@ -45,10 +43,9 @@ export function SessionProvider({ children }: PropsWithChildren) {
     setLogoutHandler(() => {
       setSession(null);
       setUserRaw(null);
-      setUserState(null);
     });
     return () => setLogoutHandler(() => {});
-  }, []);
+  }, [setSession, setUserRaw]);
 
   const getTokens = async (): Promise<{ accessToken: string; refreshToken: string } | null> => {
     if (!session) return null;
@@ -67,7 +64,6 @@ export function SessionProvider({ children }: PropsWithChildren) {
           const data: SessionData = { accessToken, refreshToken };
           setSession(JSON.stringify(data));
           setUserRaw(JSON.stringify(user));
-          setUserState(user);
         },
         signOut: async () => {
           try {
@@ -83,14 +79,12 @@ export function SessionProvider({ children }: PropsWithChildren) {
           }
           setSession(null);
           setUserRaw(null);
-          setUserState(null);
         },
         updateUser: (user) => {
           setUserRaw(JSON.stringify(user));
-          setUserState(user);
         },
         session,
-        user: userState,
+        user,
         isLoading,
         getTokens,
       }}

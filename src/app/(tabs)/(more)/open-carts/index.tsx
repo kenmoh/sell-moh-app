@@ -103,7 +103,7 @@ const OpenCarts = () => {
           renderItem={renderCart}
           contentContainerStyle={{ paddingBottom: 40 }}
           showsVerticalScrollIndicator={false}
-          onRefresh={() => refetch()}
+          onRefresh={() => { refetch(); }}
           refreshing={isRefetching}
         />
       )}

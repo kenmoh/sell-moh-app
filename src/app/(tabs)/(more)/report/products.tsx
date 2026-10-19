@@ -71,7 +71,7 @@ const ReportProducts = () => {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 24 }}
         refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+          <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} />
         }
       >
         {products.map((item, index) => {

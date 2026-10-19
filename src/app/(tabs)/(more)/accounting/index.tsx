@@ -14,20 +14,28 @@ import PaymentHistorySheet from "@/components/payment-history-sheet";
 import Pill from "@/components/pill";
 import RecordPaymentSheet from "@/components/record-payment-sheet";
 import StoreSwitcher from "@/components/store-switcher";
-import { Colors } from "@/constants/theme";
+import { Colors, type ColorPalette } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
+import type {
+  ExpenseResponse,
+  FinancialDashboardResponse,
+  PayableResponse,
+  ReceivableResponse,
+} from "@/types/accounting";
 import { getAccountingMenuIcon } from "@/types/accounting-menu-icon";
 import MoreVert from "@expo/material-symbols/more_vert.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack, useRouter } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Platform,
   Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   useColorScheme,
@@ -41,6 +49,708 @@ const tabs: { key: Tab; label: string }[] = [
   { key: "payables", label: "Payables" },
   { key: "expenses", label: "Expenses" },
 ];
+
+type MoveTarget = {
+  kind: "receivable" | "payable";
+  id: string;
+  reference: string;
+  storeId: string | null;
+};
+
+interface RowThemeProps {
+  colors: ColorPalette;
+  isDark: boolean;
+}
+
+const ReceivableRow = memo(function ReceivableRow({
+  item,
+  colors,
+  isDark,
+  onRecordPayment,
+  onViewPayments,
+  onMoveStore,
+}: {
+  item: ReceivableResponse;
+  onRecordPayment: (item: ReceivableResponse) => void;
+  onViewPayments: (item: ReceivableResponse) => void;
+  onMoveStore: (target: MoveTarget) => void;
+} & RowThemeProps) {
+  return (
+    <Pressable
+      style={[
+        styles.listCard,
+        {
+          backgroundColor: colors.card,
+          borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+        },
+      ]}
+      onPress={() => onRecordPayment(item)}
+    >
+      <View style={styles.listCardHeader}>
+        <View
+          style={[
+            styles.listCardIcon,
+            { backgroundColor: "rgba(59,130,246,0.12)" },
+          ]}
+        >
+          <Lucide name="user" size={16} color="#3b82f6" />
+        </View>
+        <View style={styles.listCardInfo}>
+          <Text style={[styles.listCardTitle, { color: colors.text }]}>
+            {item.customer_name}
+          </Text>
+          <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
+            {item.invoice_number}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor:
+                item.status === "pending"
+                  ? "rgba(245,158,11,0.12)"
+                  : item.status === "paid"
+                    ? "rgba(16,185,129,0.12)"
+                    : "rgba(59,130,246,0.12)",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.statusText,
+              {
+                color:
+                  item.status === "pending"
+                    ? "#f59e0b"
+                    : item.status === "paid"
+                      ? "#10b981"
+                      : "#3b82f6",
+              },
+            ]}
+          >
+            {item.status}
+          </Text>
+        </View>
+        <Pressable
+          style={[
+            styles.moveButton,
+            { backgroundColor: colors.backgroundElement },
+          ]}
+          onPress={() =>
+            onMoveStore({
+              kind: "receivable",
+              id: item.id,
+              reference: item.invoice_number,
+              storeId: item.store_id ?? null,
+            })
+          }
+        >
+          <Lucide name="store" size={13} color={colors.textSecondary} />
+        </Pressable>
+      </View>
+      <View
+        style={[
+          styles.listCardFooter,
+          { borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb" },
+        ]}
+      >
+        <Text style={[styles.listCardAmount, { color: colors.text }]}>
+          ₦{item.amount.toLocaleString()}
+        </Text>
+        <Text style={[styles.listCardBalance, { color: colors.textSecondary }]}>
+          Balance: ₦{item.balance.toLocaleString()}
+        </Text>
+        {item.amount_paid > 0 && (
+          <Pressable
+            style={[
+              styles.paymentsLink,
+              { backgroundColor: colors.backgroundElement },
+            ]}
+            onPress={() => onViewPayments(item)}
+          >
+            <Lucide name="receipt" size={11} color={colors.textSecondary} />
+            <Text
+              style={[styles.paymentsLinkText, { color: colors.textSecondary }]}
+            >
+              {`Paid ₦${item.amount_paid.toLocaleString()}`}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    </Pressable>
+  );
+});
+
+const PayableRow = memo(function PayableRow({
+  item,
+  colors,
+  isDark,
+  onRecordPayment,
+  onViewPayments,
+  onMoveStore,
+}: {
+  item: PayableResponse;
+  onRecordPayment: (item: PayableResponse) => void;
+  onViewPayments: (item: PayableResponse) => void;
+  onMoveStore: (target: MoveTarget) => void;
+} & RowThemeProps) {
+  return (
+    <Pressable
+      style={[
+        styles.listCard,
+        {
+          backgroundColor: colors.card,
+          borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+        },
+      ]}
+      onPress={() => onRecordPayment(item)}
+    >
+      <View style={styles.listCardHeader}>
+        <View
+          style={[
+            styles.listCardIcon,
+            { backgroundColor: "rgba(168,85,247,0.12)" },
+          ]}
+        >
+          <Lucide name="building-2" size={16} color="#a855f7" />
+        </View>
+        <View style={styles.listCardInfo}>
+          <Text style={[styles.listCardTitle, { color: colors.text }]}>
+            {item.vendor_name}
+          </Text>
+          <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
+            {item.bill_number}
+          </Text>
+        </View>
+        <View
+          style={[
+            styles.statusBadge,
+            {
+              backgroundColor:
+                item.status === "pending"
+                  ? "rgba(245,158,11,0.12)"
+                  : item.status === "paid"
+                    ? "rgba(16,185,129,0.12)"
+                    : "rgba(59,130,246,0.12)",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              styles.statusText,
+              {
+                color:
+                  item.status === "pending"
+                    ? "#f59e0b"
+                    : item.status === "paid"
+                      ? "#10b981"
+                      : "#3b82f6",
+              },
+            ]}
+          >
+            {item.status}
+          </Text>
+        </View>
+        <Pressable
+          style={[
+            styles.moveButton,
+            { backgroundColor: colors.backgroundElement },
+          ]}
+          onPress={() =>
+            onMoveStore({
+              kind: "payable",
+              id: item.id,
+              reference: item.bill_number,
+              storeId: item.store_id ?? null,
+            })
+          }
+        >
+          <Lucide name="store" size={13} color={colors.textSecondary} />
+        </Pressable>
+      </View>
+      <View
+        style={[
+          styles.listCardFooter,
+          { borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb" },
+        ]}
+      >
+        <Text style={[styles.listCardAmount, { color: colors.text }]}>
+          ₦{item.amount.toLocaleString()}
+        </Text>
+        <Text style={[styles.listCardBalance, { color: colors.textSecondary }]}>
+          Balance: ₦{item.balance.toLocaleString()}
+        </Text>
+        {item.amount_paid > 0 && (
+          <Pressable
+            style={[
+              styles.paymentsLink,
+              { backgroundColor: colors.backgroundElement },
+            ]}
+            onPress={() => onViewPayments(item)}
+          >
+            <Lucide name="receipt" size={11} color={colors.textSecondary} />
+            <Text
+              style={[styles.paymentsLinkText, { color: colors.textSecondary }]}
+            >
+              {`Paid ₦${item.amount_paid.toLocaleString()}`}
+            </Text>
+          </Pressable>
+        )}
+      </View>
+    </Pressable>
+  );
+});
+
+const ExpenseRow = memo(function ExpenseRow({
+  item,
+  colors,
+  isDark,
+}: {
+  item: ExpenseResponse;
+} & RowThemeProps) {
+  return (
+    <View
+      style={[
+        styles.listCard,
+        {
+          backgroundColor: colors.card,
+          borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+          borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
+        },
+      ]}
+    >
+      <View style={styles.listCardHeader}>
+        <View
+          style={[styles.listCardIcon, { backgroundColor: "rgba(239,68,68,0.12)" }]}
+        >
+          <Lucide name="receipt" size={16} color="#ef4444" />
+        </View>
+        <View style={styles.listCardInfo}>
+          <Text style={[styles.listCardTitle, { color: colors.text }]}>
+            {item.category}
+          </Text>
+          <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
+            {item.description || "No description"}
+          </Text>
+        </View>
+        <Text style={[styles.listCardAmount, { color: "#ef4444" }]}>
+          ₦{item.amount.toLocaleString()}
+        </Text>
+      </View>
+      <View
+        style={[
+          styles.listCardFooter,
+          { borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb" },
+        ]}
+      >
+        <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
+          {item.expense_date}
+        </Text>
+        {item.vendor ? (
+          <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
+            {item.vendor}
+          </Text>
+        ) : null}
+      </View>
+    </View>
+  );
+});
+
+const AccountingLists = memo(function AccountingLists({
+  activeTab,
+  receivables,
+  payables,
+  expenses,
+  dashboard,
+  expenseSummary,
+  colors,
+  isDark,
+  isRefetching,
+  onRefresh,
+  onRecordPayment,
+  onViewPayments,
+  onMoveStore,
+  onOpenAdd,
+  onTabChange,
+}: {
+  activeTab: Tab;
+  receivables: ReceivableResponse[];
+  payables: PayableResponse[];
+  expenses: ExpenseResponse[];
+  dashboard: FinancialDashboardResponse | undefined;
+  expenseSummary: Record<string, number>;
+  isRefetching: boolean;
+  onRefresh: () => void;
+  onRecordPayment: (
+    item: { id: string; name: string; balance: number },
+    type: "ar" | "ap",
+  ) => void;
+  onViewPayments: (
+    item: { id: string; name: string; totalPaid: number },
+    type: "ar" | "ap",
+  ) => void;
+  onMoveStore: (target: MoveTarget) => void;
+  onOpenAdd: () => void;
+  onTabChange: (tab: Tab) => void;
+} & RowThemeProps) {
+  const currentList = useMemo(() => {
+    switch (activeTab) {
+      case "receivables":
+        return receivables;
+      case "payables":
+        return payables;
+      case "expenses":
+        return expenses;
+    }
+  }, [activeTab, receivables, payables, expenses]);
+
+  const recordPaymentAr = useCallback(
+    (item: ReceivableResponse) =>
+      onRecordPayment(
+        { id: item.id, name: item.customer_name, balance: item.balance },
+        "ar",
+      ),
+    [onRecordPayment],
+  );
+
+  const recordPaymentAp = useCallback(
+    (item: PayableResponse) =>
+      onRecordPayment(
+        { id: item.id, name: item.vendor_name, balance: item.balance },
+        "ap",
+      ),
+    [onRecordPayment],
+  );
+
+  const viewPaymentsAr = useCallback(
+    (item: ReceivableResponse) =>
+      onViewPayments(
+        { id: item.id, name: item.customer_name, totalPaid: item.amount_paid },
+        "ar",
+      ),
+    [onViewPayments],
+  );
+
+  const viewPaymentsAp = useCallback(
+    (item: PayableResponse) =>
+      onViewPayments(
+        { id: item.id, name: item.vendor_name, totalPaid: item.amount_paid },
+        "ap",
+      ),
+    [onViewPayments],
+  );
+
+  const renderItem = useCallback(
+    ({
+      item,
+    }: {
+      item: ReceivableResponse | PayableResponse | ExpenseResponse;
+    }) => {
+      if (activeTab === "receivables") {
+        return (
+          <ReceivableRow
+            item={item as ReceivableResponse}
+            colors={colors}
+            isDark={isDark}
+            onRecordPayment={recordPaymentAr}
+            onViewPayments={viewPaymentsAr}
+            onMoveStore={onMoveStore}
+          />
+        );
+      }
+      if (activeTab === "payables") {
+        return (
+          <PayableRow
+            item={item as PayableResponse}
+            colors={colors}
+            isDark={isDark}
+            onRecordPayment={recordPaymentAp}
+            onViewPayments={viewPaymentsAp}
+            onMoveStore={onMoveStore}
+          />
+        );
+      }
+      return (
+        <ExpenseRow
+          item={item as ExpenseResponse}
+          colors={colors}
+          isDark={isDark}
+        />
+      );
+    },
+    [
+      activeTab,
+      colors,
+      isDark,
+      recordPaymentAr,
+      recordPaymentAp,
+      viewPaymentsAr,
+      viewPaymentsAp,
+      onMoveStore,
+    ],
+  );
+
+  const expenseSummaryEntries = Object.entries(expenseSummary).sort(
+    (a, b) => b[1] - a[1],
+  );
+  const topExpenseCategories = expenseSummaryEntries.slice(0, 3);
+  const totalExpenseSummary = expenseSummaryEntries.reduce(
+    (sum, [, val]) => sum + val,
+    0,
+  );
+
+  const listHeader = useMemo(
+    () => (
+      <View style={{ backgroundColor: colors.background }}>
+        {/* Store Filter */}
+        <View
+          style={[
+            styles.switcherRow,
+            {
+              flexDirection: "row",
+              justifyContent: "space-between",
+              alignItems: "center",
+              // paddingHorizontal: 16,
+            },
+          ]}
+        >
+          <Text style={{ color: colors.text }}>Finacial Overview</Text>
+          <StoreSwitcher mode="all" />
+        </View>
+
+        {/* Dashboard Card */}
+        <View
+          style={[
+            styles.dashboardCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+            },
+          ]}
+        >
+          <View style={styles.dashboardRow}>
+            <View style={styles.dashboardItem}>
+              <View
+                style={[
+                  styles.dashIcon,
+                  { backgroundColor: "rgba(16,185,129,0.12)" },
+                ]}
+              >
+                <Lucide name="wallet" size={14} color="#10b981" />
+              </View>
+              <Text
+                style={[styles.dashLabel, { color: colors.textSecondary }]}
+              >
+                Cash
+              </Text>
+              <Text style={[styles.dashValue, { color: colors.text }]}>
+                ₦{dashboard?.cash_balance?.toLocaleString() ?? "0"}
+              </Text>
+            </View>
+            <View style={styles.dashboardItem}>
+              <View
+                style={[
+                  styles.dashIcon,
+                  { backgroundColor: "rgba(59,130,246,0.12)" },
+                ]}
+              >
+                <Lucide name="trending-up" size={14} color="#3b82f6" />
+              </View>
+              <Text
+                style={[styles.dashLabel, { color: colors.textSecondary }]}
+              >
+                A/R
+              </Text>
+              <Text style={[styles.dashValue, { color: "#3b82f6" }]}>
+                ₦
+                {dashboard?.outstanding_receivable?.toLocaleString() ?? "0"}
+              </Text>
+            </View>
+            <View style={styles.dashboardItem}>
+              <View
+                style={[
+                  styles.dashIcon,
+                  { backgroundColor: "rgba(168,85,247,0.12)" },
+                ]}
+              >
+                <Lucide name="trending-down" size={14} color="#a855f7" />
+              </View>
+              <Text
+                style={[styles.dashLabel, { color: colors.textSecondary }]}
+              >
+                A/P
+              </Text>
+              <Text style={[styles.dashValue, { color: "#a855f7" }]}>
+                ₦{dashboard?.outstanding_payable?.toLocaleString() ?? "0"}
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Tabs */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.tabRow}
+        >
+          {tabs.map((tab) => (
+            <Pill
+              key={tab.key}
+              label={tab.label}
+              active={activeTab === tab.key}
+              onPress={() => onTabChange(tab.key)}
+              badge={
+                tab.key === "receivables"
+                  ? receivables.length
+                  : tab.key === "payables"
+                    ? payables.length
+                    : undefined
+              }
+            />
+          ))}
+        </ScrollView>
+
+        {/* Expense Summary (collapsible, only on expenses tab) */}
+        {activeTab === "expenses" && topExpenseCategories.length > 0 && (
+          <View
+            style={[
+              styles.summaryCard,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+              },
+            ]}
+          >
+            <View style={styles.summaryHeader}>
+              <View style={styles.summaryHeaderLeft}>
+                <View
+                  style={[
+                    styles.summaryIcon,
+                    { backgroundColor: "rgba(239,68,68,0.12)" },
+                  ]}
+                >
+                  <Lucide name="pie-chart" size={14} color="#ef4444" />
+                </View>
+                <Text style={[styles.summaryTitle, { color: colors.text }]}>
+                  Expense Summary
+                </Text>
+              </View>
+              <Text style={[styles.summaryTotal, { color: "#ef4444" }]}>
+                ₦{totalExpenseSummary.toLocaleString()}
+              </Text>
+            </View>
+            <View style={styles.summaryItems}>
+              {topExpenseCategories.map(([category, amount]) => (
+                <View key={category} style={styles.summaryItem}>
+                  <Text
+                    style={[
+                      styles.summaryItemLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    {category}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.summaryItemAmount,
+                      { color: colors.text },
+                    ]}
+                  >
+                    ₦{amount.toLocaleString()}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Add Button */}
+        <View style={styles.addSection}>
+          <Pressable
+            style={[
+              styles.addBtn,
+              { backgroundColor: colors.buttonPrimary },
+            ]}
+            onPress={onOpenAdd}
+          >
+            <Lucide name="plus" size={16} color="#fff" />
+            <Text style={styles.addBtnText}>
+              Add{" "}
+              {activeTab === "receivables"
+                ? "Receivable"
+                : activeTab === "payables"
+                  ? "Payable"
+                  : "Expense"}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+    ),
+    [
+      colors,
+      isDark,
+      dashboard,
+      activeTab,
+      receivables,
+      payables,
+      topExpenseCategories,
+      totalExpenseSummary,
+      onOpenAdd,
+      onTabChange,
+    ],
+  );
+
+  return (
+      <FlatList
+        key={activeTab}
+        data={currentList}
+        keyExtractor={(item: any) => item.id}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 24 }}
+        initialNumToRender={10}
+        maxToRenderPerBatch={8}
+        windowSize={9}
+        removeClippedSubviews={Platform.OS === "android"}
+        ListHeaderComponent={listHeader}
+        renderItem={renderItem}
+        refreshControl={
+          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
+        }
+        ListEmptyComponent={
+          <View style={styles.emptyContainer}>
+            <View
+              style={[
+                styles.emptyIconBadge,
+                { backgroundColor: colors.backgroundElement },
+              ]}
+            >
+              <Lucide name="inbox" size={32} color={colors.textSecondary} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.text }]}>
+              No{" "}
+              {activeTab === "receivables"
+                ? "Receivables"
+                : activeTab === "payables"
+                  ? "Payables"
+                  : "Expenses"}{" "}
+              Found
+            </Text>
+            <Text
+              style={[styles.emptySubtitle, { color: colors.textSecondary }]}
+            >
+              {activeTab === "receivables"
+                ? "Track amounts owed by customers"
+                : activeTab === "payables"
+                  ? "Track amounts owed to vendors"
+                  : "Record your business expenses"}
+            </Text>
+          </View>
+        }
+      />
+  );
+});
 
 const AccountingScreen = () => {
   const scheme = useColorScheme();
@@ -56,12 +766,7 @@ const AccountingScreen = () => {
   const [showAddPayable, setShowAddPayable] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showRecordPayment, setShowRecordPayment] = useState(false);
-  const [moveTarget, setMoveTarget] = useState<{
-    kind: "receivable" | "payable";
-    id: string;
-    reference: string;
-    storeId: string | null;
-  } | null>(null);
+  const [moveTarget, setMoveTarget] = useState<MoveTarget | null>(null);
   const [selectedItem, setSelectedItem] = useState<{
     id: string;
     name: string;
@@ -168,16 +873,11 @@ const AccountingScreen = () => {
     [],
   );
 
-  const currentList = useMemo(() => {
-    switch (activeTab) {
-      case "receivables":
-        return receivables;
-      case "payables":
-        return payables;
-      case "expenses":
-        return expenses;
-    }
-  }, [activeTab, receivables, payables, expenses]);
+  const onOpenAdd = useCallback(() => {
+    if (activeTab === "receivables") setShowAddReceivable(true);
+    else if (activeTab === "payables") setShowAddPayable(true);
+    else if (activeTab === "expenses") setShowAddExpense(true);
+  }, [activeTab]);
 
   const menuItems = useMemo(
     () => [
@@ -221,355 +921,6 @@ const AccountingScreen = () => {
     [router],
   );
 
-  const renderItem = useCallback(
-    ({ item }: { item: any }) => {
-      if (activeTab === "receivables") {
-        return (
-          <Pressable
-            style={[
-              styles.listCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: isDark ? colors.backgroundElement : "#eef0f4",
-              },
-            ]}
-            onPress={() =>
-              handleRecordPayment(
-                {
-                  id: item.id,
-                  name: item.customer_name,
-                  balance: item.balance,
-                },
-                "ar",
-              )
-            }
-          >
-            <View style={styles.listCardHeader}>
-              <View
-                style={[
-                  styles.listCardIcon,
-                  { backgroundColor: "rgba(59,130,246,0.12)" },
-                ]}
-              >
-                <Lucide name="user" size={16} color="#3b82f6" />
-              </View>
-              <View style={styles.listCardInfo}>
-                <Text style={[styles.listCardTitle, { color: colors.text }]}>
-                  {item.customer_name}
-                </Text>
-                <Text
-                  style={[styles.listCardSub, { color: colors.textSecondary }]}
-                >
-                  {item.invoice_number}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor:
-                      item.status === "pending"
-                        ? "rgba(245,158,11,0.12)"
-                        : item.status === "paid"
-                          ? "rgba(16,185,129,0.12)"
-                          : "rgba(59,130,246,0.12)",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.statusText,
-                    {
-                      color:
-                        item.status === "pending"
-                          ? "#f59e0b"
-                          : item.status === "paid"
-                            ? "#10b981"
-                            : "#3b82f6",
-                    },
-                  ]}
-                >
-                  {item.status}
-                </Text>
-              </View>
-              <Pressable
-                style={[
-                  styles.moveButton,
-                  { backgroundColor: colors.backgroundElement },
-                ]}
-                onPress={() =>
-                  setMoveTarget({
-                    kind: "receivable",
-                    id: item.id,
-                    reference: item.invoice_number,
-                    storeId: item.store_id ?? null,
-                  })
-                }
-              >
-                <Lucide
-                  name="store"
-                  size={13}
-                  color={colors.textSecondary}
-                />
-              </Pressable>
-            </View>
-            <View
-              style={[
-                styles.listCardFooter,
-                {
-                  borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
-                },
-              ]}
-            >
-              <Text style={[styles.listCardAmount, { color: colors.text }]}>
-                ₦{item.amount.toLocaleString()}
-              </Text>
-              <Text
-                style={[
-                  styles.listCardBalance,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                Balance: ₦{item.balance.toLocaleString()}
-              </Text>
-              {item.amount_paid > 0 && (
-                <Pressable
-                  style={[
-                    styles.paymentsLink,
-                    { backgroundColor: colors.backgroundElement },
-                  ]}
-                  onPress={() =>
-                    handleViewPayments(
-                      {
-                        id: item.id,
-                        name: item.customer_name,
-                        totalPaid: item.amount_paid,
-                      },
-                      "ar",
-                    )
-                  }
-                >
-                  <Lucide
-                    name="receipt"
-                    size={11}
-                    color={colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.paymentsLinkText,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    {`${item.amount_paid > 0 ? "Paid " : ""}₦${item.amount_paid.toLocaleString()}`}
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          </Pressable>
-        );
-      }
-
-      if (activeTab === "payables") {
-        return (
-          <Pressable
-            style={[
-              styles.listCard,
-              {
-                backgroundColor: colors.card,
-                borderColor: isDark ? colors.backgroundElement : "#eef0f4",
-              },
-            ]}
-            onPress={() =>
-              handleRecordPayment(
-                { id: item.id, name: item.vendor_name, balance: item.balance },
-                "ap",
-              )
-            }
-          >
-            <View style={styles.listCardHeader}>
-              <View
-                style={[
-                  styles.listCardIcon,
-                  { backgroundColor: "rgba(168,85,247,0.12)" },
-                ]}
-              >
-                <Lucide name="building-2" size={16} color="#a855f7" />
-              </View>
-              <View style={styles.listCardInfo}>
-                <Text style={[styles.listCardTitle, { color: colors.text }]}>
-                  {item.vendor_name}
-                </Text>
-                <Text
-                  style={[styles.listCardSub, { color: colors.textSecondary }]}
-                >
-                  {item.bill_number}
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.statusBadge,
-                  {
-                    backgroundColor:
-                      item.status === "pending"
-                        ? "rgba(245,158,11,0.12)"
-                        : item.status === "paid"
-                          ? "rgba(16,185,129,0.12)"
-                          : "rgba(59,130,246,0.12)",
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.statusText,
-                    {
-                      color:
-                        item.status === "pending"
-                          ? "#f59e0b"
-                          : item.status === "paid"
-                            ? "#10b981"
-                            : "#3b82f6",
-                    },
-                  ]}
-                >
-                  {item.status}
-                </Text>
-              </View>
-              <Pressable
-                style={[
-                  styles.moveButton,
-                  { backgroundColor: colors.backgroundElement },
-                ]}
-                onPress={() =>
-                  setMoveTarget({
-                    kind: "payable",
-                    id: item.id,
-                    reference: item.bill_number,
-                    storeId: item.store_id ?? null,
-                  })
-                }
-              >
-                <Lucide
-                  name="store"
-                  size={13}
-                  color={colors.textSecondary}
-                />
-              </Pressable>
-            </View>
-            <View
-              style={[
-                styles.listCardFooter,
-                {
-                  borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
-                },
-              ]}
-            >
-              <Text style={[styles.listCardAmount, { color: colors.text }]}>
-                ₦{item.amount.toLocaleString()}
-              </Text>
-              <Text
-                style={[
-                  styles.listCardBalance,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                Balance: ₦{item.balance.toLocaleString()}
-              </Text>
-              {item.amount_paid > 0 && (
-                <Pressable
-                  style={[
-                    styles.paymentsLink,
-                    { backgroundColor: colors.backgroundElement },
-                  ]}
-                  onPress={() =>
-                    handleViewPayments(
-                      {
-                        id: item.id,
-                        name: item.vendor_name,
-                        totalPaid: item.amount_paid,
-                      },
-                      "ap",
-                    )
-                  }
-                >
-                  <Lucide
-                    name="receipt"
-                    size={11}
-                    color={colors.textSecondary}
-                  />
-                  <Text
-                    style={[
-                      styles.paymentsLinkText,
-                      { color: colors.textSecondary },
-                    ]}
-                  >
-                    {`Paid ₦${item.amount_paid.toLocaleString()}`}
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          </Pressable>
-        );
-      }
-
-      return (
-        <View
-          style={[
-            styles.listCard,
-            {
-              backgroundColor: colors.card,
-              borderColor: isDark ? colors.backgroundElement : "#eef0f4",
-              borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
-            },
-          ]}
-        >
-          <View style={styles.listCardHeader}>
-            <View
-              style={[
-                styles.listCardIcon,
-                { backgroundColor: "rgba(239,68,68,0.12)" },
-              ]}
-            >
-              <Lucide name="receipt" size={16} color="#ef4444" />
-            </View>
-            <View style={styles.listCardInfo}>
-              <Text style={[styles.listCardTitle, { color: colors.text }]}>
-                {item.category}
-              </Text>
-              <Text
-                style={[styles.listCardSub, { color: colors.textSecondary }]}
-              >
-                {item.description || "No description"}
-              </Text>
-            </View>
-            <Text style={[styles.listCardAmount, { color: "#ef4444" }]}>
-              ₦{item.amount.toLocaleString()}
-            </Text>
-          </View>
-          <View
-            style={[
-              styles.listCardFooter,
-              {
-                borderTopColor: isDark ? colors.backgroundElement : "#e5e7eb",
-              },
-            ]}
-          >
-            <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
-              {item.expense_date}
-            </Text>
-            {item.vendor ? (
-              <Text
-                style={[styles.listCardSub, { color: colors.textSecondary }]}
-              >
-                {item.vendor}
-              </Text>
-            ) : null}
-          </View>
-        </View>
-      );
-    },
-    [activeTab, colors, isDark, handleRecordPayment, handleViewPayments],
-  );
-
   if (isLoading) {
     return (
       <SafeAreaView
@@ -582,15 +933,6 @@ const AccountingScreen = () => {
       </SafeAreaView>
     );
   }
-
-  const expenseSummaryEntries = Object.entries(expenseSummary).sort(
-    (a, b) => b[1] - a[1],
-  );
-  const topExpenseCategories = expenseSummaryEntries.slice(0, 3);
-  const totalExpenseSummary = expenseSummaryEntries.reduce(
-    (sum, [, val]) => sum + val,
-    0,
-  );
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -612,231 +954,22 @@ const AccountingScreen = () => {
         </Stack.Toolbar.Menu>
       </Stack.Toolbar>
 
-      <FlatList
-        data={currentList}
-        keyExtractor={(item: any) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
-        ListHeaderComponent={
-          <View style={{ backgroundColor: colors.background }}>
-            {/* Store Filter */}
-            <View
-              style={[
-                styles.switcherRow,
-                {
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  // paddingHorizontal: 16,
-                },
-              ]}
-            >
-              <Text style={{ color: colors.text }}>Finacial Overview</Text>
-              <StoreSwitcher mode="all" />
-            </View>
-
-            {/* Dashboard Card */}
-            <View
-              style={[
-                styles.dashboardCard,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: isDark ? colors.backgroundElement : "#eef0f4",
-                },
-              ]}
-            >
-              <View style={styles.dashboardRow}>
-                <View style={styles.dashboardItem}>
-                  <View
-                    style={[
-                      styles.dashIcon,
-                      { backgroundColor: "rgba(16,185,129,0.12)" },
-                    ]}
-                  >
-                    <Lucide name="wallet" size={14} color="#10b981" />
-                  </View>
-                  <Text
-                    style={[styles.dashLabel, { color: colors.textSecondary }]}
-                  >
-                    Cash
-                  </Text>
-                  <Text style={[styles.dashValue, { color: colors.text }]}>
-                    ₦{dashboard?.cash_balance?.toLocaleString() ?? "0"}
-                  </Text>
-                </View>
-                <View style={styles.dashboardItem}>
-                  <View
-                    style={[
-                      styles.dashIcon,
-                      { backgroundColor: "rgba(59,130,246,0.12)" },
-                    ]}
-                  >
-                    <Lucide name="trending-up" size={14} color="#3b82f6" />
-                  </View>
-                  <Text
-                    style={[styles.dashLabel, { color: colors.textSecondary }]}
-                  >
-                    A/R
-                  </Text>
-                  <Text style={[styles.dashValue, { color: "#3b82f6" }]}>
-                    ₦
-                    {dashboard?.outstanding_receivable?.toLocaleString() ?? "0"}
-                  </Text>
-                </View>
-                <View style={styles.dashboardItem}>
-                  <View
-                    style={[
-                      styles.dashIcon,
-                      { backgroundColor: "rgba(168,85,247,0.12)" },
-                    ]}
-                  >
-                    <Lucide name="trending-down" size={14} color="#a855f7" />
-                  </View>
-                  <Text
-                    style={[styles.dashLabel, { color: colors.textSecondary }]}
-                  >
-                    A/P
-                  </Text>
-                  <Text style={[styles.dashValue, { color: "#a855f7" }]}>
-                    ₦{dashboard?.outstanding_payable?.toLocaleString() ?? "0"}
-                  </Text>
-                </View>
-              </View>
-            </View>
-
-            {/* Tabs */}
-            <View style={styles.tabRow}>
-              {tabs.map((tab) => (
-                <Pill
-                  key={tab.key}
-                  label={tab.label}
-                  active={activeTab === tab.key}
-                  onPress={() => setActiveTab(tab.key)}
-                  badge={
-                    tab.key === "receivables"
-                      ? receivables.length
-                      : tab.key === "payables"
-                        ? payables.length
-                        : undefined
-                  }
-                />
-              ))}
-            </View>
-
-            {/* Expense Summary (collapsible, only on expenses tab) */}
-            {activeTab === "expenses" && topExpenseCategories.length > 0 && (
-              <View
-                style={[
-                  styles.summaryCard,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: isDark ? colors.backgroundElement : "#eef0f4",
-                  },
-                ]}
-              >
-                <View style={styles.summaryHeader}>
-                  <View style={styles.summaryHeaderLeft}>
-                    <View
-                      style={[
-                        styles.summaryIcon,
-                        { backgroundColor: "rgba(239,68,68,0.12)" },
-                      ]}
-                    >
-                      <Lucide name="pie-chart" size={14} color="#ef4444" />
-                    </View>
-                    <Text style={[styles.summaryTitle, { color: colors.text }]}>
-                      Expense Summary
-                    </Text>
-                  </View>
-                  <Text style={[styles.summaryTotal, { color: "#ef4444" }]}>
-                    ₦{totalExpenseSummary.toLocaleString()}
-                  </Text>
-                </View>
-                <View style={styles.summaryItems}>
-                  {topExpenseCategories.map(([category, amount]) => (
-                    <View key={category} style={styles.summaryItem}>
-                      <Text
-                        style={[
-                          styles.summaryItemLabel,
-                          { color: colors.textSecondary },
-                        ]}
-                      >
-                        {category}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.summaryItemAmount,
-                          { color: colors.text },
-                        ]}
-                      >
-                        ₦{amount.toLocaleString()}
-                      </Text>
-                    </View>
-                  ))}
-                </View>
-              </View>
-            )}
-
-            {/* Add Button */}
-            <View style={styles.addSection}>
-              <Pressable
-                style={[
-                  styles.addBtn,
-                  { backgroundColor: colors.buttonPrimary },
-                ]}
-                onPress={() => {
-                  if (activeTab === "receivables") setShowAddReceivable(true);
-                  else if (activeTab === "payables") setShowAddPayable(true);
-                  else if (activeTab === "expenses") setShowAddExpense(true);
-                }}
-              >
-                <Lucide name="plus" size={16} color="#fff" />
-                <Text style={styles.addBtnText}>
-                  Add{" "}
-                  {activeTab === "receivables"
-                    ? "Receivable"
-                    : activeTab === "payables"
-                      ? "Payable"
-                      : "Expense"}
-                </Text>
-              </Pressable>
-            </View>
-          </View>
-        }
-        renderItem={renderItem}
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View
-              style={[
-                styles.emptyIconBadge,
-                { backgroundColor: colors.backgroundElement },
-              ]}
-            >
-              <Lucide name="inbox" size={32} color={colors.textSecondary} />
-            </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No{" "}
-              {activeTab === "receivables"
-                ? "Receivables"
-                : activeTab === "payables"
-                  ? "Payables"
-                  : "Expenses"}{" "}
-              Found
-            </Text>
-            <Text
-              style={[styles.emptySubtitle, { color: colors.textSecondary }]}
-            >
-              {activeTab === "receivables"
-                ? "Track amounts owed by customers"
-                : activeTab === "payables"
-                  ? "Track amounts owed to vendors"
-                  : "Record your business expenses"}
-            </Text>
-          </View>
-        }
+      <AccountingLists
+        activeTab={activeTab}
+        receivables={receivables}
+        payables={payables}
+        expenses={expenses}
+        dashboard={dashboard}
+        expenseSummary={expenseSummary}
+        colors={colors}
+        isDark={isDark}
+        isRefetching={isRefetching}
+        onRefresh={handleRefresh}
+        onRecordPayment={handleRecordPayment}
+        onViewPayments={handleViewPayments}
+        onMoveStore={setMoveTarget}
+        onOpenAdd={onOpenAdd}
+        onTabChange={setActiveTab}
       />
 
       <AddReceivableSheet
@@ -928,7 +1061,6 @@ const styles = StyleSheet.create({
   dashLabel: { fontSize: 11, fontWeight: "600" },
   dashValue: { fontSize: 15, fontWeight: "800" },
   tabRow: {
-    flexDirection: "row",
     paddingHorizontal: 16,
     gap: 8,
     marginBottom: 12,

@@ -230,11 +230,11 @@ The panel above the figures reports two controls. The balance check (Assets − 
           keyExtractor={(item) => item.title}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
-          ListHeaderComponent={data ? <BalanceSheetIntegrity data={data} /> : null}
+          ListHeaderComponent={data ? <BalanceSheetIntegrity data={data} /> : undefined}
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={refetch}
+              onRefresh={() => { refetch(); }}
               tintColor="#3b82f6"
             />
           }

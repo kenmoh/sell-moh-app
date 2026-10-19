@@ -1,4 +1,4 @@
-﻿import {
+import {
   Tabs,
   TabList,
   TabTrigger,
@@ -21,19 +21,19 @@ export default function AppTabs() {
       <TabSlot style={{ height: '100%' }} />
       <TabList asChild>
         <CustomTabList>
-          <TabTrigger name="pos" href="/(tabs)/(pos)" asChild>
+          <TabTrigger name="(pos)" href="/(tabs)/(pos)" asChild>
             <TabButton>POS</TabButton>
           </TabTrigger>
-          <TabTrigger name="orders" href="/(tabs)/(orders)" asChild>
-            <TabButton>Orders</TabButton>
+          <TabTrigger name="(sales)" href="/(tabs)/(sales)" asChild>
+            <TabButton>Sales</TabButton>
           </TabTrigger>
-          <TabTrigger name="dashboard" href="/(tabs)/(dashboard)" asChild>
+          <TabTrigger name="(dashboard)" href="/(tabs)/(dashboard)" asChild>
             <TabButton>Dashboard</TabButton>
           </TabTrigger>
-          <TabTrigger name="inventory" href="/(tabs)/(inventory)" asChild>
-            <TabButton>Inventory</TabButton>
+          <TabTrigger name="(document)" href="/(tabs)/(document)" asChild>
+            <TabButton>Document</TabButton>
           </TabTrigger>
-          <TabTrigger name="more" href="/(tabs)/(more)" asChild>
+          <TabTrigger name="(more)" href="/(tabs)/(more)" asChild>
             <TabButton>More</TabButton>
           </TabTrigger>
         </CustomTabList>
@@ -42,9 +42,12 @@ export default function AppTabs() {
   );
 }
 
-export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps) {
+export function TabButton({ children, isFocused, ref, ...props }: TabTriggerSlotProps) {
   return (
-    <Pressable {...props} style={({ pressed }) => pressed && styles.pressed}>
+    <Pressable
+      ref={ref as never}
+      {...props}
+      style={({ pressed }) => pressed && styles.pressed}>
       <ThemedView
         type={isFocused ? 'backgroundSelected' : 'backgroundElement'}
         style={styles.tabButtonView}>
@@ -58,7 +61,7 @@ export function TabButton({ children, isFocused, ...props }: TabTriggerSlotProps
 
 export function CustomTabList(props: TabListProps) {
   const scheme = useColorScheme();
-  const colors = Colors[scheme === 'unspecified' ? 'light' : scheme];
+  const colors = Colors[scheme ?? 'light'];
 
   return (
     <View {...props} style={styles.tabListContainer}>

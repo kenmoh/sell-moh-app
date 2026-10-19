@@ -16,10 +16,10 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const more = () => {
+const More = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
-  const colors = Colors[scheme === "unspecified" ? "light" : scheme];
+  const colors = Colors[scheme ?? "light"];
   const { signOut, user, updateUser } = useSession();
 
   const { mutate: toggleCart } = useMutation({
@@ -77,11 +77,6 @@ const more = () => {
           label="Discounts & Coupons"
           leadingIcon="percent"
           onPress={() => router.push("/(tabs)/(more)/discounts")}
-        />
-        <LinkItem
-          label="Subscriptions"
-          leadingIcon="calendar"
-          onPress={() => router.push("/(tabs)/(more)/subscription")}
         />
         <LinkItem
           label="Customers"
@@ -175,7 +170,7 @@ const more = () => {
   );
 };
 
-export default more;
+export default More;
 
 const styles = StyleSheet.create({
   settingRow: {

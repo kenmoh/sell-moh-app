@@ -421,7 +421,7 @@ const InventoryScreen = () => {
         }
         onEndReachedThreshold={0.5}
         refreshing={isRefetching}
-        onRefresh={refetch}
+        onRefresh={() => { refetch(); }}
         ListHeaderComponent={
           <View style={{ backgroundColor: colors.background }}>
             <HeaderNav
@@ -485,7 +485,7 @@ const InventoryScreen = () => {
               color={colors.buttonPrimary}
               style={{ paddingVertical: 20 }}
             />
-          ) : null
+          ) : undefined
         }
         ListEmptyComponent={
           isPending ? (

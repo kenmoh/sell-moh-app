@@ -243,7 +243,7 @@ const ChartOfAccounts = () => {
           contentContainerStyle={{ paddingBottom: 24 }}
           renderItem={renderItem}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={refetch} />
+            <RefreshControl refreshing={isRefetching} onRefresh={() => { refetch(); }} />
           }
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
