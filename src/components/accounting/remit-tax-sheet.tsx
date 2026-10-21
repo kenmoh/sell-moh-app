@@ -23,6 +23,7 @@ type Props = {
   onVisibleChange: (visible: boolean) => void;
   lines: TaxOwedLine[];
   isPending?: boolean;
+  storeName?: string;
   onSubmit: (payload: TaxRemitRequest) => void;
 };
 
@@ -31,6 +32,7 @@ const RemitTaxSheet = ({
   onVisibleChange,
   lines,
   isPending,
+  storeName,
   onSubmit,
 }: Props) => {
   const scheme = useColorScheme();
@@ -78,6 +80,14 @@ const RemitTaxSheet = ({
       }}
     >
       <Text style={[styles.title, { color: colors.text }]}>Remit Tax</Text>
+      {storeName && (
+        <View style={styles.storeRow}>
+          <Lucide name="store" size={13} color={colors.textSecondary} />
+          <Text style={[styles.storeName, { color: colors.textSecondary }]}>
+            Remitting from {storeName}
+          </Text>
+        </View>
+      )}
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Record tax paid to the authority; the ledger keeps the running balance
       </Text>
@@ -289,6 +299,13 @@ export default RemitTaxSheet;
 
 const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: "700" },
+  storeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 4,
+  },
+  storeName: { fontSize: 12, fontWeight: "600" },
   subtitle: { fontSize: 13, marginBottom: 12 },
   label: {
     fontSize: 12,

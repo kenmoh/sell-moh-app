@@ -42,7 +42,7 @@ const TaxesScreen = () => {
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
 
-  const { activeStoreId } = useActiveStore();
+  const { activeStoreId, activeStoreName } = useActiveStore();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [showRemitSheet, setShowRemitSheet] = useState(false);
@@ -94,8 +94,8 @@ const TaxesScreen = () => {
     isError: isOwedError,
     error: owedError,
   } = useQuery({
-    queryKey: ["taxes-owed"],
-    queryFn: fetchTaxesOwed,
+    queryKey: ["taxes-owed", activeStoreId],
+    queryFn: () => fetchTaxesOwed(activeStoreId),
   });
 
   useApiErrorToast({
@@ -110,12 +110,14 @@ const TaxesScreen = () => {
     isError: isRemitError,
     error: remitError,
   } = useMutation({
-    mutationFn: (payload: TaxRemitRequest) => remitTax(payload),
+    mutationFn: (payload: TaxRemitRequest) =>
+      remitTax({ ...payload, store_id: activeStoreId }),
     onSuccess: async () => {
       setShowRemitSheet(false);
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["taxes-owed"] }),
         queryClient.invalidateQueries({ queryKey: ["taxes-collected"] }),
+        queryClient.invalidateQueries({ queryKey: ["remittances"] }),
         queryClient.invalidateQueries({ queryKey: ["journals"] }),
         queryClient.invalidateQueries({ queryKey: ["financial-dashboard"] }),
         queryClient.invalidateQueries({ queryKey: ["balance-sheet"] }),
@@ -391,6 +393,7 @@ const TaxesScreen = () => {
         onVisibleChange={setShowRemitSheet}
         lines={owedLines}
         isPending={isRemitting}
+        storeName={activeStoreName}
         onSubmit={(payload) => submitRemittance(payload)}
       />
     </View>

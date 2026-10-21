@@ -344,9 +344,14 @@ export const fetchTaxesCollected = async ({
 
 // ── Tax Remittance ────────────────────────────────────────────────────────
 
-export const fetchTaxesOwed = async (): Promise<TaxOwedLine[]> => {
+export const fetchTaxesOwed = async (
+  storeId?: string | null,
+): Promise<TaxOwedLine[]> => {
+  const params = new URLSearchParams();
+  if (storeId) params.append("store_id", storeId);
+  const qs = params.toString();
   const res = await apiClient.get<{ data: TaxOwedLine[] }>(
-    `${URL}/taxes-owed`,
+    `${URL}/taxes-owed${qs ? `?${qs}` : ""}`,
   );
 
   if (!res.ok) {
@@ -359,13 +364,16 @@ export const fetchTaxesOwed = async (): Promise<TaxOwedLine[]> => {
 export const fetchRemittanceHistory = async ({
   page = 1,
   pageSize = 20,
+  storeId,
 }: {
   page?: number;
   pageSize?: number;
+  storeId?: string | null;
 }): Promise<AccountingPage<TaxRemittanceItem>> => {
   const params = new URLSearchParams();
   params.append("page", String(page));
   params.append("page_size", String(pageSize));
+  if (storeId) params.append("store_id", storeId);
   const res = await apiClient.get<{
     data: TaxRemittanceItem[];
     total: number;

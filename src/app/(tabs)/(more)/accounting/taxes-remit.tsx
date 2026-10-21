@@ -1,6 +1,8 @@
 import { fetchRemittanceHistory } from "@/api/accounting";
+import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
+import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useCallback } from "react";
@@ -20,6 +22,7 @@ const RemittanceHistoryScreen = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
+  const { activeStoreId } = useActiveStore();
 
   const {
     data,
@@ -32,10 +35,14 @@ const RemittanceHistoryScreen = () => {
     isError,
     error,
   } = useInfiniteQuery({
-    queryKey: ["remittances", "infinite"],
+    queryKey: ["remittances", "infinite", activeStoreId],
     initialPageParam: 1,
     queryFn: ({ pageParam }) =>
-      fetchRemittanceHistory({ page: pageParam, pageSize: REMIT_PAGE_SIZE }),
+      fetchRemittanceHistory({
+        page: pageParam,
+        pageSize: REMIT_PAGE_SIZE,
+        storeId: activeStoreId,
+      }),
     getNextPageParam: (lastPage) =>
       lastPage.page * lastPage.page_size < lastPage.total
         ? lastPage.page + 1
@@ -81,6 +88,9 @@ const RemittanceHistoryScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={styles.switcherRow}>
+        <StoreSwitcher mode="all" />
+      </View>
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={colors.buttonPrimary} size="large" />
@@ -141,6 +151,7 @@ export default RemittanceHistoryScreen;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  switcherRow: { paddingHorizontal: 16, marginBottom: 8 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   card: {
     borderWidth: 1,
