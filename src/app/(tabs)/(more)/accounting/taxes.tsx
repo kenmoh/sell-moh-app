@@ -16,7 +16,6 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
 
 const TAXES_PAGE_SIZE = 20;
 
@@ -100,9 +99,7 @@ const TaxesScreen = () => {
           <Text style={[styles.summaryName, { color: colors.text }]}>
             {tax.name} · {tax.rate}%
           </Text>
-          <Text
-            style={[styles.summaryCount, { color: colors.textSecondary }]}
-          >
+          <Text style={[styles.summaryCount, { color: colors.textSecondary }]}>
             {tax.sale_count} {tax.sale_count === 1 ? "sale" : "sales"}
           </Text>
         </View>
@@ -234,7 +231,7 @@ const TaxesScreen = () => {
         </View>
       </View>
 
-      <View style={styles.section}>
+      <View>
         <View
           style={[
             styles.totalCard,
@@ -253,15 +250,11 @@ const TaxesScreen = () => {
         </View>
 
         {taxes.length > 0 && (
-          <View style={styles.summaryList}>
-            {taxes.map(renderSummaryCard)}
-          </View>
+          <View style={styles.summaryList}>{taxes.map(renderSummaryCard)}</View>
         )}
 
         {lines.length > 0 && (
-          <Text
-            style={[styles.linesTitle, { color: colors.textSecondary }]}
-          >
+          <Text style={[styles.linesTitle, { color: colors.textSecondary }]}>
             Collected from sales
           </Text>
         )}
@@ -270,9 +263,9 @@ const TaxesScreen = () => {
   );
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top", "left", "right"]}
+      // edges={["top", "left", "right"]}
     >
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -283,7 +276,7 @@ const TaxesScreen = () => {
           data={lines}
           keyExtractor={(item, i) => `${item.sale_id}-${item.name}-${i}`}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 100 }}
+          contentContainerStyle={{ paddingBottom: 100, paddingHorizontal: 18 }}
           refreshing={isRefetching}
           onRefresh={() => void refetch()}
           onEndReached={() => {
@@ -321,7 +314,7 @@ const TaxesScreen = () => {
           renderItem={({ item, index }) => renderLine(item, index)}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -332,13 +325,13 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   footerLoader: { paddingVertical: 20, alignItems: "center" },
   switcherRow: {
-    paddingHorizontal: 16,
+    // paddingHorizontal: 16,
     marginTop: 6,
     marginBottom: 12,
   },
   dateRow: {
     flexDirection: "row",
-    paddingHorizontal: 16,
+    // paddingHorizontal: 16,
     gap: 10,
     marginBottom: 16,
   },
@@ -360,13 +353,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   datePillText: { fontSize: 12, fontWeight: "600", flex: 1 },
-  section: { paddingHorizontal: 16, marginBottom: 8 },
+
   totalCard: {
     borderRadius: 14,
     borderWidth: 1,
     paddingVertical: 14,
     paddingHorizontal: 16,
-    alignItems: "center",
+    alignItems: "flex-start",
     gap: 2,
   },
   totalLabel: { fontSize: 13, fontWeight: "600" },
