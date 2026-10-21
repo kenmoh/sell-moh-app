@@ -51,7 +51,7 @@ const tabs: { key: Tab; label: string }[] = [
 ];
 
 type MoveTarget = {
-  kind: "receivable" | "payable";
+  kind: "receivable" | "payable" | "expense";
   id: string;
   reference: string;
   storeId: string | null;
@@ -306,8 +306,10 @@ const ExpenseRow = memo(function ExpenseRow({
   item,
   colors,
   isDark,
+  onMoveStore,
 }: {
   item: ExpenseResponse;
+  onMoveStore: (target: MoveTarget) => void;
 } & RowThemeProps) {
   return (
     <View
@@ -347,11 +349,29 @@ const ExpenseRow = memo(function ExpenseRow({
         <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
           {item.expense_date}
         </Text>
-        {item.vendor ? (
-          <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
-            {item.vendor}
-          </Text>
-        ) : null}
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          {item.vendor ? (
+            <Text style={[styles.listCardSub, { color: colors.textSecondary }]}>
+              {item.vendor}
+            </Text>
+          ) : null}
+          <Pressable
+            style={[
+              styles.moveButton,
+              { backgroundColor: colors.backgroundElement },
+            ]}
+            onPress={() =>
+              onMoveStore({
+                kind: "expense",
+                id: item.id,
+                reference: item.expense_number,
+                storeId: item.store_id ?? null,
+              })
+            }
+          >
+            <Lucide name="store" size={13} color={colors.textSecondary} />
+          </Pressable>
+        </View>
       </View>
     </View>
   );
@@ -476,6 +496,7 @@ const AccountingLists = memo(function AccountingLists({
           item={item as ExpenseResponse}
           colors={colors}
           isDark={isDark}
+          onMoveStore={onMoveStore}
         />
       );
     },
@@ -916,6 +937,11 @@ const AccountingScreen = () => {
         key: "compare-stores",
         label: "Compare Stores",
         onPress: () => router.push("/(tabs)/(more)/accounting/compare"),
+      },
+      {
+        key: "taxes",
+        label: "Taxes",
+        onPress: () => router.push("/(tabs)/(more)/accounting/taxes"),
       },
     ],
     [router],

@@ -1,29 +1,61 @@
 import {
-  AccountResponse,
-  BalanceSheetResponse,
-  CashFlowResponse,
-  CreateAccountRequest,
-  CreateExpenseRequest,
-  CreateJournalRequest,
-  CreatePayableRequest,
-  CreateReceivableRequest,
-  ExpenseResponse,
-  FinancialDashboardResponse,
-  JournalCreatedResponse,
-  JournalListItem,
-  PaymentRecord,
-  PayableResponse,
-  ProfitAndLossResponse,
-  ReceivableResponse,
-  RecordPaymentRequest,
-  ToggleAccountStatusRequest,
-  TrialBalanceItem,
-  UpdateAccountRequest,
+    AccountResponse,
+    BalanceSheetResponse,
+    CashFlowResponse,
+    CreateAccountRequest,
+    CreateExpenseRequest,
+    CreateJournalRequest,
+    CreatePayableRequest,
+    CreateReceivableRequest,
+    ExpenseResponse,
+    FinancialDashboardResponse,
+    JournalCreatedResponse,
+    JournalListItem,
+    PayableResponse,
+    PaymentRecord,
+    ProfitAndLossResponse,
+    ReceivableResponse,
+    TaxesCollectedResponse,
+    RecordPaymentRequest,
+    ToggleAccountStatusRequest,
+    TrialBalanceItem,
+    UpdateAccountRequest,
 } from "@/types/accounting";
 import { getErrorMessage } from "./auth";
 import { apiClient } from "./client";
 
 const URL = "/accounting";
+
+type AccountingListEnvelope<T> = {
+  data?: T[];
+  total?: number;
+  page?: number;
+  page_size?: number;
+  pagination?: unknown;
+};
+
+const logAccountingListSample = <T>(
+  name: string,
+  response: AccountingListEnvelope<T> | undefined,
+) => {
+  if (!__DEV__) return;
+  console.log(
+    `[Accounting] ${name} response sample`,
+    JSON.stringify(
+      {
+        responseKeys: Object.keys(response ?? {}),
+        pagination: response?.pagination ?? {
+          total: response?.total,
+          page: response?.page,
+          page_size: response?.page_size,
+        },
+        records: response?.data?.slice(0, 3) ?? [],
+      },
+      null,
+      2,
+    ),
+  );
+};
 
 // ── Chart of Accounts ──────────────────────────────────────────────────────
 
@@ -115,7 +147,12 @@ export const fetchJournals = async (
   page = 1,
   pageSize = 50,
   storeId?: string | null,
-): Promise<{ items: JournalListItem[]; total: number; page: number; page_size: number }> => {
+): Promise<{
+  items: JournalListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+}> => {
   const params = new URLSearchParams();
   params.append("page", String(page));
   params.append("page_size", String(pageSize));
@@ -220,6 +257,36 @@ export const fetchCashFlow = async (
   return res.data?.data!;
 };
 
+export const fetchTaxesCollected = async ({
+  fromDate,
+  toDate,
+  storeId,
+  page = 1,
+  pageSize = 20,
+}: {
+  fromDate?: string;
+  toDate?: string;
+  storeId?: string | null;
+  page?: number;
+  pageSize?: number;
+}): Promise<TaxesCollectedResponse> => {
+  const params = new URLSearchParams();
+  params.append("page", String(page));
+  params.append("page_size", String(pageSize));
+  if (fromDate) params.append("from_date", fromDate);
+  if (toDate) params.append("to_date", toDate);
+  if (storeId) params.append("store_id", storeId);
+  const res = await apiClient.get<{ data: TaxesCollectedResponse }>(
+    `${URL}/taxes-collected?${params.toString()}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
 // ── Accounts Receivable ────────────────────────────────────────────────────
 
 export const fetchReceivables = async (
@@ -230,7 +297,7 @@ export const fetchReceivables = async (
   if (status) params.append("status", status);
   if (storeId) params.append("store_id", storeId);
   const qs = params.toString();
-  const res = await apiClient.get<{ data: ReceivableResponse[] }>(
+  const res = await apiClient.get<AccountingListEnvelope<ReceivableResponse>>(
     `${URL}/receivable${qs ? `?${qs}` : ""}`,
   );
 
@@ -238,6 +305,7 @@ export const fetchReceivables = async (
     throw new Error(getErrorMessage(res));
   }
 
+  logAccountingListSample("receivables", res.data);
   return res.data?.data ?? [];
 };
 
@@ -310,7 +378,7 @@ export const fetchPayables = async (
   if (status) params.append("status", status);
   if (storeId) params.append("store_id", storeId);
   const qs = params.toString();
-  const res = await apiClient.get<{ data: PayableResponse[] }>(
+  const res = await apiClient.get<AccountingListEnvelope<PayableResponse>>(
     `${URL}/payable${qs ? `?${qs}` : ""}`,
   );
 
@@ -318,6 +386,7 @@ export const fetchPayables = async (
     throw new Error(getErrorMessage(res));
   }
 
+  logAccountingListSample("payables", res.data);
   return res.data?.data ?? [];
 };
 
@@ -353,20 +422,30 @@ export const recordApPayment = async (
 };
 
 /**
- * Re-attribute a receivable or payable to another store (null = All Stores).
- * This is a correction, not an edit: the server requires a supervisor PIN
- * unless the caller is an owner, and records the change in the audit trail.
+ * Re-attribute a receivable, payable or expense to another store
+ * (null = All Stores). This is a correction, not an edit: the server requires
+ * a supervisor PIN unless the caller is an owner, and records the change in
+ * the audit trail.
  */
+const MOVE_TO_STORE_PATHS = {
+  receivable: "receivable",
+  payable: "payable",
+  expense: "expenses",
+} as const;
+
 const moveToStore = async <T>(
-  kind: "receivable" | "payable",
+  kind: keyof typeof MOVE_TO_STORE_PATHS,
   id: string,
   storeId: string | null,
   supervisorPin?: string,
 ): Promise<T> => {
-  const res = await apiClient.patch<{ data: T }>(`${URL}/${kind}/${id}/store`, {
-    store_id: storeId,
-    ...(supervisorPin ? { supervisor_pin: supervisorPin } : {}),
-  });
+  const res = await apiClient.patch<{ data: T }>(
+    `${URL}/${MOVE_TO_STORE_PATHS[kind]}/${id}/store`,
+    {
+      store_id: storeId,
+      ...(supervisorPin ? { supervisor_pin: supervisorPin } : {}),
+    },
+  );
 
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
@@ -389,6 +468,13 @@ export const movePayableToStore = (
 ): Promise<PayableResponse> =>
   moveToStore<PayableResponse>("payable", apId, storeId, supervisorPin);
 
+export const moveExpenseToStore = (
+  expenseId: string,
+  storeId: string | null,
+  supervisorPin?: string,
+): Promise<ExpenseResponse> =>
+  moveToStore<ExpenseResponse>("expense", expenseId, storeId, supervisorPin);
+
 // ── Expenses ───────────────────────────────────────────────────────────────
 
 export const fetchExpenses = async (params?: {
@@ -403,7 +489,7 @@ export const fetchExpenses = async (params?: {
   if (params?.to_date) query.append("to_date", params.to_date);
   if (params?.store_id) query.append("store_id", params.store_id);
   const qs = query.toString();
-  const res = await apiClient.get<{ data: ExpenseResponse[] }>(
+  const res = await apiClient.get<AccountingListEnvelope<ExpenseResponse>>(
     `${URL}/expenses${qs ? `?${qs}` : ""}`,
   );
 
@@ -411,6 +497,7 @@ export const fetchExpenses = async (params?: {
     throw new Error(getErrorMessage(res));
   }
 
+  logAccountingListSample("expenses", res.data);
   return res.data?.data ?? [];
 };
 

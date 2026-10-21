@@ -128,6 +128,35 @@ export interface CashFlowResponse {
   net_cash_flow: number;
 }
 
+// ── Taxes Collected ────────────────────────────────────────────────────────
+
+export interface TaxCollectedItem {
+  name: string;
+  rate: number;
+  amount: number;
+  sale_count: number;
+}
+
+export interface TaxCollectedLine {
+  sale_id: string;
+  sale_number: string;
+  date: string | null;
+  name: string;
+  rate: number;
+  amount: number;
+}
+
+export interface TaxesCollectedResponse {
+  taxes: TaxCollectedItem[];
+  total_collected: number;
+  zero_tax_sales: number;
+  items: TaxCollectedLine[];
+  page: number;
+  page_size: number;
+  total_items: number;
+  has_more: boolean;
+}
+
 // ── Accounts Receivable ────────────────────────────────────────────────────
 
 export interface CreateReceivableRequest {

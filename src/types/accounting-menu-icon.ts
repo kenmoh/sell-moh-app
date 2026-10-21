@@ -5,6 +5,7 @@ import Book from "@expo/material-symbols/book.xml";
 import CompareArrows from "@expo/material-symbols/compare_arrows.xml";
 import Description from "@expo/material-symbols/description.xml";
 import Payments from "@expo/material-symbols/payments.xml";
+import ReceiptLong from "@expo/material-symbols/receipt_long.xml";
 import TrendingUp from "@expo/material-symbols/trending_up.xml";
 
 const isIOS = process.env.EXPO_OS === "ios";
@@ -17,6 +18,7 @@ const MENU_ICONS = {
   "balance-sheet": { sf: "building.columns", material: AccountBalance },
   "cash-flow": { sf: "arrow.left.arrow.right", material: Payments },
   "compare-stores": { sf: "arrow.left.arrow.right.square", material: CompareArrows },
+  taxes: { sf: "doc.plaintext", material: ReceiptLong },
 } as const;
 
 export type AccountingMenuKey = keyof typeof MENU_ICONS;

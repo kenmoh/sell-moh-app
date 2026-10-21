@@ -1,4 +1,8 @@
-import { movePayableToStore, moveReceivableToStore } from "@/api/accounting";
+import {
+  moveExpenseToStore,
+  movePayableToStore,
+  moveReceivableToStore,
+} from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
 import Pill from "@/components/pill";
 import PillRow from "@/components/pill-row";
@@ -22,13 +26,25 @@ type Props = {
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
   /** Which sub-ledger the correction applies to. */
-  kind: "receivable" | "payable";
+  kind: "receivable" | "payable" | "expense";
   recordId: string;
-  /** Invoice or bill number, shown so it is obvious what is being moved. */
+  /** Invoice, bill or expense number, shown so it is obvious what is being moved. */
   reference: string;
   /** Current store, or null when untagged. */
   currentStoreId: string | null;
 };
+
+const KIND_LABELS = {
+  receivable: "Move Receivable",
+  payable: "Move Payable",
+  expense: "Move Expense",
+} as const;
+
+const KIND_QUERY_KEYS = {
+  receivable: "receivables",
+  payable: "payables",
+  expense: "expenses",
+} as const;
 
 const isPinRequiredError = (message: string) =>
   message.includes("supervisor_pin_required") ||
@@ -67,18 +83,25 @@ const MoveToStoreSheet = ({
   const move = useMutation({
     mutationFn: async () => {
       if (targetStoreId === undefined) return;
-      return kind === "receivable"
-        ? await moveReceivableToStore(recordId, targetStoreId, pin || undefined)
-        : await movePayableToStore(recordId, targetStoreId, pin || undefined);
+      if (kind === "receivable") {
+        return await moveReceivableToStore(recordId, targetStoreId, pin || undefined);
+      }
+      if (kind === "payable") {
+        return await movePayableToStore(recordId, targetStoreId, pin || undefined);
+      }
+      return await moveExpenseToStore(recordId, targetStoreId, pin || undefined);
     },
     onSuccess: () => {
       const name =
         targetStoreId === null
           ? "All Stores"
           : (stores.find((s) => s.id === targetStoreId)?.name ?? "that store");
-      toast.success("Store updated", `${reference} now shows under ${name}.`);
+      toast.success(
+        "Store updated",
+        `${reference} now shows under ${name}.`,
+      );
       void queryClient.invalidateQueries({
-        queryKey: [kind === "receivable" ? "receivables" : "payables"],
+        queryKey: [KIND_QUERY_KEYS[kind]],
       });
       void queryClient.invalidateQueries({ queryKey: ["financial-dashboard"] });
       setPin("");
@@ -110,7 +133,7 @@ const MoveToStoreSheet = ({
     >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>
-          {kind === "receivable" ? "Move Receivable" : "Move Payable"}
+          {KIND_LABELS[kind]}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {reference} is booked to {currentName}
