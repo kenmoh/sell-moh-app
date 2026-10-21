@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useCallback, useEffect } from "react";
 import { View, Text, Pressable, StyleSheet, useColorScheme } from "react-native";
 import Animated, {
   useSharedValue,
@@ -7,7 +7,6 @@ import Animated, {
   withTiming,
   runOnJS,
 } from "react-native-reanimated";
-import { PanGestureHandler } from "react-native-gesture-handler";
 import { Gesture, GestureDetector } from "react-native-gesture-handler";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { Colors, ColorPalette } from "@/constants/theme";
@@ -75,39 +74,43 @@ const ToastItem = ({
   const bgColor = isDark ? BG_COLORS[type].dark : BG_COLORS[type].light;
   const textColor = TEXT_COLORS[type];
 
+  const dismiss = useCallback(() => {
+    if (isDismissing.value) return;
+    isDismissing.value = true;
+    opacity.value = withTiming(0, { duration: 200 });
+    translateY.value = withTiming(-100, { duration: 250 });
+    scale.value = withTiming(0.95, { duration: 200 });
+    setTimeout(() => onDismiss(id), 250);
+  }, [id, onDismiss]);
+
+  const dismissWorklet = useCallback(() => {
+    "worklet";
+    runOnJS(dismiss)();
+  }, [dismiss]);
+
   useEffect(() => {
     translateY.value = withSpring(0, { damping: 20, stiffness: 200 });
     opacity.value = withSpring(1, { damping: 20, stiffness: 200 });
     scale.value = withSpring(1, { damping: 20, stiffness: 200 });
   }, []);
 
-  if (timeout && timeout > 0) {
-    useEffect(() => {
-      const timer = setTimeout(() => {
-        dismiss();
-      }, timeout);
-      return () => clearTimeout(timer);
-    }, [timeout]);
-  }
-
-  const dismiss = () => {
-    if (isDismissing.value) return;
-    isDismissing.value = true;
-    opacity.value = withTiming(0, { duration: 200 });
-    translateY.value = withTiming(-100, { duration: 250 });
-    scale.value = withTiming(0.95, { duration: 200 });
-    setTimeout(() => runOnJS(onDismiss)(id), 250);
-  };
+  useEffect(() => {
+    if (!timeout || timeout <= 0) return;
+    const timer = setTimeout(() => dismiss(), timeout);
+    return () => clearTimeout(timer);
+  }, [timeout, dismiss]);
 
   const panGesture = Gesture.Pan()
     .onUpdate((e) => {
+      "worklet";
       if (e.translationX > 0) {
         swipeX.value = e.translationX;
       }
     })
     .onEnd((e) => {
+      "worklet";
       if (e.translationX > 80 || e.velocityX > 500) {
-        dismiss();
+        dismissWorklet();
       } else {
         swipeX.value = withSpring(0, { damping: 20, stiffness: 200 });
       }

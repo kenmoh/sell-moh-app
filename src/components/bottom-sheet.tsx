@@ -27,10 +27,12 @@ export default function AppBottomSheet({
   children,
   visible,
   onVisibleChange,
+  index = 0,
   snapPoints = ["80%", "95%"],
   enableDynamicSizing = true,
 }: {
   children: React.ReactNode;
+  index?: number;
   visible?: boolean;
   onVisibleChange?: (visible: boolean) => void;
   snapPoints?: (string | number)[];
@@ -56,7 +58,7 @@ export default function AppBottomSheet({
   return (
     <BottomSheet
       ref={internalRef}
-      index={visible ? 0 : -1}
+      index={visible ? index : -1}
       snapPoints={snapPointsInPixels}
       enableDynamicSizing={enableDynamicSizing}
       enablePanDownToClose
