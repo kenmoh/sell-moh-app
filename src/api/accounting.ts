@@ -15,8 +15,12 @@ import {
     PaymentRecord,
     ProfitAndLossResponse,
     ReceivableResponse,
-    TaxesCollectedResponse,
     RecordPaymentRequest,
+    TaxOwedLine,
+    TaxRemitRequest,
+    TaxRemitResponse,
+    TaxRemittanceItem,
+    TaxesCollectedResponse,
     ToggleAccountStatusRequest,
     TrialBalanceItem,
     UpdateAccountRequest,
@@ -329,6 +333,64 @@ export const fetchTaxesCollected = async ({
   if (storeId) params.append("store_id", storeId);
   const res = await apiClient.get<{ data: TaxesCollectedResponse }>(
     `${URL}/taxes-collected?${params.toString()}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
+// ── Tax Remittance ────────────────────────────────────────────────────────
+
+export const fetchTaxesOwed = async (): Promise<TaxOwedLine[]> => {
+  const res = await apiClient.get<{ data: TaxOwedLine[] }>(
+    `${URL}/taxes-owed`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? [];
+};
+
+export const fetchRemittanceHistory = async ({
+  page = 1,
+  pageSize = 20,
+}: {
+  page?: number;
+  pageSize?: number;
+}): Promise<AccountingPage<TaxRemittanceItem>> => {
+  const params = new URLSearchParams();
+  params.append("page", String(page));
+  params.append("page_size", String(pageSize));
+  const res = await apiClient.get<{
+    data: TaxRemittanceItem[];
+    total: number;
+    page: number;
+    page_size: number;
+  }>(`${URL}/taxes-remit?${params.toString()}`);
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return {
+    items: res.data?.data ?? [],
+    total: res.data?.total ?? 0,
+    page: res.data?.page ?? page,
+    page_size: res.data?.page_size ?? pageSize,
+  };
+};
+
+export const remitTax = async (
+  payload: TaxRemitRequest,
+): Promise<TaxRemitResponse> => {
+  const res = await apiClient.post<{ data: TaxRemitResponse }>(
+    `${URL}/taxes-remit`,
+    payload,
   );
 
   if (!res.ok) {

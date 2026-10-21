@@ -157,6 +157,46 @@ export interface TaxesCollectedResponse {
   has_more: boolean;
 }
 
+// ── Tax Remittance ─────────────────────────────────────────────────────────
+
+export interface TaxOwedLine {
+  account_code: string;
+  account_name: string;
+  collected: number;
+  remitted: number;
+  still_owed: number;
+  tax_names: string[];
+}
+
+export interface TaxRemittanceItem {
+  journal_id: string;
+  journal_number: string;
+  description: string;
+  payment_date: string;
+  account_code: string;
+  account_name: string;
+  amount: number;
+  notes?: string | null;
+  store_id?: string | null;
+}
+
+export interface TaxRemitRequest {
+  account_code: string;
+  amount: number;
+  payment_date: string;
+  method: "cash" | "bank";
+  store_id?: string | null;
+  notes?: string;
+}
+
+export interface TaxRemitResponse {
+  account_code: string;
+  account_name: string;
+  amount: number;
+  still_owed: number;
+  journal_number: string;
+}
+
 // ── Accounts Receivable ────────────────────────────────────────────────────
 
 export interface CreateReceivableRequest {

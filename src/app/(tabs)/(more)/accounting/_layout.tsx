@@ -36,6 +36,10 @@ const AccountingLayout = () => {
         <Stack.Screen name="cash-flow" options={{ title: "Cash Flow" }} />
         <Stack.Screen name="taxes" options={{ title: "Taxes" }} />
         <Stack.Screen
+          name="taxes-remit"
+          options={{ title: "Remittance History" }}
+        />
+        <Stack.Screen
           name="compare"
           options={{ title: "Compare Stores" }}
         />

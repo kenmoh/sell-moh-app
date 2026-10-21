@@ -1,11 +1,29 @@
-import { fetchTaxesCollected } from "@/api/accounting";
+import {
+  fetchTaxesCollected,
+  fetchTaxesOwed,
+  remitTax,
+} from "@/api/accounting";
+import RemitTaxSheet from "@/components/accounting/remit-tax-sheet";
 import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useActiveStore } from "@/lib/store-context";
-import type { TaxCollectedItem, TaxCollectedLine } from "@/types/accounting";
+import type {
+  TaxCollectedItem,
+  TaxCollectedLine,
+  TaxRemitRequest,
+} from "@/types/accounting";
+import Add from "@expo/material-symbols/add.xml";
+import History from "@expo/material-symbols/history.xml";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
+import { Stack, useRouter } from "expo-router";
 import { Fragment, useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -25,6 +43,9 @@ const TaxesScreen = () => {
   const colors = Colors[isDark ? "dark" : "light"];
 
   const { activeStoreId } = useActiveStore();
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  const [showRemitSheet, setShowRemitSheet] = useState(false);
 
   const [fromDate, setFromDate] = useState(() => {
     const d = new Date();
@@ -66,6 +87,46 @@ const TaxesScreen = () => {
       }),
     getNextPageParam: (lastPage) =>
       lastPage.has_more ? lastPage.page + 1 : undefined,
+  });
+
+  const {
+    data: owedLines = [],
+    isError: isOwedError,
+    error: owedError,
+  } = useQuery({
+    queryKey: ["taxes-owed"],
+    queryFn: fetchTaxesOwed,
+  });
+
+  useApiErrorToast({
+    isError: isOwedError,
+    error: owedError,
+    title: "Couldn't load tax balances",
+  });
+
+  const {
+    mutate: submitRemittance,
+    isPending: isRemitting,
+    isError: isRemitError,
+    error: remitError,
+  } = useMutation({
+    mutationFn: (payload: TaxRemitRequest) => remitTax(payload),
+    onSuccess: async () => {
+      setShowRemitSheet(false);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["taxes-owed"] }),
+        queryClient.invalidateQueries({ queryKey: ["taxes-collected"] }),
+        queryClient.invalidateQueries({ queryKey: ["journals"] }),
+        queryClient.invalidateQueries({ queryKey: ["financial-dashboard"] }),
+        queryClient.invalidateQueries({ queryKey: ["balance-sheet"] }),
+      ]);
+    },
+  });
+
+  useApiErrorToast({
+    isError: isRemitError,
+    error: remitError,
+    title: "Remittance failed",
   });
 
   const summary = data?.pages[0];
@@ -267,6 +328,16 @@ const TaxesScreen = () => {
       style={[styles.container, { backgroundColor: colors.background }]}
       // edges={["top", "left", "right"]}
     >
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "clock.arrow.circlepath" : History}
+          onPress={() => router.push("/(tabs)/(more)/accounting/taxes-remit")}
+        />
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "plus" : Add}
+          onPress={() => setShowRemitSheet(true)}
+        />
+      </Stack.Toolbar>
       {isLoading ? (
         <View style={styles.loadingContainer}>
           <ActivityIndicator color={colors.buttonPrimary} size="large" />
@@ -314,6 +385,14 @@ const TaxesScreen = () => {
           renderItem={({ item, index }) => renderLine(item, index)}
         />
       )}
+
+      <RemitTaxSheet
+        visible={showRemitSheet}
+        onVisibleChange={setShowRemitSheet}
+        lines={owedLines}
+        isPending={isRemitting}
+        onSubmit={(payload) => submitRemittance(payload)}
+      />
     </View>
   );
 };

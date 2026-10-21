@@ -1,0 +1,355 @@
+import AppBottomSheet from "@/components/bottom-sheet";
+import AppTextInput from "@/components/text-input";
+import { Colors } from "@/constants/theme";
+import type { TaxOwedLine, TaxRemitRequest } from "@/types/accounting";
+import { Lucide } from "@react-native-vector-icons/lucide";
+import { useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  useColorScheme,
+  View,
+} from "react-native";
+
+const METHODS = [
+  { key: "cash", label: "Cash", icon: "banknote", desc: "Paid out of the till" },
+  { key: "bank", label: "Bank", icon: "landmark", desc: "Bank transfer" },
+] as const;
+
+type Props = {
+  visible: boolean;
+  onVisibleChange: (visible: boolean) => void;
+  lines: TaxOwedLine[];
+  isPending?: boolean;
+  onSubmit: (payload: TaxRemitRequest) => void;
+};
+
+const RemitTaxSheet = ({
+  visible,
+  onVisibleChange,
+  lines,
+  isPending,
+  onSubmit,
+}: Props) => {
+  const scheme = useColorScheme();
+  const isDark = scheme === "dark";
+  const colors = Colors[isDark ? "dark" : "light"];
+
+  const [accountCode, setAccountCode] = useState<string | null>(null);
+  const [amount, setAmount] = useState<string | null>(null);
+  const [method, setMethod] = useState<"cash" | "bank">("cash");
+  const [notes, setNotes] = useState("");
+
+  // Nulls fall back to the first account and its still-owed amount, so an
+  // opening sheet is always prefilled without rewriting state in an effect.
+  const selectedCode = accountCode ?? lines[0]?.account_code ?? null;
+  const line = lines.find((l) => l.account_code === selectedCode) ?? null;
+  const amountText = amount ?? (line ? String(line.still_owed) : "");
+  const parsedAmount = parseFloat(amountText) || 0;
+  const overCeiling = line ? parsedAmount - line.still_owed > 0.009 : false;
+
+  const reset = () => {
+    setAccountCode(null);
+    setAmount(null);
+    setMethod("cash");
+    setNotes("");
+  };
+
+  const handleSubmit = () => {
+    if (!line || parsedAmount <= 0 || overCeiling || isPending) return;
+    const paymentDate = new Date().toISOString().split("T")[0];
+    onSubmit({
+      account_code: line.account_code,
+      amount: parsedAmount,
+      payment_date: paymentDate,
+      method,
+      notes: notes.trim() || undefined,
+    });
+  };
+
+  return (
+    <AppBottomSheet
+      visible={visible}
+      onVisibleChange={(v) => {
+        if (!v) reset();
+        onVisibleChange(v);
+      }}
+    >
+      <Text style={[styles.title, { color: colors.text }]}>Remit Tax</Text>
+      <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+        Record tax paid to the authority; the ledger keeps the running balance
+      </Text>
+
+      {/* Account select */}
+      <Text style={[styles.label, { color: colors.textSecondary }]}>
+        Tax account
+      </Text>
+      <View style={styles.accountChips}>
+        {lines.map((l) => {
+          const isSelected = l.account_code === selectedCode;
+          return (
+            <Pressable
+              key={l.account_code}
+              style={[
+                styles.accountChip,
+                {
+                  backgroundColor: isSelected
+                    ? "transparent"
+                    : colors.textInput,
+                  borderColor: isSelected
+                    ? colors.buttonPrimary
+                    : isDark
+                      ? "#282b32"
+                      : "#eef0f4",
+                  borderWidth: isSelected ? 1.5 : 1,
+                },
+              ]}
+              onPress={() => {
+                setAccountCode(l.account_code);
+                setAmount(String(l.still_owed));
+              }}
+            >
+              <Text
+                style={[
+                  styles.accountChipCode,
+                  {
+                    color: isSelected
+                      ? colors.buttonPrimary
+                      : colors.textSecondary,
+                  },
+                ]}
+              >
+                {l.account_code}
+              </Text>
+              <Text
+                style={[
+                  styles.accountChipName,
+                  { color: isSelected ? colors.buttonPrimary : colors.text },
+                ]}
+                numberOfLines={1}
+              >
+                {l.account_name}
+              </Text>
+              <Text style={[styles.accountChipOwed, { color: isSelected ? colors.buttonPrimary : "#10b981" }]}>
+                ₦{l.still_owed.toLocaleString()} owed
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Selected line context */}
+      {line && (
+        <View
+          style={[
+            styles.contextCard,
+            { backgroundColor: colors.textInput, borderColor: isDark ? "#282b32" : "#eef0f4" },
+          ]}
+        >
+          <View style={styles.contextRow}>
+            <Text style={[styles.contextLabel, { color: colors.textSecondary }]}>
+              Collected
+            </Text>
+            <Text style={[styles.contextValue, { color: colors.text }]}>
+              ₦{line.collected.toLocaleString()}
+            </Text>
+          </View>
+          <View style={styles.contextRow}>
+            <Text style={[styles.contextLabel, { color: colors.textSecondary }]}>
+              Already remitted
+            </Text>
+            <Text style={[styles.contextValue, { color: "#0ea5e9" }]}>
+              ₦{line.remitted.toLocaleString()}
+            </Text>
+          </View>
+          <View style={[styles.contextRow, styles.contextLast]}>
+            <Text style={[styles.contextLabel, { color: colors.textSecondary }]}>
+              Still owed
+            </Text>
+            <Text style={[styles.contextValue, { color: "#10b981" }]}>
+              ₦{line.still_owed.toLocaleString()}
+            </Text>
+          </View>
+        </View>
+      )}
+
+      {/* Amount */}
+      <Text style={[styles.label, { color: colors.textSecondary }]}>Amount</Text>
+      <AppTextInput
+        placeholder="0"
+        value={amountText}
+        onChangeText={(v) => setAmount(v.replace(/[^0-9.]/g, ""))}
+        keyboardType="decimal-pad"
+        leftIcon="banknote"
+      />
+      {line && overCeiling && (
+        <Text style={styles.overWarning}>
+          More than the ₦{line.still_owed.toLocaleString()} still owed on this
+          account
+        </Text>
+      )}
+
+      {/* Method */}
+      <Text style={[styles.label, { color: colors.textSecondary }]}>
+        Payment method
+      </Text>
+      <View style={styles.methodRow}>
+        {METHODS.map((m) => {
+          const isSelected = method === m.key;
+          return (
+            <Pressable
+              key={m.key}
+              onPress={() => setMethod(m.key)}
+              style={[
+                styles.methodPill,
+                {
+                  backgroundColor: isSelected
+                    ? "transparent"
+                    : colors.textInput,
+                  borderColor: isSelected
+                    ? colors.buttonPrimary
+                    : isDark
+                      ? "#282b32"
+                      : "#eef0f4",
+                  borderWidth: isSelected ? 1.5 : 1,
+                },
+              ]}
+            >
+              <Lucide
+                name={m.icon}
+                size={16}
+                color={isSelected ? colors.buttonPrimary : colors.textSecondary}
+              />
+              <View style={styles.methodText}>
+                <Text
+                  style={[
+                    styles.methodLabel,
+                    {
+                      color: isSelected
+                        ? colors.buttonPrimary
+                        : colors.text,
+                    },
+                  ]}
+                >
+                  {m.label}
+                </Text>
+                <Text
+                  style={[
+                    styles.methodDesc,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  {m.desc}
+                </Text>
+              </View>
+            </Pressable>
+          );
+        })}
+      </View>
+
+      {/* Notes */}
+      <Text style={[styles.label, { color: colors.textSecondary }]}>
+        Notes (optional)
+      </Text>
+      <AppTextInput
+        placeholder="e.g. VAT transfer FIRS"
+        value={notes}
+        onChangeText={setNotes}
+      />
+
+      {/* Confirm */}
+      <Pressable
+        style={[
+          styles.confirmButton,
+          {
+            backgroundColor: colors.buttonPrimary,
+            opacity:
+              line && parsedAmount > 0 && !overCeiling && !isPending ? 1 : 0.5,
+          },
+        ]}
+        disabled={!line || parsedAmount <= 0 || overCeiling || isPending}
+        onPress={handleSubmit}
+      >
+        {isPending ? (
+          <ActivityIndicator size={18} color="#fff" />
+        ) : (
+          <Lucide name="send" size={18} color="#fff" />
+        )}
+        <Text style={styles.confirmText}>
+          {isPending ? "Posting..." : "Record Remittance"}
+        </Text>
+      </Pressable>
+    </AppBottomSheet>
+  );
+};
+
+export default RemitTaxSheet;
+
+const styles = StyleSheet.create({
+  title: { fontSize: 18, fontWeight: "700" },
+  subtitle: { fontSize: 13, marginBottom: 12 },
+  label: {
+    fontSize: 12,
+    fontWeight: "600",
+    letterSpacing: 0.8,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  accountChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  accountChip: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    gap: 2,
+  },
+  accountChipCode: {
+    fontSize: 11,
+    fontWeight: "700",
+    fontFamily: "monospace",
+  },
+  accountChipName: { fontSize: 12, fontWeight: "600", maxWidth: 140, marginTop: 2 },
+  accountChipOwed: { fontSize: 10, fontWeight: "600", marginTop: 2 },
+  contextCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 12,
+    padding: 12,
+    marginTop: 12,
+  },
+  contextRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 4,
+  },
+  contextLast: { borderBottomWidth: 0 },
+  contextLabel: { fontSize: 12 },
+  contextValue: { fontSize: 13, fontWeight: "700" },
+  overWarning: { color: "#ef4444", fontSize: 12, marginTop: -6, marginBottom: 4 },
+  methodRow: { flexDirection: "row", gap: 8 },
+  methodPill: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  methodText: { flex: 1 },
+  methodLabel: { fontSize: 13, fontWeight: "700" },
+  methodDesc: { fontSize: 11, marginTop: 1 },
+  confirmButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderRadius: 999,
+    paddingVertical: 14,
+    marginTop: 14,
+  },
+  confirmText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+});
