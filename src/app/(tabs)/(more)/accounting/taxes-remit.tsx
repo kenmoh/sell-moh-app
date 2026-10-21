@@ -3,12 +3,14 @@ import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useActiveStore } from "@/lib/store-context";
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { useCallback } from "react";
+import { Fragment, useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -24,6 +26,25 @@ const RemittanceHistoryScreen = () => {
   const colors = Colors[isDark ? "dark" : "light"];
   const { activeStoreId } = useActiveStore();
 
+  const [fromDate, setFromDate] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return d;
+  });
+  const [toDate, setToDate] = useState(new Date());
+  const [showFromPicker, setShowFromPicker] = useState(false);
+  const [showToPicker, setShowToPicker] = useState(false);
+
+  const from = fromDate.toISOString().split("T")[0];
+  const to = toDate.toISOString().split("T")[0];
+
+  const formatDate = (d: Date) =>
+    d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+
   const {
     data,
     isLoading,
@@ -35,13 +56,15 @@ const RemittanceHistoryScreen = () => {
     isError,
     error,
   } = useInfiniteQuery({
-    queryKey: ["remittances", "infinite", activeStoreId],
+    queryKey: ["remittances", "infinite", activeStoreId, from, to],
     initialPageParam: 1,
     queryFn: ({ pageParam }) =>
       fetchRemittanceHistory({
         page: pageParam,
         pageSize: REMIT_PAGE_SIZE,
         storeId: activeStoreId,
+        fromDate: from,
+        toDate: to,
       }),
     getNextPageParam: (lastPage) =>
       lastPage.page * lastPage.page_size < lastPage.total
@@ -90,6 +113,88 @@ const RemittanceHistoryScreen = () => {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.switcherRow}>
         <StoreSwitcher mode="all" />
+      </View>
+      <View style={styles.filtersRow}>
+        <Fragment>
+          <View style={styles.dateCol}>
+            <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>
+              From
+            </Text>
+            <Pressable
+              onPress={() => setShowFromPicker(true)}
+              style={({ pressed }) => [
+                styles.datePill,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: isDark ? "#262930" : "#eef0f4",
+                },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Lucide name="calendar" size={14} color={colors.text} />
+              <Text style={[styles.datePillText, { color: colors.text }]}>
+                {formatDate(fromDate)}
+              </Text>
+              <Lucide
+                name="chevron-down"
+                size={14}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+            {showFromPicker && (
+              <DateTimePicker
+                value={fromDate}
+                mode="date"
+                display="compact"
+                presentation="dialog"
+                onValueChange={(_, d) => {
+                  setShowFromPicker(false);
+                  if (d) setFromDate(d);
+                }}
+                onDismiss={() => setShowFromPicker(false)}
+              />
+            )}
+          </View>
+          <View style={styles.dateCol}>
+            <Text style={[styles.dateLabel, { color: colors.textSecondary }]}>
+              To
+            </Text>
+            <Pressable
+              onPress={() => setShowToPicker(true)}
+              style={({ pressed }) => [
+                styles.datePill,
+                {
+                  backgroundColor: colors.card,
+                  borderColor: isDark ? "#262930" : "#eef0f4",
+                },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Lucide name="calendar" size={14} color={colors.text} />
+              <Text style={[styles.datePillText, { color: colors.text }]}>
+                {formatDate(toDate)}
+              </Text>
+              <Lucide
+                name="chevron-down"
+                size={14}
+                color={colors.textSecondary}
+              />
+            </Pressable>
+            {showToPicker && (
+              <DateTimePicker
+                value={toDate}
+                mode="date"
+                display="compact"
+                presentation="dialog"
+                onValueChange={(_, d) => {
+                  setShowToPicker(false);
+                  if (d) setToDate(d);
+                }}
+                onDismiss={() => setShowToPicker(false)}
+              />
+            )}
+          </View>
+        </Fragment>
       </View>
       {isLoading ? (
         <View style={styles.loadingContainer}>
@@ -152,6 +257,30 @@ export default RemittanceHistoryScreen;
 const styles = StyleSheet.create({
   container: { flex: 1 },
   switcherRow: { paddingHorizontal: 16, marginBottom: 8 },
+  filtersRow: {
+    flexDirection: "row",
+    paddingHorizontal: 16,
+    gap: 10,
+    marginBottom: 12,
+  },
+  dateCol: { flex: 1 },
+  dateLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    marginBottom: 4,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  datePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 100,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 6,
+    borderWidth: 1,
+  },
+  datePillText: { fontSize: 12, fontWeight: "600", flex: 1 },
   loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
   card: {
     borderWidth: 1,

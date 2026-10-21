@@ -365,15 +365,21 @@ export const fetchRemittanceHistory = async ({
   page = 1,
   pageSize = 20,
   storeId,
+  fromDate,
+  toDate,
 }: {
   page?: number;
   pageSize?: number;
   storeId?: string | null;
+  fromDate?: string;
+  toDate?: string;
 }): Promise<AccountingPage<TaxRemittanceItem>> => {
   const params = new URLSearchParams();
   params.append("page", String(page));
   params.append("page_size", String(pageSize));
   if (storeId) params.append("store_id", storeId);
+  if (fromDate) params.append("from_date", fromDate);
+  if (toDate) params.append("to_date", toDate);
   const res = await apiClient.get<{
     data: TaxRemittanceItem[];
     total: number;
