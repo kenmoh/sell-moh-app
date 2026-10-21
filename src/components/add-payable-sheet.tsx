@@ -288,7 +288,7 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
             What the bill is for
           </Text>
           <PillRow inset={12}>
-            {EXPENSE_CATEGORIES.map((c) => (
+            {EXPENSE_CATEGORIES.filter((c) => c.id !== "taxes").map((c) => (
               <Pill
                 key={c.id}
                 label={c.label}
