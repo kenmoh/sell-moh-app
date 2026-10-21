@@ -1,10 +1,10 @@
 import {
   createExpense,
-  fetchExpenses,
   fetchExpenseSummary,
+  fetchExpensesPaged,
   fetchFinancialDashboard,
-  fetchPayables,
-  fetchReceivables,
+  fetchPayablesPaged,
+  fetchReceivablesPaged,
 } from "@/api/accounting";
 import AddExpenseSheet from "@/components/add-expense-sheet";
 import AddPayableSheet from "@/components/add-payable-sheet";
@@ -25,7 +25,7 @@ import type {
 import { getAccountingMenuIcon } from "@/types/accounting-menu-icon";
 import MoreVert from "@expo/material-symbols/more_vert.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack, useRouter } from "expo-router";
 import { memo, useCallback, useMemo, useState } from "react";
@@ -382,6 +382,8 @@ const AccountingLists = memo(function AccountingLists({
   receivables,
   payables,
   expenses,
+  receivableTotal,
+  payableTotal,
   dashboard,
   expenseSummary,
   colors,
@@ -393,11 +395,16 @@ const AccountingLists = memo(function AccountingLists({
   onMoveStore,
   onOpenAdd,
   onTabChange,
+  onLoadMore,
+  isLoadingMore,
+  activeTabHasNextPage,
 }: {
   activeTab: Tab;
   receivables: ReceivableResponse[];
   payables: PayableResponse[];
   expenses: ExpenseResponse[];
+  receivableTotal: number;
+  payableTotal: number;
   dashboard: FinancialDashboardResponse | undefined;
   expenseSummary: Record<string, number>;
   isRefetching: boolean;
@@ -413,6 +420,9 @@ const AccountingLists = memo(function AccountingLists({
   onMoveStore: (target: MoveTarget) => void;
   onOpenAdd: () => void;
   onTabChange: (tab: Tab) => void;
+  onLoadMore: () => void;
+  isLoadingMore: boolean;
+  activeTabHasNextPage: boolean;
 } & RowThemeProps) {
   const currentList = useMemo(() => {
     switch (activeTab) {
@@ -623,9 +633,9 @@ const AccountingLists = memo(function AccountingLists({
               onPress={() => onTabChange(tab.key)}
               badge={
                 tab.key === "receivables"
-                  ? receivables.length
+                  ? receivableTotal
                   : tab.key === "payables"
-                    ? payables.length
+                    ? payableTotal
                     : undefined
               }
             />
@@ -714,8 +724,8 @@ const AccountingLists = memo(function AccountingLists({
       isDark,
       dashboard,
       activeTab,
-      receivables,
-      payables,
+      receivableTotal,
+      payableTotal,
       topExpenseCategories,
       totalExpenseSummary,
       onOpenAdd,
@@ -734,8 +744,18 @@ const AccountingLists = memo(function AccountingLists({
         maxToRenderPerBatch={8}
         windowSize={9}
         removeClippedSubviews={Platform.OS === "android"}
+        onEndReached={onLoadMore}
+        onEndReachedThreshold={0.5}
         ListHeaderComponent={listHeader}
         renderItem={renderItem}
+        ListFooterComponent={
+          isLoadingMore ? (
+            <ActivityIndicator
+              color={colors.buttonPrimary}
+              style={{ paddingVertical: 20 }}
+            />
+          ) : undefined
+        }
         refreshControl={
           <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
         }
@@ -809,35 +829,70 @@ const AccountingScreen = () => {
 
   useApiErrorToast({ isError, error, title: "Couldn't load accounting" });
 
-  const {
-    data: receivables = [],
-    isLoading: isLoadingAR,
-    isRefetching: isRefetchingAR,
-    refetch: refetchAR,
-  } = useQuery({
-    queryKey: ["receivables", activeStoreId],
-    queryFn: () => fetchReceivables(undefined, activeStoreId),
+  const AR_PAGE_SIZE = 20;
+  const AP_PAGE_SIZE = 20;
+  const EXPENSE_PAGE_SIZE = 20;
+
+  const receivablesQuery = useInfiniteQuery({
+    queryKey: ["receivables", "infinite", activeStoreId],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      fetchReceivablesPaged({
+        page: pageParam,
+        page_size: AR_PAGE_SIZE,
+        store_id: activeStoreId ?? undefined,
+      }),
+    getNextPageParam: (lastPage) =>
+      lastPage.page * lastPage.page_size < lastPage.total
+        ? lastPage.page + 1
+        : undefined,
   });
 
-  const {
-    data: payables = [],
-    isLoading: isLoadingAP,
-    isRefetching: isRefetchingAP,
-    refetch: refetchAP,
-  } = useQuery({
-    queryKey: ["payables", activeStoreId],
-    queryFn: () => fetchPayables(undefined, activeStoreId),
+  const payablesQuery = useInfiniteQuery({
+    queryKey: ["payables", "infinite", activeStoreId],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      fetchPayablesPaged({
+        page: pageParam,
+        page_size: AP_PAGE_SIZE,
+        store_id: activeStoreId ?? undefined,
+      }),
+    getNextPageParam: (lastPage) =>
+      lastPage.page * lastPage.page_size < lastPage.total
+        ? lastPage.page + 1
+        : undefined,
   });
 
-  const {
-    data: expenses = [],
-    isLoading: isLoadingExpenses,
-    isRefetching: isRefetchingExpenses,
-    refetch: refetchExpenses,
-  } = useQuery({
-    queryKey: ["expenses", activeStoreId],
-    queryFn: () => fetchExpenses({ store_id: activeStoreId ?? undefined }),
+  const expensesQuery = useInfiniteQuery({
+    queryKey: ["expenses", "infinite", activeStoreId],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      fetchExpensesPaged({
+        page: pageParam,
+        page_size: EXPENSE_PAGE_SIZE,
+        store_id: activeStoreId ?? undefined,
+      }),
+    getNextPageParam: (lastPage) =>
+      lastPage.page * lastPage.page_size < lastPage.total
+        ? lastPage.page + 1
+        : undefined,
   });
+
+  const receivables = useMemo(
+    () => receivablesQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [receivablesQuery.data],
+  );
+  const payables = useMemo(
+    () => payablesQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [payablesQuery.data],
+  );
+  const expenses = useMemo(
+    () => expensesQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [expensesQuery.data],
+  );
+
+  const receivableTotal = receivablesQuery.data?.pages[0]?.total ?? 0;
+  const payableTotal = payablesQuery.data?.pages[0]?.total ?? 0;
 
   const { data: expenseSummary = {} } = useQuery({
     queryKey: ["expense-summary", activeStoreId],
@@ -846,8 +901,35 @@ const AccountingScreen = () => {
   });
 
   const isLoading =
-    isLoadingDashboard || isLoadingAR || isLoadingAP || isLoadingExpenses;
-  const isRefetching = isRefetchingAR || isRefetchingAP || isRefetchingExpenses;
+    isLoadingDashboard ||
+    receivablesQuery.isLoading ||
+    payablesQuery.isLoading ||
+    expensesQuery.isLoading;
+  const isRefetching =
+    receivablesQuery.isRefetching ||
+    payablesQuery.isRefetching ||
+    expensesQuery.isRefetching;
+  const isLoadingMore =
+    receivablesQuery.isFetchingNextPage ||
+    payablesQuery.isFetchingNextPage ||
+    expensesQuery.isFetchingNextPage;
+  const { fetchNextPage: fetchNextAR } = receivablesQuery;
+  const { fetchNextPage: fetchNextAP } = payablesQuery;
+  const { fetchNextPage: fetchNextExpenses } = expensesQuery;
+  const activeTabHasNextPage =
+    activeTab === "receivables"
+      ? receivablesQuery.hasNextPage
+      : activeTab === "payables"
+        ? payablesQuery.hasNextPage
+        : expensesQuery.hasNextPage;
+
+  const handleLoadMore = useCallback(() => {
+    if (activeTabHasNextPage) {
+      if (activeTab === "receivables") fetchNextAR();
+      else if (activeTab === "payables") fetchNextAP();
+      else fetchNextExpenses();
+    }
+  }, [activeTab, activeTabHasNextPage, fetchNextAR, fetchNextAP, fetchNextExpenses]);
 
   const { mutate: addExpense, isPending: isAddingExpense } = useMutation({
     mutationFn: (data: { category: string; amount: string; note: string }) =>
@@ -867,10 +949,10 @@ const AccountingScreen = () => {
   });
 
   const handleRefresh = useCallback(() => {
-    refetchAR();
-    refetchAP();
-    refetchExpenses();
-  }, [refetchAR, refetchAP, refetchExpenses]);
+    receivablesQuery.refetch();
+    payablesQuery.refetch();
+    expensesQuery.refetch();
+  }, [receivablesQuery, payablesQuery, expensesQuery]);
 
   const handleRecordPayment = useCallback(
     (
@@ -985,6 +1067,8 @@ const AccountingScreen = () => {
         receivables={receivables}
         payables={payables}
         expenses={expenses}
+        receivableTotal={receivableTotal}
+        payableTotal={payableTotal}
         dashboard={dashboard}
         expenseSummary={expenseSummary}
         colors={colors}
@@ -996,6 +1080,9 @@ const AccountingScreen = () => {
         onMoveStore={setMoveTarget}
         onOpenAdd={onOpenAdd}
         onTabChange={setActiveTab}
+        onLoadMore={handleLoadMore}
+        isLoadingMore={isLoadingMore}
+        activeTabHasNextPage={activeTabHasNextPage}
       />
 
       <AddReceivableSheet

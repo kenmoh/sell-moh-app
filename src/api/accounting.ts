@@ -57,6 +57,57 @@ const logAccountingListSample = <T>(
   );
 };
 
+export type AccountingPage<T> = {
+  items: T[];
+  total: number;
+  page: number;
+  page_size: number;
+};
+
+type AccountingPageParams = {
+  page: number;
+  page_size: number;
+  store_id?: string;
+};
+
+/**
+ * Paginated variants used by the accounting hub so its lists can grow with
+ * infinite scroll instead of loading the whole ledger up front.
+ */
+const fetchAccountingPage = async <T>(
+  path: "receivable" | "payable" | "expenses",
+  params: AccountingPageParams,
+): Promise<AccountingPage<T>> => {
+  const query = new URLSearchParams();
+  query.append("page", String(params.page));
+  query.append("page_size", String(params.page_size));
+  if (params.store_id) query.append("store_id", params.store_id);
+  const qs = query.toString();
+  const res = await apiClient.get<AccountingListEnvelope<T>>(
+    `${URL}/${path}${qs ? `?${qs}` : ""}`,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return {
+    items: res.data?.data ?? [],
+    total: res.data?.total ?? 0,
+    page: res.data?.page ?? params.page,
+    page_size: res.data?.page_size ?? params.page_size,
+  };
+};
+
+export const fetchReceivablesPaged = (params: AccountingPageParams) =>
+  fetchAccountingPage<ReceivableResponse>("receivable", params);
+
+export const fetchPayablesPaged = (params: AccountingPageParams) =>
+  fetchAccountingPage<PayableResponse>("payable", params);
+
+export const fetchExpensesPaged = (params: AccountingPageParams) =>
+  fetchAccountingPage<ExpenseResponse>("expenses", params);
+
 // ── Chart of Accounts ──────────────────────────────────────────────────────
 
 export const fetchAccounts = async (): Promise<AccountResponse[]> => {
