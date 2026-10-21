@@ -4,6 +4,7 @@ import Pill from "@/components/pill";
 import PillRow from "@/components/pill-row";
 import SearchInput from "@/components/search-input";
 import { Colors } from "@/constants/theme";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useSession } from "@/lib/ctx";
 import { useActiveStore } from "@/lib/store-context";
 import {
@@ -12,8 +13,11 @@ import {
   DocumentType,
 } from "@/types/document-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useApiErrorToast } from "@/hooks/use-api-error-toast";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -35,6 +39,7 @@ const DOC_TYPES: { label: string; value: DocumentType | "all" }[] = [
   { label: "Receipt", value: "receipt" },
   { label: "Purchase Order", value: "purchase_order" },
 ];
+const DOCUMENTS_PAGE_SIZE = 20;
 
 const statusConfig: Record<string, { color: string; bg: string }> = {
   draft: { color: "#6B7280", bg: "rgba(107, 114, 128, 0.12)" },
@@ -80,24 +85,40 @@ const DocumentListScreen = () => {
   const { activeStoreId } = useActiveStore();
 
   const {
-    data: documentsResponse,
+    data: documentPages,
     isPending,
     isRefetching,
     refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
     isError,
     error,
-  } = useQuery({
-    queryKey: ["documents"],
-    queryFn: () => getDocuments(),
+  } = useInfiniteQuery({
+    queryKey: ["documents", "list", activeType],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
+      getDocuments({
+        doc_type: activeType === "all" ? undefined : activeType,
+        page: pageParam,
+        page_size: DOCUMENTS_PAGE_SIZE,
+      }),
+    getNextPageParam: (lastPage, _pages, lastPageParam) => {
+      const page = lastPage.page ?? lastPageParam;
+      const pageSize = lastPage.page_size ?? DOCUMENTS_PAGE_SIZE;
+      if (lastPage.total !== undefined) {
+        return page * pageSize < lastPage.total ? page + 1 : undefined;
+      }
+      return lastPage.data.length === pageSize ? page + 1 : undefined;
+    },
   });
 
   useApiErrorToast({ isError, error, title: "Couldn't load documents" });
 
-  const documents: Document[] = useMemo(() => {
-    const raw = documentsResponse?.data;
-    if (Array.isArray(raw)) return raw as Document[];
-    return [];
-  }, [documentsResponse]);
+  const documents: Document[] = useMemo(
+    () => documentPages?.pages.flatMap((page) => page.data) ?? [],
+    [documentPages],
+  );
 
   const createMutation = useMutation({
     mutationFn: (payload: DocumentCreateRequest) => createDocument(payload),
@@ -160,7 +181,7 @@ const DocumentListScreen = () => {
         placeholder="Search documents..."
       />
 
-      <PillRow inset={16}>
+      <PillRow inset={15}>
         {DOC_TYPES.map((item) => (
           <Pill
             key={item.value}
@@ -220,7 +241,6 @@ const DocumentListScreen = () => {
             {formatCurrency(item.total)}
           </Text>
         </View>
-
         <View style={styles.cardBottom}>
           <View style={styles.cardMeta}>
             <Lucide name="layers" size={12} color={colors.textSecondary} />
@@ -243,13 +263,7 @@ const DocumentListScreen = () => {
   };
 
   return (
-    <View
-      style={{
-        flex: 1,
-        paddingHorizontal: 15,
-        backgroundColor: colors.background,
-      }}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <FlatList
         data={filtered}
         keyExtractor={(item) => item.id}
@@ -262,11 +276,19 @@ const DocumentListScreen = () => {
         }
         stickyHeaderIndices={[0]}
         showsVerticalScrollIndicator={false}
+        onEndReached={() => {
+          if (hasNextPage && !isFetchingNextPage) {
+            void fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5}
         refreshing={isRefetching}
-        onRefresh={() => { refetch(); }}
+        onRefresh={() => {
+          refetch();
+        }}
         contentContainerStyle={[
+          { paddingBottom: 20, paddingHorizontal: 14 },
           styles.list,
-          // { paddingBottom: insets.bottom + 20 },
         ]}
         ListEmptyComponent={
           isPending ? (
@@ -288,8 +310,30 @@ const DocumentListScreen = () => {
               >
                 Try adjusting your filters or create a new document.
               </Text>
+              {hasNextPage && (
+                <Pressable
+                  style={[
+                    styles.loadMoreBtn,
+                    { backgroundColor: colors.buttonPrimary },
+                  ]}
+                  onPress={() => void fetchNextPage()}
+                  disabled={isFetchingNextPage}
+                >
+                  <Text style={styles.loadMoreBtnText}>
+                    Load more documents
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )
+        }
+        ListFooterComponent={
+          isFetchingNextPage ? (
+            <ActivityIndicator
+              color={colors.buttonPrimary}
+              style={{ paddingVertical: 20 }}
+            />
+          ) : undefined
         }
       />
 
@@ -415,4 +459,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
   },
+  loadMoreBtn: {
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    marginTop: 8,
+  },
+  loadMoreBtnText: { color: "#ffffff", fontSize: 13, fontWeight: "600" },
 });

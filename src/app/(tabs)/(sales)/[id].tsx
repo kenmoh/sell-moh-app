@@ -6,14 +6,14 @@ import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
-  View,
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    useColorScheme,
+    View,
 } from "react-native";
 
 type OrderStatus = "Completed" | "Pending" | "Voided" | "Returned";
@@ -136,8 +136,7 @@ const OrderDetails = () => {
       toast.success("Sale voided — stock restored, cash adjusted");
       if (sale) openVoidReceipt(sale);
     },
-    onError: (e: any) =>
-      toast.error(e?.message || "Could not void this sale"),
+    onError: (e: any) => toast.error(e?.message || "Could not void this sale"),
   });
 
   const confirmVoid = (reason: string) => {
@@ -237,6 +236,11 @@ const OrderDetails = () => {
   const status = statusConfig[statusMap[sale.status] ?? "Pending"];
   const paymentMethod = getPaymentMethod(sale.payment_methods);
   const change = Math.max(0, sale.amount_paid - sale.total);
+  const canVoid =
+    sale.status !== "completed" &&
+    sale.status !== "voided" &&
+    sale.status !== "returned";
+  const canReturn = sale.status === "partial";
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -507,52 +511,54 @@ const OrderDetails = () => {
           )}
         </View>
 
-        {sale.status !== "voided" && sale.status !== "returned" && (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleVoidPress}
-            disabled={voidMutation.isPending}
-            style={[
-              styles.voidBtn,
-              {
-                borderColor: "#ef4444",
-                backgroundColor: isDark
-                  ? "rgba(239, 68, 68, 0.10)"
-                  : "rgba(239, 68, 68, 0.06)",
-              },
-            ]}
-          >
-            <Lucide
-              name="x-octagon"
-              size={18}
-              color="#ef4444"
-            />
-            <Text style={styles.voidBtnText}>
-              {voidMutation.isPending ? "Voiding…" : "Void Sale"}
-            </Text>
-          </TouchableOpacity>
-        )}
+        {(canVoid || canReturn) && (
+          <View style={styles.saleActions}>
+            {canVoid && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleVoidPress}
+                disabled={voidMutation.isPending}
+                style={[
+                  styles.voidBtn,
+                  styles.saleAction,
+                  {
+                    borderColor: "#ef4444",
+                    backgroundColor: isDark
+                      ? "rgba(239, 68, 68, 0.10)"
+                      : "rgba(239, 68, 68, 0.06)",
+                  },
+                ]}
+              >
+                <Lucide name="x-octagon" size={18} color="#ef4444" />
+                <Text style={styles.voidBtnText}>
+                  {voidMutation.isPending ? "Voiding…" : "Void Sale"}
+                </Text>
+              </TouchableOpacity>
+            )}
 
-        {(sale.status === "completed" || sale.status === "partial") && (
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleReturnPress}
-            disabled={returnMutation.isPending}
-            style={[
-              styles.voidBtn,
-              {
-                borderColor: "#f97316",
-                backgroundColor: isDark
-                  ? "rgba(249, 115, 22, 0.10)"
-                  : "rgba(249, 115, 22, 0.06)",
-              },
-            ]}
-          >
-            <Lucide name="undo-2" size={18} color="#f97316" />
-            <Text style={[styles.voidBtnText, { color: "#f97316" }]}>
-              {returnMutation.isPending ? "Returning…" : "Return Sale"}
-            </Text>
-          </TouchableOpacity>
+            {canReturn && (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={handleReturnPress}
+                disabled={returnMutation.isPending}
+                style={[
+                  styles.voidBtn,
+                  styles.saleAction,
+                  {
+                    borderColor: "#f97316",
+                    backgroundColor: isDark
+                      ? "rgba(249, 115, 22, 0.10)"
+                      : "rgba(249, 115, 22, 0.06)",
+                  },
+                ]}
+              >
+                <Lucide name="undo-2" size={18} color="#f97316" />
+                <Text style={[styles.voidBtnText, { color: "#f97316" }]}>
+                  {returnMutation.isPending ? "Returning…" : "Return Sale"}
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
         )}
 
         <View style={{ height: 80 }} />
@@ -790,9 +796,18 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     gap: 8,
     borderWidth: 1.5,
-    borderRadius: 12,
+    borderRadius: 999,
     paddingVertical: 14,
+    paddingHorizontal: 10,
+  },
+  saleActions: {
+    flexDirection: "row",
+    gap: 10,
     marginTop: 16,
+  },
+  saleAction: {
+    flex: 1,
+    minHeight: 52,
   },
   voidBtnText: {
     color: "#ef4444",

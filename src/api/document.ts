@@ -2,6 +2,7 @@ import { DataMessageResponse } from "@/types/auth";
 import {
   DocumentCreateRequest,
   DocumentListFilters,
+  DocumentListResponse,
   DocumentResponse,
 } from "@/types/document-types";
 import * as FileSystem from "expo-file-system/legacy";
@@ -34,13 +35,13 @@ export const getDocuments = async (filters: DocumentListFilters = {}) => {
   if (filters.page_size) params.append("page_size", String(filters.page_size));
   const qs = params.toString();
 
-  const res = await apiClient.get<DocumentResponse>(
+  const res = await apiClient.get<DocumentListResponse>(
     `${DOCUMENT_URL}${qs ? `?${qs}` : ""}`,
   );
   if (!res.ok) {
     throw new Error(getErrorMessage(res));
   }
-  return res.data;
+  return res.data!;
 };
 
 export const getDocumentById = async (id: string) => {

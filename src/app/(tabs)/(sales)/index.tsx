@@ -6,7 +6,7 @@ import StoreSwitcher from "@/components/store-switcher";
 import { ColorPalette, Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -23,6 +23,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 
 type FilterStatus = "All" | "Completed" | "Pending" | "Voided";
 const filterOptions: FilterStatus[] = ["All", "Completed", "Pending", "Voided"];
+const SALES_PAGE_SIZE = 20;
 
 function formatDate(iso: string | null): string {
   if (!iso) return "";
@@ -79,7 +80,6 @@ const SalesScreen = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
-  const queryClient = useQueryClient();
 
   const [activeFilter, setActiveFilter] = useState<FilterStatus>("All");
   const [search, setSearch] = useState("");
@@ -89,18 +89,32 @@ const SalesScreen = () => {
   const apiStatus =
     activeFilter === "All" ? undefined : activeFilter.toLowerCase();
 
-  const { data, isLoading, isRefetching, refetch } = useQuery({
-    queryKey: ["sales", apiStatus, activeStoreId],
-    queryFn: () =>
+  const {
+    data,
+    isLoading,
+    isRefetching,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["sales", "infinite", apiStatus, activeStoreId],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) =>
       fetchSales({
         status: apiStatus,
-        page_size: 100,
+        page: pageParam,
+        page_size: SALES_PAGE_SIZE,
         store_id: activeStoreId ?? undefined,
       }),
+    getNextPageParam: (lastPage) =>
+      lastPage.page * lastPage.page_size < lastPage.total
+        ? lastPage.page + 1
+        : undefined,
   });
 
   const orders = useMemo(() => {
-    const items = data?.items ?? [];
+    const items = data?.pages.flatMap((page) => page.items) ?? [];
     return items.map((s) => ({
       id: s.id,
       orderNumber: s.sale_number,
@@ -182,6 +196,12 @@ const SalesScreen = () => {
           }
           showsVerticalScrollIndicator={false}
           stickyHeaderIndices={[1]}
+          onEndReached={() => {
+            if (hasNextPage && !isFetchingNextPage) {
+              void fetchNextPage();
+            }
+          }}
+          onEndReachedThreshold={0.5}
           refreshing={isRefetching}
           onRefresh={() => { refetch(); }}
           ListHeaderComponent={
@@ -434,6 +454,14 @@ const SalesScreen = () => {
                 </Pressable>
               )}
             </View>
+          }
+          ListFooterComponent={
+            isFetchingNextPage ? (
+              <ActivityIndicator
+                color={colors.buttonPrimary}
+                style={{ paddingVertical: 20 }}
+              />
+            ) : undefined
           }
           contentContainerStyle={{ paddingBottom: 24 }}
         />

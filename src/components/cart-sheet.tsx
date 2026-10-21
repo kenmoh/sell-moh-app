@@ -1,16 +1,17 @@
+import { clearCartItems, createCart, getCart, voidCartItem } from "@/api/cart";
 import { validateCoupon } from "@/api/discount";
-import { voidCartItem, getCart, clearCartItems, createCart } from "@/api/cart";
 import {
-  initiatePayment,
   confirmPayment,
+  initiatePayment,
   recordSplitPayment,
 } from "@/api/payments";
-import { computeCartTax, CartTaxLine } from "@/lib/cart-tax";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
+import { CartTaxLine, computeCartTax } from "@/lib/cart-tax";
 import { useSession } from "@/lib/ctx";
 import Lucide from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useRouter } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -24,11 +25,10 @@ import {
   View,
 } from "react-native";
 import Animated, { FadeIn, FadeOut, Layout } from "react-native-reanimated";
-import { useRouter } from "expo-router";
 import AppBottomSheet from "./bottom-sheet";
 
-import type { ReceiptData } from "@/types/payments";
 import { buildReceiptHtml } from "@/lib/receipt-html";
+import type { ReceiptData } from "@/types/payments";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 
@@ -390,7 +390,8 @@ export const CartItemRow = ({
               styles.stepperBtn,
               {
                 backgroundColor: colors.backgroundElement,
-                opacity: item.quantity >= (item.product.in_stock ?? 0) ? 0.4 : 1,
+                opacity:
+                  item.quantity >= (item.product.in_stock ?? 0) ? 0.4 : 1,
               },
             ]}
           >
@@ -996,7 +997,8 @@ export const CartCheckoutButton = ({
         style={[
           styles.primaryButton,
           {
-            backgroundColor: isPaidValid && !isCheckingOut ? "#2f7df6" : "#2f7df670",
+            backgroundColor:
+              isPaidValid && !isCheckingOut ? "#2f7df6" : "#2f7df670",
           },
         ]}
       >
@@ -1198,29 +1200,33 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   // Sync API cart items (with itemId) into Zustand when sheet opens
   useEffect(() => {
     if (!visible || !activeCart || activeCartId.startsWith("cart-")) return;
-    getCart(activeCartId).then((apiCart) => {
-      const state = useCartStore.getState();
-      const cart = state.carts.find((c) => c.id === activeCartId);
-      if (!cart) return;
-      const merged = apiCart.items.map((apiItem) => {
-        const local = cart.items.find((i) => i.product.id === apiItem.product_id);
-        return {
-          product: local?.product ?? {
-            id: apiItem.product_id,
-            name: apiItem.name,
-            price: apiItem.unit_price,
-            in_stock: 0,
-          },
-          quantity: apiItem.qty,
-          itemId: apiItem.id,
-        };
-      });
-      useCartStore.setState((s) => ({
-        carts: s.carts.map((c) =>
-          c.id === activeCartId ? { ...c, items: merged } : c,
-        ),
-      }));
-    }).catch(() => {});
+    getCart(activeCartId)
+      .then((apiCart) => {
+        const state = useCartStore.getState();
+        const cart = state.carts.find((c) => c.id === activeCartId);
+        if (!cart) return;
+        const merged = apiCart.items.map((apiItem) => {
+          const local = cart.items.find(
+            (i) => i.product.id === apiItem.product_id,
+          );
+          return {
+            product: local?.product ?? {
+              id: apiItem.product_id,
+              name: apiItem.name,
+              price: apiItem.unit_price,
+              in_stock: 0,
+            },
+            quantity: apiItem.qty,
+            itemId: apiItem.id,
+          };
+        });
+        useCartStore.setState((s) => ({
+          carts: s.carts.map((c) =>
+            c.id === activeCartId ? { ...c, items: merged } : c,
+          ),
+        }));
+      })
+      .catch(() => {});
   }, [visible, activeCartId]);
 
   // Coupon validation
@@ -1354,7 +1360,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       });
 
       if (method === "cash") {
-        const saleResult = await confirmPayment({ intent_id: intentResult.intent_id });
+        const saleResult = await confirmPayment({
+          intent_id: intentResult.intent_id,
+        });
         return { type: "cash" as const, receipt: saleResult.receipt };
       }
 
@@ -1406,95 +1414,96 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     },
   });
 
-  const { mutate: splitCheckoutMutation, isPending: isSplitCheckingOut } = useMutation({
-    mutationFn: async () => {
-      const customerEmail = user?.email || "";
+  const { mutate: splitCheckoutMutation, isPending: isSplitCheckingOut } =
+    useMutation({
+      mutationFn: async () => {
+        const customerEmail = user?.email || "";
 
-      const intentResult = await initiatePayment({
-        cart_id: activeCartId,
-        method: "card",
-        customer_email: customerEmail,
-        customer_name: activeCart?.customerName || undefined,
-        customer_phone: activeCart?.customerPhone || undefined,
-        coupon_code: activeCart?.couponCode || undefined,
-      });
-
-      const intentId = intentResult.intent_id;
-      const saleResult = await confirmPayment({ intent_id: intentId });
-      const saleId = saleResult.sale_id;
-
-      await recordSplitPayment({
-        sale_id: saleId,
-        splits: {
-          cash: numCash || undefined,
-          card: numCard || undefined,
-          transfer: numTransfer || undefined,
-        },
-        customer_email: customerEmail,
-      });
-
-      if (numCard > 0) {
-        const cardIntent = await initiatePayment({
+        const intentResult = await initiatePayment({
           cart_id: activeCartId,
           method: "card",
           customer_email: customerEmail,
           customer_name: activeCart?.customerName || undefined,
+          customer_phone: activeCart?.customerPhone || undefined,
+          coupon_code: activeCart?.couponCode || undefined,
         });
-        return {
-          type: "card" as const,
-          intentId: cardIntent.intent_id,
-          amount: numCard,
-          receipt: saleResult.receipt,
-        };
-      }
 
-      if (numTransfer > 0) {
-        const trfIntent = await initiatePayment({
-          cart_id: activeCartId,
-          method: "transfer",
+        const intentId = intentResult.intent_id;
+        const saleResult = await confirmPayment({ intent_id: intentId });
+        const saleId = saleResult.sale_id;
+
+        await recordSplitPayment({
+          sale_id: saleId,
+          splits: {
+            cash: numCash || undefined,
+            card: numCard || undefined,
+            transfer: numTransfer || undefined,
+          },
           customer_email: customerEmail,
-          customer_name: activeCart?.customerName || undefined,
         });
-        return {
-          type: "transfer" as const,
-          intentId: trfIntent.intent_id,
-          amount: numTransfer,
-          receipt: saleResult.receipt,
-        };
-      }
 
-      return { type: "cash" as const, receipt: saleResult.receipt };
-    },
-    onSuccess: (result) => {
-      if (result.type === "cash") {
-        setLastPayment({
-          cash: finalTotal,
-          transfer: 0,
-          card: 0,
-          total: finalTotal,
-          method: "split",
-          receiptData: result.receipt,
+        if (numCard > 0) {
+          const cardIntent = await initiatePayment({
+            cart_id: activeCartId,
+            method: "card",
+            customer_email: customerEmail,
+            customer_name: activeCart?.customerName || undefined,
+          });
+          return {
+            type: "card" as const,
+            intentId: cardIntent.intent_id,
+            amount: numCard,
+            receipt: saleResult.receipt,
+          };
+        }
+
+        if (numTransfer > 0) {
+          const trfIntent = await initiatePayment({
+            cart_id: activeCartId,
+            method: "transfer",
+            customer_email: customerEmail,
+            customer_name: activeCart?.customerName || undefined,
+          });
+          return {
+            type: "transfer" as const,
+            intentId: trfIntent.intent_id,
+            amount: numTransfer,
+            receipt: saleResult.receipt,
+          };
+        }
+
+        return { type: "cash" as const, receipt: saleResult.receipt };
+      },
+      onSuccess: (result) => {
+        if (result.type === "cash") {
+          setLastPayment({
+            cash: finalTotal,
+            transfer: 0,
+            card: 0,
+            total: finalTotal,
+            method: "split",
+            receiptData: result.receipt,
+          });
+          setIsSuccess(true);
+          return;
+        }
+
+        onVisibleChange(false);
+
+        router.push({
+          pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
+          params: {
+            saleId: result.intentId,
+            paymentId: result.intentId,
+            method: result.type,
+            amount: String(result.amount),
+          },
         });
-        setIsSuccess(true);
-        return;
-      }
-
-      onVisibleChange(false);
-
-      router.push({
-        pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
-        params: {
-          saleId: result.intentId,
-          paymentId: result.intentId,
-          method: result.type,
-          amount: String(result.amount),
-        },
-      });
-    },
-    onError: (err: any) => {
-      Alert.alert("Payment Failed", err?.message || "Something went wrong");
-    },
-  });
+      },
+      onError: (err: any) => {
+        Alert.alert("Payment Failed", err?.message || "Something went wrong");
+      },
+    });
 
   const handleCheckout = (method?: "cash" | "transfer" | "card") => {
     if (!isPaidValid) {
@@ -1526,9 +1535,18 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     }
 
     setLastPayment({
-      cash: resolvedMethod === "transfer" || resolvedMethod === "card" ? 0 : numCash,
-      transfer: resolvedMethod === "cash" || resolvedMethod === "card" ? 0 : numTransfer,
-      card: resolvedMethod === "cash" || resolvedMethod === "transfer" ? 0 : numCard,
+      cash:
+        resolvedMethod === "transfer" || resolvedMethod === "card"
+          ? 0
+          : numCash,
+      transfer:
+        resolvedMethod === "cash" || resolvedMethod === "card"
+          ? 0
+          : numTransfer,
+      card:
+        resolvedMethod === "cash" || resolvedMethod === "transfer"
+          ? 0
+          : numCard,
       total: finalTotal,
       method: resolvedMethod,
     });
@@ -1541,7 +1559,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   };
 
   const handleFinishSuccess = async () => {
-    const currentCart = useCartStore.getState().carts.find((c) => c.id === activeCartId);
+    const currentCart = useCartStore
+      .getState()
+      .carts.find((c) => c.id === activeCartId);
     const storeId = currentCart?.storeId || user?.store_id || "";
     removeCart(activeCartId);
     queryClient.invalidateQueries({ queryKey: ["carts"] });
@@ -1579,17 +1599,25 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const handleRemoveItem = (cartId: string, productId: string) => {
     const item = items.find((i) => i.product.id === productId);
     if (!item) return;
-    setPendingVoidItems([{ itemId: item.itemId ?? "", productId, maxQty: item.quantity }]);
+    setPendingVoidItems([
+      { itemId: item.itemId ?? "", productId, maxQty: item.quantity },
+    ]);
     setVoidPin("");
     setVoidQty("");
     setVoidPinVisible(true);
   };
 
-  const handleQuantityChange = (cartId: string, productId: string, newQty: number) => {
+  const handleQuantityChange = (
+    cartId: string,
+    productId: string,
+    newQty: number,
+  ) => {
     if (newQty <= 0) {
       const item = items.find((i) => i.product.id === productId);
       if (item) {
-        setPendingVoidItems([{ itemId: item.itemId ?? "", productId, maxQty: item.quantity }]);
+        setPendingVoidItems([
+          { itemId: item.itemId ?? "", productId, maxQty: item.quantity },
+        ]);
         setVoidPin("");
         setVoidQty("");
         setVoidPinVisible(true);
@@ -1614,7 +1642,10 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
         const voidedQty = voidQty.trim() ? Number(voidQty.trim()) : undefined;
         for (const item of pendingVoidItems) {
           if (item.itemId) {
-            await voidCartItem(item.itemId, { supervisor_pin: pin, qty: voidedQty });
+            await voidCartItem(item.itemId, {
+              supervisor_pin: pin,
+              qty: voidedQty,
+            });
           }
           if (voidedQty && voidedQty < item.maxQty) {
             // Partial void — update qty in Zustand
@@ -1626,10 +1657,10 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
                       items: c.items.map((i) =>
                         i.itemId === item.itemId
                           ? { ...i, quantity: i.quantity - voidedQty }
-                          : i
+                          : i,
                       ),
                     }
-                  : c
+                  : c,
               ),
             }));
           } else {
@@ -1652,7 +1683,11 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     setPendingVoidItems(
       items
         .filter((i) => i.itemId)
-        .map((i) => ({ itemId: i.itemId!, productId: i.product.id, maxQty: i.quantity }))
+        .map((i) => ({
+          itemId: i.itemId!,
+          productId: i.product.id,
+          maxQty: i.quantity,
+        })),
     );
     setVoidPin("");
     setVoidQty("");
@@ -1661,152 +1696,171 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
   return (
     <>
-    <AppBottomSheet visible={visible} onVisibleChange={onVisibleChange}>
-      <View style={styles.container}>
-        {isSuccess && lastPayment ? (
-          <CartSuccessView
-            receipt={lastPayment}
-            colors={colors}
-            onFinish={handleFinishSuccess}
-          />
-        ) : (
-          <>
-            <CartHeader
-              cartName={cartName}
-              sessionId={activeCart?.sessionId}
-              customerName={activeCart?.customerName}
-              customerPhone={activeCart?.customerPhone}
-              totalItemsCount={totalItemsCount}
-              hasItems={items.length > 0}
+      <AppBottomSheet
+        index={1}
+        visible={visible}
+        onVisibleChange={onVisibleChange}
+      >
+        <View style={styles.container}>
+          {isSuccess && lastPayment ? (
+            <CartSuccessView
+              receipt={lastPayment}
               colors={colors}
-              onClearCart={handleClearCart}
+              onFinish={handleFinishSuccess}
             />
-
-            {items.length === 0 ? (
-              <CartEmptyState colors={colors} />
-            ) : (
-              <CartItemsList
-                items={items}
-                activeCartId={activeCartId}
-                colors={colors}
-                onUpdateQuantity={handleQuantityChange}
-                onRemoveItem={handleRemoveItem}
-              />
-            )}
-
-            {items.length > 0 && (
-              <CouponInput
-                couponCode={couponCode}
-                discountAmount={discountAmount}
-                cartSubtotal={totalPrice}
-                colors={colors}
-                onApply={handleApplyCoupon}
-                onRemove={handleRemoveCoupon}
-                isValidating={isValidatingCoupon}
-              />
-            )}
-
-            {items.length > 0 && (
-              <CartPaymentSection
-                totalPrice={totalPrice}
+          ) : (
+            <>
+              <CartHeader
+                cartName={cartName}
+                sessionId={activeCart?.sessionId}
+                customerName={activeCart?.customerName}
+                customerPhone={activeCart?.customerPhone}
                 totalItemsCount={totalItemsCount}
-                discountAmount={discountAmount}
-                couponCode={couponCode}
-                taxBreakdown={taxResult.breakdown}
-                paymentMethod={paymentMethod}
-                cashInput={cashInput}
-                transferInput={transferInput}
-                cardInput={cardInput}
-                numCash={numCash}
-                numTransfer={numTransfer}
-                numCard={numCard}
-                totalPaid={totalPaid}
-                isPaidValid={isPaidValid}
-                remainingNeeded={remainingNeeded}
-                splitPaidCash={splitPaidCash}
-                splitPaidTransfer={splitPaidTransfer}
-                splitPaidCard={splitPaidCard}
-                isCheckingOut={isCheckingOut || isSplitCheckingOut}
+                hasItems={items.length > 0}
                 colors={colors}
-                onSelectPaymentMethod={handleSelectPaymentMethod}
-                onCashChange={handleCashChange}
-                onTransferChange={handleTransferChange}
-                onCardChange={handleCardChange}
-                onSplitEven={handleSplitEven}
-                onCheckout={handleCheckout}
+                onClearCart={handleClearCart}
               />
-            )}
-          </>
-        )}
-      </View>
-    </AppBottomSheet>
 
-    <AppBottomSheet
-      visible={voidPinVisible}
-      onVisibleChange={setVoidPinVisible}
-      snapPoints={["40%"]}
-    >
-      <Text style={[styles.voidTitle, { color: colors.text }]}>
-        Supervisor PIN Required
-      </Text>
-      <Text style={[styles.voidSubtitle, { color: colors.textSecondary }]}>
-        {pendingVoidItems.length > 1
-          ? `Clear all ${pendingVoidItems.length} items from cart?`
-          : `Void "${pendingVoidItems[0]?.productId ? items.find((i) => i.product.id === pendingVoidItems[0]?.productId)?.product.name : ""}"`}
-      </Text>
+              {items.length === 0 ? (
+                <CartEmptyState colors={colors} />
+              ) : (
+                <CartItemsList
+                  items={items}
+                  activeCartId={activeCartId}
+                  colors={colors}
+                  onUpdateQuantity={handleQuantityChange}
+                  onRemoveItem={handleRemoveItem}
+                />
+              )}
 
-      {pendingVoidItems.length === 1 && pendingVoidItems[0].maxQty > 1 && (
-        <View style={{ marginBottom: 12 }}>
-          <Text style={[styles.voidLabel, { color: colors.textSecondary }]}>
-            Quantity to void (max {pendingVoidItems[0].maxQty})
-          </Text>
-          <TextInput
-            style={[styles.voidPinInput, { color: colors.text, borderColor: colors.backgroundElement }]}
-            placeholder={`All ${pendingVoidItems[0].maxQty}`}
-            placeholderTextColor={colors.textSecondary}
-            value={voidQty}
-            onChangeText={setVoidQty}
-            keyboardType="number-pad"
-            maxLength={4}
-          />
+              {items.length > 0 && (
+                <CouponInput
+                  couponCode={couponCode}
+                  discountAmount={discountAmount}
+                  cartSubtotal={totalPrice}
+                  colors={colors}
+                  onApply={handleApplyCoupon}
+                  onRemove={handleRemoveCoupon}
+                  isValidating={isValidatingCoupon}
+                />
+              )}
+
+              {items.length > 0 && (
+                <CartPaymentSection
+                  totalPrice={totalPrice}
+                  totalItemsCount={totalItemsCount}
+                  discountAmount={discountAmount}
+                  couponCode={couponCode}
+                  taxBreakdown={taxResult.breakdown}
+                  paymentMethod={paymentMethod}
+                  cashInput={cashInput}
+                  transferInput={transferInput}
+                  cardInput={cardInput}
+                  numCash={numCash}
+                  numTransfer={numTransfer}
+                  numCard={numCard}
+                  totalPaid={totalPaid}
+                  isPaidValid={isPaidValid}
+                  remainingNeeded={remainingNeeded}
+                  splitPaidCash={splitPaidCash}
+                  splitPaidTransfer={splitPaidTransfer}
+                  splitPaidCard={splitPaidCard}
+                  isCheckingOut={isCheckingOut || isSplitCheckingOut}
+                  colors={colors}
+                  onSelectPaymentMethod={handleSelectPaymentMethod}
+                  onCashChange={handleCashChange}
+                  onTransferChange={handleTransferChange}
+                  onCardChange={handleCardChange}
+                  onSplitEven={handleSplitEven}
+                  onCheckout={handleCheckout}
+                />
+              )}
+            </>
+          )}
         </View>
-      )}
+      </AppBottomSheet>
 
-      <TextInput
-        style={[styles.voidPinInput, { color: colors.text, borderColor: colors.backgroundElement }]}
-        placeholder="Enter supervisor PIN"
-        placeholderTextColor={colors.textSecondary}
-        value={voidPin}
-        onChangeText={setVoidPin}
-        keyboardType="number-pad"
-        maxLength={6}
-        secureTextEntry
-        autoFocus
-      />
-      <View style={styles.voidActions}>
-        <Pressable
-          onPress={() => {
-            setVoidPinVisible(false);
-            setVoidPin("");
-            setVoidQty("");
-            setPendingVoidItems([]);
-          }}
-          style={[styles.voidCancelBtn, { borderColor: colors.backgroundElement }]}
-        >
-          <Text style={[styles.voidCancelText, { color: colors.text }]}>Cancel</Text>
-        </Pressable>
-        <Pressable
-          onPress={handleVoidSubmit}
-          disabled={!voidPin.trim()}
+      <AppBottomSheet
+        visible={voidPinVisible}
+        onVisibleChange={setVoidPinVisible}
+        snapPoints={["40%"]}
+      >
+        <Text style={[styles.voidTitle, { color: colors.text }]}>
+          Supervisor PIN Required
+        </Text>
+        <Text style={[styles.voidSubtitle, { color: colors.textSecondary }]}>
+          {pendingVoidItems.length > 1
+            ? `Clear all ${pendingVoidItems.length} items from cart?`
+            : `Void "${pendingVoidItems[0]?.productId ? items.find((i) => i.product.id === pendingVoidItems[0]?.productId)?.product.name : ""}"`}
+        </Text>
+
+        {pendingVoidItems.length === 1 && pendingVoidItems[0].maxQty > 1 && (
+          <View style={{ marginBottom: 12 }}>
+            <Text style={[styles.voidLabel, { color: colors.textSecondary }]}>
+              Quantity to void (max {pendingVoidItems[0].maxQty})
+            </Text>
+            <TextInput
+              style={[
+                styles.voidPinInput,
+                { color: colors.text, borderColor: colors.backgroundElement },
+              ]}
+              placeholder={`All ${pendingVoidItems[0].maxQty}`}
+              placeholderTextColor={colors.textSecondary}
+              value={voidQty}
+              onChangeText={setVoidQty}
+              keyboardType="number-pad"
+              maxLength={4}
+            />
+          </View>
+        )}
+
+        <TextInput
           style={[
-            styles.voidConfirmBtn,
-            { backgroundColor: !voidPin.trim() ? colors.textSecondary : colors.error },
+            styles.voidPinInput,
+            { color: colors.text, borderColor: colors.backgroundElement },
           ]}
-        >
-          <Text style={styles.voidConfirmText}>Confirm</Text>
-        </Pressable>
-      </View>
-    </AppBottomSheet>
+          placeholder="Enter supervisor PIN"
+          placeholderTextColor={colors.textSecondary}
+          value={voidPin}
+          onChangeText={setVoidPin}
+          keyboardType="number-pad"
+          maxLength={6}
+          secureTextEntry
+          autoFocus
+        />
+        <View style={styles.voidActions}>
+          <Pressable
+            onPress={() => {
+              setVoidPinVisible(false);
+              setVoidPin("");
+              setVoidQty("");
+              setPendingVoidItems([]);
+            }}
+            style={[
+              styles.voidCancelBtn,
+              { borderColor: colors.backgroundElement },
+            ]}
+          >
+            <Text style={[styles.voidCancelText, { color: colors.text }]}>
+              Cancel
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={handleVoidSubmit}
+            disabled={!voidPin.trim()}
+            style={[
+              styles.voidConfirmBtn,
+              {
+                backgroundColor: !voidPin.trim()
+                  ? colors.textSecondary
+                  : colors.error,
+              },
+            ]}
+          >
+            <Text style={styles.voidConfirmText}>Confirm</Text>
+          </Pressable>
+        </View>
+      </AppBottomSheet>
     </>
   );
 };

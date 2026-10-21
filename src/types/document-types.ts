@@ -88,6 +88,14 @@ export interface DocumentResponse {
   data: Document;
 }
 
+export interface DocumentListResponse {
+  message: string;
+  data: Document[];
+  total?: number;
+  page?: number;
+  page_size?: number;
+}
+
 // // Example usage:
 // const createInvoice: DocumentCreateRequest = {
 //     tenant_id: '550e8400-e29b-41d4-a716-446655440000',
