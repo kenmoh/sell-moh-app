@@ -56,6 +56,44 @@ export const fetchSales = async (
   };
 };
 
+export const fetchSalesSummary = async (
+  params: Pick<SaleQueryParams, "store_id"> = {},
+): Promise<{
+  total_revenue: number;
+  completed: number;
+  pending: number;
+  pending_amount: number;
+  voided: number;
+  all: number;
+}> => {
+  const query = new URLSearchParams();
+  if (params.store_id) query.append("store_id", params.store_id);
+  const qs = query.toString();
+  const res = await apiClient.get<{
+    data: {
+      total_revenue: number;
+      completed: number;
+      pending: number;
+      pending_amount: number;
+      voided: number;
+      all: number;
+    };
+  }>(`${URL}/summary${qs ? `?${qs}` : ""}`);
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data ?? {
+    total_revenue: 0,
+    completed: 0,
+    pending: 0,
+    pending_amount: 0,
+    voided: 0,
+    all: 0,
+  };
+};
+
 export const getSaleById = async (saleId: string): Promise<SaleDetail> => {
   const res = await apiClient.get<{ data: SaleDetail }>(`${URL}/${saleId}`);
 

@@ -1,4 +1,4 @@
-import { fetchSales } from "@/api/sales";
+import { fetchSales, fetchSalesSummary } from "@/api/sales";
 import OrderCard from "@/components/order-card";
 import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
@@ -6,7 +6,7 @@ import StoreSwitcher from "@/components/store-switcher";
 import { ColorPalette, Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useInfiniteQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -123,29 +123,22 @@ const SalesScreen = () => {
       price: s.total,
       status: statusMap[s.status] ?? "Pending",
       date: formatDate(s.created_at),
+      createdAt: s.created_at ?? "",
     }));
   }, [data]);
 
-  const completedCount = useMemo(
-    () => orders.filter((o) => o.status === "Completed").length,
-    [orders],
-  );
-  const pendingCount = useMemo(
-    () => orders.filter((o) => o.status === "Pending").length,
-    [orders],
-  );
-  const voidedCount = useMemo(
-    () => orders.filter((o) => o.status === "Voided").length,
-    [orders],
-  );
+  // The header cards come from the backend so they are right on load —
+  // they must not depend on how far the user has paged.
+  const { data: summary } = useQuery({
+    queryKey: ["sales", "summary", activeStoreId],
+    queryFn: () =>
+      fetchSalesSummary({ store_id: activeStoreId ?? undefined }),
+  });
 
-  const totalRevenue = useMemo(
-    () =>
-      orders
-        .filter((o) => o.status === "Completed")
-        .reduce((sum, o) => sum + o.price, 0),
-    [orders],
-  );
+  const completedCount = summary?.completed ?? 0;
+  const pendingCount = summary?.pending ?? 0;
+  const voidedCount = summary?.voided ?? 0;
+  const totalRevenue = summary?.total_revenue ?? 0;
 
   const getFilterCount = (filter: FilterStatus) => {
     if (filter === "All") return orders.length;
@@ -164,13 +157,24 @@ const SalesScreen = () => {
     });
   }, [orders, search]);
 
+  // Latest pending (partially paid included) sales first — they are the
+  // ones that need following up — then everything else newest first.
+  const pendingFirst = useMemo(() => {
+    return [...filteredOrders].sort((a, b) => {
+      const aPending = a.status === "Pending";
+      const bPending = b.status === "Pending";
+      if (aPending !== bPending) return aPending ? -1 : 1;
+      return b.createdAt.localeCompare(a.createdAt);
+    });
+  }, [filteredOrders]);
+
   const flatListData: ListItemType[] = useMemo(() => {
     const items: ListItemType[] = [{ type: "sticky_header" }];
-    filteredOrders.forEach((order) => {
+    pendingFirst.forEach((order) => {
       items.push({ type: "order_item", data: order });
     });
     return items;
-  }, [filteredOrders]);
+  }, [pendingFirst]);
 
   const handleOrderPress = (order: { id: string }) => {
     router.push({
