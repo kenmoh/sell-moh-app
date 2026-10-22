@@ -75,15 +75,6 @@ export default function ChangePasswordScreen() {
   return (
     <AppView>
       <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Change Password
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Enter your current password and choose a new one.
-          </Text>
-        </View>
-
         <View style={styles.form}>
           <AppTextInput
             label="Current Password"
@@ -145,7 +136,7 @@ export default function ChangePasswordScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, paddingHorizontal: 24, justifyContent: "center" },
+  container: { flex: 1, paddingHorizontal: 5 },
   header: { alignItems: "center", marginBottom: 32 },
   title: { fontSize: 22, fontWeight: "700", marginBottom: 8 },
   subtitle: { fontSize: 14, textAlign: "center", lineHeight: 20 },

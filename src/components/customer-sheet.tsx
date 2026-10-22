@@ -3,10 +3,10 @@ import AppBottomSheet from "@/components/bottom-sheet";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { Customer, CustomerType } from "@/types/customer";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useApiMutation } from "@/hooks/use-api-mutation";
+import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -51,7 +51,9 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
   const [email, setEmail] = useState("");
   const [address, setAddress] = useState("");
   const [type, setType] = useState<CustomerType>("customer");
-  const [errors, setErrors] = useState<Partial<Record<CustomerField, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<CustomerField, string>>>(
+    {},
+  );
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const reset = () => {
@@ -137,6 +139,7 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
   return (
     <AppBottomSheet
       snapPoints={["75%", "90%"]}
+      index={1}
       visible={visible}
       onVisibleChange={(v) => {
         if (!v) reset();
@@ -234,7 +237,10 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
       <Pressable
         style={[
           styles.saveBtn,
-          { backgroundColor: colors.buttonPrimary, opacity: canSubmit ? 1 : 0.5 },
+          {
+            backgroundColor: colors.buttonPrimary,
+            opacity: canSubmit ? 1 : 0.5,
+          },
         ]}
         disabled={!canSubmit}
         onPress={handleSave}
@@ -243,7 +249,11 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
           <ActivityIndicator color="#fff" />
         ) : (
           <>
-            <Lucide name={isEditing ? "check" : "user-plus"} size={18} color="#fff" />
+            <Lucide
+              name={isEditing ? "check" : "user-plus"}
+              size={18}
+              color="#fff"
+            />
             <Text style={styles.saveBtnText}>
               {isEditing ? "Save Changes" : "Add Customer"}
             </Text>
@@ -260,15 +270,26 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
               </Text>
               <View style={styles.deleteConfirmRow}>
                 <Pressable
-                  style={[styles.deleteCancelBtn, { backgroundColor: colors.backgroundElement }]}
+                  style={[
+                    styles.deleteCancelBtn,
+                    { backgroundColor: colors.backgroundElement },
+                  ]}
                   onPress={() => setShowDeleteConfirm(false)}
                 >
-                  <Text style={[styles.deleteCancelText, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.deleteCancelText,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     Cancel
                   </Text>
                 </Pressable>
                 <Pressable
-                  style={[styles.deleteConfirmBtn, { backgroundColor: "#ef4444" }]}
+                  style={[
+                    styles.deleteConfirmBtn,
+                    { backgroundColor: "#ef4444" },
+                  ]}
                   onPress={() => removeCustomer()}
                   disabled={isDeleting}
                 >
@@ -335,8 +356,18 @@ const styles = StyleSheet.create({
   deleteConfirm: { marginTop: 12, gap: 10 },
   deleteConfirmText: { fontSize: 14, textAlign: "center" },
   deleteConfirmRow: { flexDirection: "row", gap: 10 },
-  deleteCancelBtn: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: "center" },
+  deleteCancelBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
   deleteCancelText: { fontSize: 14, fontWeight: "600" },
-  deleteConfirmBtn: { flex: 1, borderRadius: 12, paddingVertical: 12, alignItems: "center" },
+  deleteConfirmBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 12,
+    alignItems: "center",
+  },
   deleteConfirmBtnText: { color: "#fff", fontSize: 14, fontWeight: "700" },
 });

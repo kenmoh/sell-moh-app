@@ -3,8 +3,9 @@ import InfoTooltip from "@/components/info-tooltip";
 import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
-import DateTimePicker from "@expo/ui/community/datetime-picker";
+import type { PnLLineItem } from "@/types/accounting";
 import Info from "@expo/material-symbols/info.xml";
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
 import { Stack } from "expo-router";
@@ -19,13 +20,13 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import type { PnLLineItem } from "@/types/accounting";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const ProfitAndLoss = () => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
+  const insets = useSafeAreaInsets();
 
   const { activeStoreId } = useActiveStore();
 
@@ -145,10 +146,7 @@ const ProfitAndLoss = () => {
   );
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: colors.background }]}
-      
-    >
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
           icon={process.env.EXPO_OS === "ios" ? "info.circle" : Info}
@@ -264,7 +262,9 @@ const ProfitAndLoss = () => {
             refreshControl={
               <RefreshControl
                 refreshing={isRefetching}
-                onRefresh={() => { refetch(); }}
+                onRefresh={() => {
+                  refetch();
+                }}
                 tintColor="#3b82f6"
               />
             }
@@ -308,7 +308,12 @@ const ProfitAndLoss = () => {
               },
             ]}
           >
-            <Text style={[styles.netProfitLabel, { color: colors.text }]}>
+            <Text
+              style={[
+                styles.netProfitLabel,
+                { color: colors.text, marginBottom: insets.bottom },
+              ]}
+            >
               Net Profit
             </Text>
             <Text
@@ -401,9 +406,9 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "baseline",
     paddingHorizontal: 20,
-    paddingVertical: 16,
+    paddingVertical: 10,
     borderTopWidth: StyleSheet.hairlineWidth,
   },
   netProfitLabel: { fontSize: 16, fontWeight: "800" },

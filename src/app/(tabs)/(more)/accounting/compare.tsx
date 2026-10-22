@@ -8,6 +8,7 @@ import {
 import InfoTooltip from "@/components/info-tooltip";
 import Pill from "@/components/pill";
 import { Colors } from "@/constants/theme";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useActiveStore } from "@/lib/store-context";
 import type {
   BalanceSheetResponse,
@@ -21,7 +22,6 @@ import Info from "@expo/material-symbols/info.xml";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide, type LucideIconName } from "@react-native-vector-icons/lucide";
 import { useQueries } from "@tanstack/react-query";
-import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import {
@@ -36,6 +36,7 @@ import {
   useWindowDimensions,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type StatementKey = "pnl" | "cashflow" | "tb" | "bs" | "journals";
 
@@ -106,6 +107,7 @@ const CompareStores = () => {
   const colors = Colors[isDark ? "dark" : "light"];
 
   const { stores } = useActiveStore();
+  const insets = useSafeAreaInsets();
 
   const [statement, setStatement] = useState<StatementKey>("pnl");
   const [showInfo, setShowInfo] = useState(false);
@@ -434,9 +436,14 @@ const CompareStores = () => {
             color: "#8b5cf6",
             icon: "check-check",
             rows: [
-              totalRow("balance_check", "Assets − Liabilities − Equity", checkVals, {
-                tone: "signed",
-              }),
+              totalRow(
+                "balance_check",
+                "Assets − Liabilities − Equity",
+                checkVals,
+                {
+                  tone: "signed",
+                },
+              ),
             ],
           },
         ];
@@ -887,7 +894,12 @@ On the Balance Sheet tab, the Balance Check row is Assets minus Liabilities minu
             </View>
           </ScrollView>
 
-          <Text style={[styles.footnote, { color: colors.textSecondary }]}>
+          <Text
+            style={[
+              styles.footnote,
+              { color: colors.textSecondary, marginBottom: insets.bottom },
+            ]}
+          >
             {journalsTruncated
               ? "* Summed from the latest 500 journal entries per column."
               : "Untagged = All Stores − each store (journals and expenses with no store assigned)."}

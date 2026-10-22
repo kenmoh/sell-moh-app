@@ -3,12 +3,13 @@ import BalanceSheetIntegrity from "@/components/balance-sheet-integrity";
 import InfoTooltip from "@/components/info-tooltip";
 import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useActiveStore } from "@/lib/store-context";
-import DateTimePicker from "@expo/ui/community/datetime-picker";
+import type { PnLLineItem } from "@/types/accounting";
 import Info from "@expo/material-symbols/info.xml";
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
-import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { Stack } from "expo-router";
 import { Fragment, useCallback, useState } from "react";
 import {
@@ -21,8 +22,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import type { PnLLineItem } from "@/types/accounting";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Section = {
   title: string;
@@ -44,6 +44,7 @@ const BalanceSheet = () => {
   const [showPicker, setShowPicker] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const asAtDate = date.toISOString().split("T")[0];
+  const insets = useSafeAreaInsets();
 
   const formatDate = (d: Date) => {
     return d.toLocaleDateString("en-US", {
@@ -158,10 +159,7 @@ const BalanceSheet = () => {
   );
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: colors.background }]}
-      
-    >
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Header */}
       <Stack.Toolbar placement="right">
         <Stack.Toolbar.Button
@@ -230,11 +228,15 @@ The panel above the figures reports two controls. The balance check (Assets − 
           keyExtractor={(item) => item.title}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 100 }}
-          ListHeaderComponent={data ? <BalanceSheetIntegrity data={data} /> : undefined}
+          ListHeaderComponent={
+            data ? <BalanceSheetIntegrity data={data} /> : undefined
+          }
           refreshControl={
             <RefreshControl
               refreshing={isRefetching}
-              onRefresh={() => { refetch(); }}
+              onRefresh={() => {
+                refetch();
+              }}
               tintColor="#3b82f6"
             />
           }
@@ -280,7 +282,9 @@ The panel above the figures reports two controls. The balance check (Assets − 
           <Text style={[styles.totalFooterLabel, { color: colors.text }]}>
             Total
           </Text>
-          <View style={styles.totalFooterRow}>
+          <View
+            style={[styles.totalFooterRow, { marginBottom: insets.bottom }]}
+          >
             <View style={styles.totalFooterItem}>
               <Text style={[styles.totalFooterItemLabel, { color: "#10b981" }]}>
                 Assets
@@ -405,7 +409,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  totalFooterItem: { alignItems: "center" },
+  totalFooterItem: { alignItems: "flex-start" },
   totalFooterItemLabel: { fontSize: 11, fontWeight: "600" },
   totalFooterItemValue: { fontSize: 15, fontWeight: "800" },
   totalFooterEquals: { fontSize: 18, fontWeight: "600" },

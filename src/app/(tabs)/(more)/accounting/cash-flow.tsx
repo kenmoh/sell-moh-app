@@ -19,7 +19,7 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const CashFlow = () => {
   const scheme = useColorScheme();
@@ -37,6 +37,7 @@ const CashFlow = () => {
   const [showFromPicker, setShowFromPicker] = useState(false);
   const [showToPicker, setShowToPicker] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
+  const insets = useSafeAreaInsets();
 
   const from = fromDate.toISOString().split("T")[0];
   const to = toDate.toISOString().split("T")[0];
@@ -302,7 +303,12 @@ const CashFlow = () => {
               },
             ]}
           >
-            <Text style={[styles.netCashFlowLabel, { color: colors.text }]}>
+            <Text
+              style={[
+                styles.netCashFlowLabel,
+                { color: colors.text, marginBottom: insets.bottom },
+              ]}
+            >
               Net Cash Flow
             </Text>
             <Text
@@ -400,7 +406,7 @@ const styles = StyleSheet.create({
     right: 0,
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
+    alignItems: "baseline",
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderTopWidth: StyleSheet.hairlineWidth,
