@@ -12,7 +12,7 @@ const MoreCard = ({
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   return (
-    <>
+    <View style={{ marginVertical: 10 }}>
       <Text
         style={{
           marginVertical: 5,
@@ -33,7 +33,7 @@ const MoreCard = ({
       >
         {children}
       </View>
-    </>
+    </View>
   );
 };
 

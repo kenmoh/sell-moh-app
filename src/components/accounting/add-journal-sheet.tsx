@@ -58,7 +58,11 @@ const AddJournalSheet = ({
     setEntries(initialEntries);
   };
 
-  const updateEntry = (index: number, field: keyof EntryLine, value: string | number) => {
+  const updateEntry = (
+    index: number,
+    field: keyof EntryLine,
+    value: string | number,
+  ) => {
     setEntries((prev) => {
       const updated = [...prev];
       updated[index] = { ...updated[index], [field]: value };
@@ -94,13 +98,16 @@ const AddJournalSheet = ({
 
   return (
     <AppBottomSheet
+      index={1}
       visible={visible}
       onVisibleChange={(v) => {
         if (!v) reset();
         onVisibleChange(v);
       }}
     >
-      <Text style={[styles.title, { color: colors.text }]}>New Journal Entry</Text>
+      <Text style={[styles.title, { color: colors.text }]}>
+        New Journal Entry
+      </Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Create a manual journal entry with debit and credit lines
       </Text>
@@ -121,7 +128,13 @@ const AddJournalSheet = ({
         Entry Lines
       </Text>
       {entries.map((entry, index) => (
-        <View key={index} style={[styles.entryCard, { borderColor: isDark ? "#282b32" : "#eef0f4" }]}>
+        <View
+          key={index}
+          style={[
+            styles.entryCard,
+            { borderColor: isDark ? "#282b32" : "#eef0f4" },
+          ]}
+        >
           <View style={styles.entryHeader}>
             <Text style={[styles.entryNumber, { color: colors.textSecondary }]}>
               Line {index + 1}
@@ -196,7 +209,9 @@ const AddJournalSheet = ({
               <AppTextInput
                 placeholder="0"
                 value={entry.debit > 0 ? String(entry.debit) : ""}
-                onChangeText={(v) => updateEntry(index, "debit", parseFloat(v) || 0)}
+                onChangeText={(v) =>
+                  updateEntry(index, "debit", parseFloat(v) || 0)
+                }
                 keyboardType="numeric"
               />
             </View>
@@ -207,7 +222,9 @@ const AddJournalSheet = ({
               <AppTextInput
                 placeholder="0"
                 value={entry.credit > 0 ? String(entry.credit) : ""}
-                onChangeText={(v) => updateEntry(index, "credit", parseFloat(v) || 0)}
+                onChangeText={(v) =>
+                  updateEntry(index, "credit", parseFloat(v) || 0)
+                }
                 keyboardType="numeric"
               />
             </View>
@@ -230,6 +247,7 @@ const AddJournalSheet = ({
           {
             opacity:
               description.trim() && entries.length >= 2 && !isPending ? 1 : 0.5,
+            backgroundColor: colors.buttonPrimary,
           },
         ]}
         disabled={!description.trim() || entries.length < 2 || isPending}
@@ -296,8 +314,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#2563eb",
-    borderRadius: 12,
+    borderRadius: 999,
     paddingVertical: 14,
     marginTop: 8,
   },

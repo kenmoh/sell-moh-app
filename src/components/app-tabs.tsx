@@ -71,9 +71,9 @@ export default function AppTabs() {
       hidden={shouldHideTabBar}
       backgroundColor={colors.background}
       indicatorColor={colors.backgroundElement}
-      labelStyle={{ selected: { color: colors.card } }}
+      labelStyle={{ selected: { color: colors.text } }}
       rippleColor={colors.backgroundElement}
-      labelVisibilityMode="unlabeled"
+      labelVisibilityMode="labeled"
     >
       <NativeTabs.Trigger name="(pos)">
         <NativeTabs.Trigger.Label>POS</NativeTabs.Trigger.Label>
@@ -81,19 +81,19 @@ export default function AppTabs() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="(sales)">
-        <NativeTabs.Trigger.Label hidden>Sales</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Sales</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="list.bullet" md={"lists"} />
       </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="(dashboard)">
+      {/* <NativeTabs.Trigger name="(dashboard)">
         <NativeTabs.Trigger.Label hidden>Dashboard</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="chart.bar.fill" md={"bar_chart"} />
-      </NativeTabs.Trigger>
+      </NativeTabs.Trigger> */}
       <NativeTabs.Trigger name="(document)">
-        <NativeTabs.Trigger.Label hidden>Document</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Documents</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="document" md={"edit_document"} />
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="(more)">
-        <NativeTabs.Trigger.Label hidden>More</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>More</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf="list.clipboard" md={"more_vert"} />
       </NativeTabs.Trigger>
     </NativeTabs>

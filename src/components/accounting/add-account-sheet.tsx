@@ -22,7 +22,12 @@ type Props = {
 
 const accountTypes = [
   { id: "asset", label: "Asset", icon: "briefcase", color: "#10b981" },
-  { id: "liability", label: "Liability", icon: "credit-card", color: "#ef4444" },
+  {
+    id: "liability",
+    label: "Liability",
+    icon: "credit-card",
+    color: "#ef4444",
+  },
   { id: "equity", label: "Equity", icon: "shield", color: "#8b5cf6" },
   { id: "revenue", label: "Revenue", icon: "trending-up", color: "#3b82f6" },
   { id: "expense", label: "Expense", icon: "trending-down", color: "#f59e0b" },
@@ -54,6 +59,7 @@ const AddAccountSheet = ({
   return (
     <AppBottomSheet
       visible={visible}
+      index={1}
       onVisibleChange={(v) => {
         if (!v) reset();
         onVisibleChange(v);
@@ -110,7 +116,10 @@ const AddAccountSheet = ({
       <Pressable
         style={[
           styles.confirmButton,
-          { opacity: code && name && selectedType && !isPending ? 1 : 0.5 },
+          {
+            opacity: code && name && selectedType && !isPending ? 1 : 0.5,
+            backgroundColor: colors.buttonPrimary,
+          },
         ]}
         disabled={!code || !name || !selectedType || isPending}
         onPress={handleAdd}
@@ -140,8 +149,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#2563eb",
-    borderRadius: 12,
+    borderRadius: 999,
     paddingVertical: 14,
     marginTop: 12,
   },

@@ -10,12 +10,12 @@ import {
   type ExpenseCategoryId,
 } from "@/constants/expense-categories";
 import { Colors } from "@/constants/theme";
+import { useApiMutation } from "@/hooks/use-api-mutation";
+import { useActiveStore } from "@/lib/store-context";
 import type { Customer } from "@/types/customer";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useApiMutation } from "@/hooks/use-api-mutation";
-import { useActiveStore } from "@/lib/store-context";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -131,6 +131,7 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
   return (
     <AppBottomSheet
       snapPoints={["75%", "90%"]}
+      index={1}
       visible={visible}
       onVisibleChange={(v) => {
         if (!v) reset();
@@ -359,7 +360,11 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
                   })
                 : "Select due date"}
             </Text>
-            <Lucide name="chevron-down" size={16} color={colors.textSecondary} />
+            <Lucide
+              name="chevron-down"
+              size={16}
+              color={colors.textSecondary}
+            />
           </Pressable>
           {showDatePicker && (
             <DateTimePicker

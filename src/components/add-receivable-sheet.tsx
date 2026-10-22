@@ -5,12 +5,13 @@ import AppBottomSheet from "@/components/bottom-sheet";
 import PillRow from "@/components/pill-row";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useActiveStore } from "@/lib/store-context";
 import { Customer } from "@/types/customer";
 import { Document } from "@/types/document-types";
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useApiMutation } from "@/hooks/use-api-mutation";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -21,7 +22,6 @@ import {
   useColorScheme,
   View,
 } from "react-native";
-import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { z } from "zod";
 
 const receivableSchema = z.object({
@@ -32,7 +32,10 @@ const receivableSchema = z.object({
     .string()
     .trim()
     .min(1, "Amount is required")
-    .refine((v) => Number.isFinite(Number(v)) && Number(v) > 0, "Enter an amount above 0"),
+    .refine(
+      (v) => Number.isFinite(Number(v)) && Number(v) > 0,
+      "Enter an amount above 0",
+    ),
   dueDate: z.string().min(1, "Due date is required"),
 });
 
@@ -60,7 +63,9 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
   const [amount, setAmount] = useState("");
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [showDatePicker, setShowDatePicker] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<ReceivableField, string>>>({});
+  const [errors, setErrors] = useState<
+    Partial<Record<ReceivableField, string>>
+  >({});
 
   const dueDateValue = dueDate ? dueDate.toISOString().split("T")[0] : "";
 
@@ -106,7 +111,9 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
     const raw = invoiceData?.data;
     const list = Array.isArray(raw) ? (raw as Document[]) : [];
     return list
-      .filter((d) => !recordedInvoiceNumbers.has(d.doc_number?.trim().toLowerCase()))
+      .filter(
+        (d) => !recordedInvoiceNumbers.has(d.doc_number?.trim().toLowerCase()),
+      )
       .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
   }, [invoiceData, recordedInvoiceNumbers]);
 
@@ -167,7 +174,11 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
     setCustomer(selected);
     setCustomerSearch("");
     setShowNewCustomer(false);
-    setErrors((prev) => ({ ...prev, customerId: undefined, customerName: undefined }));
+    setErrors((prev) => ({
+      ...prev,
+      customerId: undefined,
+      customerName: undefined,
+    }));
   };
 
   const handleSelectInvoice = (invoice: Document) => {
@@ -178,7 +189,11 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
       const parsed = new Date(invoice.due_date);
       if (!Number.isNaN(parsed.getTime())) setDueDate(parsed);
     }
-    setErrors((prev) => ({ ...prev, invoiceNumber: undefined, amount: undefined }));
+    setErrors((prev) => ({
+      ...prev,
+      invoiceNumber: undefined,
+      amount: undefined,
+    }));
   };
 
   const handleCreate = () => {
@@ -187,7 +202,9 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
     if (!customer && !newCustomerName.trim()) {
       setErrors((prev) => ({
         ...prev,
-        customerName: customer ? undefined : "Pick a customer or enter a new one",
+        customerName: customer
+          ? undefined
+          : "Pick a customer or enter a new one",
         customerId: customer ? undefined : "Pick a customer",
       }));
       return;
@@ -229,6 +246,7 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
   return (
     <AppBottomSheet
       snapPoints={["80%", "95%"]}
+      index={1}
       visible={visible}
       onVisibleChange={(v) => {
         if (!v) reset();
@@ -236,7 +254,9 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
       }}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>New Receivable</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          New Receivable
+        </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Pick a customer and their invoice to fill the details
         </Text>
@@ -269,7 +289,12 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
                 },
               ]}
             >
-              <View style={[styles.avatar, { backgroundColor: colors.backgroundElement }]}>
+              <View
+                style={[
+                  styles.avatar,
+                  { backgroundColor: colors.backgroundElement },
+                ]}
+              >
                 <Lucide name="user" size={18} color={colors.textSecondary} />
               </View>
               <View style={{ flex: 1 }}>
@@ -277,7 +302,12 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
                   {customer.name}
                 </Text>
                 {(customer.phone || customer.email) && (
-                  <Text style={[styles.selectedMeta, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.selectedMeta,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     {customer.phone || customer.email}
                   </Text>
                 )}
@@ -330,11 +360,16 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
                         ]}
                         onPress={() => handleSelectCustomer(c)}
                       >
-                        <Text style={[styles.dropdownName, { color: colors.text }]}>
+                        <Text
+                          style={[styles.dropdownName, { color: colors.text }]}
+                        >
                           {c.name}
                         </Text>
                         <Text
-                          style={[styles.dropdownMeta, { color: colors.textSecondary }]}
+                          style={[
+                            styles.dropdownMeta,
+                            { color: colors.textSecondary },
+                          ]}
                         >
                           {c.phone || c.email || "No contact"}
                         </Text>
@@ -424,7 +459,10 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
                     {invoice.doc_number}
                   </Text>
                   <Text
-                    style={[styles.invoiceAmount, { color: colors.textSecondary }]}
+                    style={[
+                      styles.invoiceAmount,
+                      { color: colors.textSecondary },
+                    ]}
                   >
                     {`₦${Number(invoice.total ?? 0).toLocaleString()}`}
                     {invoice.status !== "paid" ? ` · ${invoice.status}` : ""}
@@ -451,7 +489,9 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
             autoCapitalize="characters"
             error={
               errors.invoiceNumber ??
-              (isDuplicateInvoice ? "Already recorded as a receivable" : undefined)
+              (isDuplicateInvoice
+                ? "Already recorded as a receivable"
+                : undefined)
             }
           />
         </View>
@@ -494,7 +534,11 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
                   })
                 : "Select due date"}
             </Text>
-            <Lucide name="chevron-down" size={16} color={colors.textSecondary} />
+            <Lucide
+              name="chevron-down"
+              size={16}
+              color={colors.textSecondary}
+            />
           </Pressable>
           {showDatePicker && (
             <DateTimePicker
@@ -509,14 +553,19 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
               onDismiss={() => setShowDatePicker(false)}
             />
           )}
-          {errors.dueDate && <Text style={styles.errorText}>{errors.dueDate}</Text>}
+          {errors.dueDate && (
+            <Text style={styles.errorText}>{errors.dueDate}</Text>
+          )}
         </View>
       </ScrollView>
 
       <Pressable
         style={[
           styles.createBtn,
-          { backgroundColor: colors.buttonPrimary, opacity: canSubmit ? 1 : 0.5 },
+          {
+            backgroundColor: colors.buttonPrimary,
+            opacity: canSubmit ? 1 : 0.5,
+          },
         ]}
         disabled={!canSubmit}
         onPress={handleCreate}
@@ -551,7 +600,11 @@ const styles = StyleSheet.create({
   errorText: { fontSize: 12, color: "#DC2626" },
   hint: { fontSize: 12 },
   dropdown: { borderRadius: 12, borderWidth: 1, overflow: "hidden" },
-  dropdownItem: { paddingVertical: 10, paddingHorizontal: 12, borderBottomWidth: 1 },
+  dropdownItem: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderBottomWidth: 1,
+  },
   dropdownName: { fontSize: 14, fontWeight: "600" },
   dropdownMeta: { fontSize: 12, marginTop: 2 },
   linkButton: { paddingVertical: 4 },

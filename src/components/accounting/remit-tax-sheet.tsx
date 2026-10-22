@@ -1,11 +1,11 @@
+import { fetchTaxesOwed } from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
-import { fetchTaxesOwed } from "@/api/accounting";
 import { useActiveStore } from "@/lib/store-context";
-import { useQuery } from "@tanstack/react-query";
 import type { TaxRemitRequest } from "@/types/accounting";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -17,7 +17,12 @@ import {
 } from "react-native";
 
 const METHODS = [
-  { key: "cash", label: "Cash", icon: "banknote", desc: "Paid out of the till" },
+  {
+    key: "cash",
+    label: "Cash",
+    icon: "banknote",
+    desc: "Paid out of the till",
+  },
   { key: "bank", label: "Bank", icon: "landmark", desc: "Bank transfer" },
 ] as const;
 
@@ -98,6 +103,7 @@ const RemitTaxSheet = ({
   return (
     <AppBottomSheet
       visible={visible}
+      index={1}
       onVisibleChange={(v) => {
         if (!v) reset();
         onVisibleChange(v);
@@ -168,59 +174,64 @@ const RemitTaxSheet = ({
           No tax is owed by {remitStoreName}
         </Text>
       ) : (
-      <View style={styles.accountChips}>
-        {owedLines.map((l) => {
-          const isSelected = l.account_code === selectedCode;
-          return (
-            <Pressable
-              key={l.account_code}
-              style={[
-                styles.accountChip,
-                {
-                  backgroundColor: isSelected
-                    ? "transparent"
-                    : colors.textInput,
-                  borderColor: isSelected
-                    ? colors.buttonPrimary
-                    : isDark
-                      ? "#282b32"
-                      : "#eef0f4",
-                  borderWidth: isSelected ? 1.5 : 1,
-                },
-              ]}
-              onPress={() => {
-                setAccountCode(l.account_code);
-                setAmount(String(l.still_owed));
-              }}
-            >
-              <Text
+        <View style={styles.accountChips}>
+          {owedLines.map((l) => {
+            const isSelected = l.account_code === selectedCode;
+            return (
+              <Pressable
+                key={l.account_code}
                 style={[
-                  styles.accountChipCode,
+                  styles.accountChip,
                   {
-                    color: isSelected
+                    backgroundColor: isSelected
+                      ? "transparent"
+                      : colors.textInput,
+                    borderColor: isSelected
                       ? colors.buttonPrimary
-                      : colors.textSecondary,
+                      : isDark
+                        ? "#282b32"
+                        : "#eef0f4",
+                    borderWidth: isSelected ? 1.5 : 1,
                   },
                 ]}
+                onPress={() => {
+                  setAccountCode(l.account_code);
+                  setAmount(String(l.still_owed));
+                }}
               >
-                {l.account_code}
-              </Text>
-              <Text
-                style={[
-                  styles.accountChipName,
-                  { color: isSelected ? colors.buttonPrimary : colors.text },
-                ]}
-                numberOfLines={1}
-              >
-                {l.account_name}
-              </Text>
-              <Text style={[styles.accountChipOwed, { color: isSelected ? colors.buttonPrimary : "#10b981" }]}>
-                ₦{l.still_owed.toLocaleString()} owed
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
+                <Text
+                  style={[
+                    styles.accountChipCode,
+                    {
+                      color: isSelected
+                        ? colors.buttonPrimary
+                        : colors.textSecondary,
+                    },
+                  ]}
+                >
+                  {l.account_code}
+                </Text>
+                <Text
+                  style={[
+                    styles.accountChipName,
+                    { color: isSelected ? colors.buttonPrimary : colors.text },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {l.account_name}
+                </Text>
+                <Text
+                  style={[
+                    styles.accountChipOwed,
+                    { color: isSelected ? colors.buttonPrimary : "#10b981" },
+                  ]}
+                >
+                  ₦{l.still_owed.toLocaleString()} owed
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       )}
 
       {/* Selected line context */}
@@ -228,11 +239,16 @@ const RemitTaxSheet = ({
         <View
           style={[
             styles.contextCard,
-            { backgroundColor: colors.textInput, borderColor: isDark ? "#282b32" : "#eef0f4" },
+            {
+              backgroundColor: colors.textInput,
+              borderColor: isDark ? "#282b32" : "#eef0f4",
+            },
           ]}
         >
           <View style={styles.contextRow}>
-            <Text style={[styles.contextLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.contextLabel, { color: colors.textSecondary }]}
+            >
               Collected
             </Text>
             <Text style={[styles.contextValue, { color: colors.text }]}>
@@ -240,7 +256,9 @@ const RemitTaxSheet = ({
             </Text>
           </View>
           <View style={styles.contextRow}>
-            <Text style={[styles.contextLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.contextLabel, { color: colors.textSecondary }]}
+            >
               Already remitted
             </Text>
             <Text style={[styles.contextValue, { color: "#0ea5e9" }]}>
@@ -248,7 +266,9 @@ const RemitTaxSheet = ({
             </Text>
           </View>
           <View style={[styles.contextRow, styles.contextLast]}>
-            <Text style={[styles.contextLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.contextLabel, { color: colors.textSecondary }]}
+            >
               Still owed
             </Text>
             <Text style={[styles.contextValue, { color: "#10b981" }]}>
@@ -259,7 +279,9 @@ const RemitTaxSheet = ({
       )}
 
       {/* Amount */}
-      <Text style={[styles.label, { color: colors.textSecondary }]}>Amount</Text>
+      <Text style={[styles.label, { color: colors.textSecondary }]}>
+        Amount
+      </Text>
       <AppTextInput
         placeholder="0"
         value={amountText}
@@ -310,19 +332,14 @@ const RemitTaxSheet = ({
                   style={[
                     styles.methodLabel,
                     {
-                      color: isSelected
-                        ? colors.buttonPrimary
-                        : colors.text,
+                      color: isSelected ? colors.buttonPrimary : colors.text,
                     },
                   ]}
                 >
                   {m.label}
                 </Text>
                 <Text
-                  style={[
-                    styles.methodDesc,
-                    { color: colors.textSecondary },
-                  ]}
+                  style={[styles.methodDesc, { color: colors.textSecondary }]}
                 >
                   {m.desc}
                 </Text>
@@ -410,7 +427,12 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontFamily: "monospace",
   },
-  accountChipName: { fontSize: 12, fontWeight: "600", maxWidth: 140, marginTop: 2 },
+  accountChipName: {
+    fontSize: 12,
+    fontWeight: "600",
+    maxWidth: 140,
+    marginTop: 2,
+  },
   accountChipOwed: { fontSize: 10, fontWeight: "600", marginTop: 2 },
   contextCard: {
     borderWidth: StyleSheet.hairlineWidth,
@@ -427,7 +449,12 @@ const styles = StyleSheet.create({
   contextLast: { borderBottomWidth: 0 },
   contextLabel: { fontSize: 12 },
   contextValue: { fontSize: 13, fontWeight: "700" },
-  overWarning: { color: "#ef4444", fontSize: 12, marginTop: -6, marginBottom: 4 },
+  overWarning: {
+    color: "#ef4444",
+    fontSize: 12,
+    marginTop: -6,
+    marginBottom: 4,
+  },
   methodRow: { flexDirection: "row", gap: 8 },
   methodPill: {
     flex: 1,

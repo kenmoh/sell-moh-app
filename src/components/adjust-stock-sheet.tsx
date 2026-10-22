@@ -3,10 +3,10 @@ import AppBottomSheet from "@/components/bottom-sheet";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/lib/ctx";
 import { AdjustProduct } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
@@ -62,8 +62,6 @@ const AdjustStockSheet = ({
   const [errors, setErrors] = useState<Partial<Record<AdjustField, string>>>(
     {},
   );
-
-
 
   useEffect(() => {
     setUnitCostValue(String(unitCost));
@@ -127,6 +125,7 @@ const AdjustStockSheet = ({
   return (
     <AppBottomSheet
       snapPoints={["75%", "85%"]}
+      index={1}
       visible={visible}
       onVisibleChange={(v) => {
         if (!v) reset();
@@ -171,7 +170,12 @@ const AdjustStockSheet = ({
             onChangeText={(t) => {
               const filtered = t.replace(/[^0-9-]/g, "");
               const dashCount = (filtered.match(/-/g) || []).length;
-              if (dashCount <= 1 && (filtered === "" || filtered === "-" || /^-?\d+$/.test(filtered))) {
+              if (
+                dashCount <= 1 &&
+                (filtered === "" ||
+                  filtered === "-" ||
+                  /^-?\d+$/.test(filtered))
+              ) {
                 setQuantity(filtered);
               }
             }}

@@ -7,12 +7,12 @@ import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
 import { Customer } from "@/types/customer";
-import DateTimePicker from "@expo/ui/community/datetime-picker";
 import {
   DocumentCreateRequest,
   DocumentItemLine,
   DocumentType,
 } from "@/types/document-types";
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
@@ -49,7 +49,8 @@ const emptyItem = (): DocumentItemLine => ({
 const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
-  const { isOwner, stores, resolvedStoreId, resolvedStoreName } = useActiveStore();
+  const { isOwner, stores, resolvedStoreId, resolvedStoreName } =
+    useActiveStore();
 
   const [docType, setDocType] = useState<DocumentType>("invoice");
   // Owners choose the store; everyone else is filed against their own by
@@ -74,8 +75,7 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
   const { data: customerResults, isPending: isSearchingCustomers } = useQuery({
     queryKey: ["customers", "picker", customerSearch],
     queryFn: () => fetchCustomers(1, 20, customerSearch.trim() || undefined),
-    enabled:
-      visible && !customer && customerSearch.trim().length >= 2,
+    enabled: visible && !customer && customerSearch.trim().length >= 2,
   });
 
   const updateItem = (index: number, patch: Partial<DocumentItemLine>) => {
@@ -147,6 +147,7 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
   return (
     <AppBottomSheet
       snapPoints={["70%", "90%"]}
+      index={1}
       visible={visible}
       onVisibleChange={onVisibleChange}
     >
@@ -196,11 +197,16 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
               ]}
             >
               <View style={{ flex: 1 }}>
-                <Text style={[styles.selectedCustomerName, { color: colors.text }]}>
+                <Text
+                  style={[styles.selectedCustomerName, { color: colors.text }]}
+                >
                   {customer.name}
                 </Text>
                 <Text
-                  style={[styles.selectedCustomerMeta, { color: colors.textSecondary }]}
+                  style={[
+                    styles.selectedCustomerMeta,
+                    { color: colors.textSecondary },
+                  ]}
                 >
                   {customer.phone || customer.email || "No contact"}
                 </Text>
@@ -251,11 +257,16 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
                           setCustomerSearch("");
                         }}
                       >
-                        <Text style={[styles.customerName, { color: colors.text }]}>
+                        <Text
+                          style={[styles.customerName, { color: colors.text }]}
+                        >
                           {c.name}
                         </Text>
                         <Text
-                          style={[styles.customerMeta, { color: colors.textSecondary }]}
+                          style={[
+                            styles.customerMeta,
+                            { color: colors.textSecondary },
+                          ]}
                         >
                           {c.phone || c.email || "No contact"}
                         </Text>
@@ -305,7 +316,9 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
 
         {isOwner && (
           <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.textSecondary }]}
+            >
               Store
             </Text>
             <PillRow>
@@ -321,8 +334,8 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
             </PillRow>
             <Text style={[styles.helper, { color: colors.textSecondary }]}>
               {`This becomes an invoice, payable or journal entry, and those are attributed to a store. Filing against ${
-                stores.find((x) => x.id === (storeId ?? resolvedStoreId))?.name ??
-                resolvedStoreName
+                stores.find((x) => x.id === (storeId ?? resolvedStoreId))
+                  ?.name ?? resolvedStoreName
               }.`}
             </Text>
           </View>
@@ -442,10 +455,7 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
                 </View>
               ) : (
                 <Text
-                  style={[
-                    styles.lineTaxHint,
-                    { color: colors.textSecondary },
-                  ]}
+                  style={[styles.lineTaxHint, { color: colors.textSecondary }]}
                 >
                   No tax rates configured yet
                 </Text>
@@ -471,7 +481,11 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
                 ]}
                 onPress={() => setShowDatePicker(true)}
               >
-                <Lucide name="calendar" size={16} color={colors.textSecondary} />
+                <Lucide
+                  name="calendar"
+                  size={16}
+                  color={colors.textSecondary}
+                />
                 <Text
                   style={[
                     styles.datePickerText,
@@ -534,7 +548,6 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
             : `Create ${DOC_TYPES.find((t) => t.value === docType)?.label}`}
         </Text>
       </Pressable>
-
     </AppBottomSheet>
   );
 };

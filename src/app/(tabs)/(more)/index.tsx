@@ -6,7 +6,7 @@ import { useSession } from "@/lib/ctx";
 import { Host, Switch } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation } from "@tanstack/react-query";
-import { router } from "expo-router";
+import { router, Stack } from "expo-router";
 import {
   ScrollView,
   StyleSheet,
@@ -46,18 +46,19 @@ const More = () => {
       style={{ flex: 1, backgroundColor: colors.background }}
       contentContainerStyle={{
         paddingHorizontal: 15,
-        paddingTop: insets.top,
+        // paddingTop: insets.top,
         paddingBottom: insets.bottom + 20,
-        gap: 15,
+        // gap: 15,
       }}
       showsVerticalScrollIndicator={false}
     >
+      <Stack.Screen options={{ title: "Store Settings", headerShown: true }} />
       <MoreCard label="Store">
-        <LinkItem
+        {/* <LinkItem
           label="Store Profile"
           leadingIcon="building-2"
           onPress={() => router.push("/(tabs)/(more)/store-profile")}
-        />
+        /> */}
         <LinkItem
           label="User Profile"
           leadingIcon="user-circle"

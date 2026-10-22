@@ -92,12 +92,14 @@ const ProfileScreen = () => {
       .toUpperCase()
       .slice(0, 2) || "??";
 
+  // Captured once per mount: computing it fresh on every render would make
+  // the countdown jitter, and the rule forbids Date.now in render.
+  const [nowTs] = useState(() => Date.now());
   const daysUntilExpiry = pinData?.expires_at
     ? Math.max(
         0,
         Math.ceil(
-          (new Date(pinData.expires_at).getTime() - Date.now()) /
-            (1000 * 60 * 60 * 24),
+          (new Date(pinData.expires_at).getTime() - nowTs) / (1000 * 60 * 60 * 24),
         ),
       )
     : null;
@@ -238,21 +240,30 @@ const ProfileScreen = () => {
             BUSINESS
           </Text>
 
-          <Pressable
-            onPress={handlePickLogo}
-            style={styles.logoRow}
-          >
+          <Pressable onPress={handlePickLogo} style={styles.logoRow}>
             {bizData?.logo_url ? (
               <Image
                 source={{ uri: bizData.logo_url }}
                 style={styles.logoImage}
               />
             ) : (
-              <View style={[styles.logoPlaceholder, { backgroundColor: colors.backgroundElement }]}>
+              <View
+                style={[
+                  styles.logoPlaceholder,
+                  { backgroundColor: colors.backgroundElement },
+                ]}
+              >
                 {isUploadingLogo ? (
-                  <ActivityIndicator size="small" color={colors.textSecondary} />
+                  <ActivityIndicator
+                    size="small"
+                    color={colors.textSecondary}
+                  />
                 ) : (
-                  <Lucide name="image-plus" size={24} color={colors.textSecondary} />
+                  <Lucide
+                    name="image-plus"
+                    size={24}
+                    color={colors.textSecondary}
+                  />
                 )}
               </View>
             )}
@@ -483,10 +494,7 @@ const ProfileScreen = () => {
           <Pressable
             onPress={() => saveBiz()}
             disabled={isSavingBiz}
-            style={[
-              styles.saveBtn,
-              { backgroundColor: colors.buttonPrimary },
-            ]}
+            style={[styles.saveBtn, { backgroundColor: colors.buttonPrimary }]}
           >
             {isSavingBiz ? (
               <ActivityIndicator color="#fff" size="small" />
@@ -577,7 +585,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     paddingHorizontal: 20,
     paddingVertical: 16,
-    gap: 12,
+    gap: 30,
   },
   sectionLabel: {
     fontSize: 11,

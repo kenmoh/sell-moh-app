@@ -1,8 +1,8 @@
 import AppBottomSheet from "@/components/bottom-sheet";
-import { useActiveStore } from "@/lib/store-context";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
 import {
@@ -79,7 +79,12 @@ const categories = [
   },
 ];
 
-const AddExpenseSheet = ({ visible, onVisibleChange, onAdd, isPending }: Props) => {
+const AddExpenseSheet = ({
+  visible,
+  onVisibleChange,
+  onAdd,
+  isPending,
+}: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const { resolvedStoreName } = useActiveStore();
@@ -101,6 +106,7 @@ const AddExpenseSheet = ({ visible, onVisibleChange, onAdd, isPending }: Props) 
   return (
     <AppBottomSheet
       visible={visible}
+      index={1}
       onVisibleChange={(v) => {
         if (!v) reset();
         onVisibleChange(v);
@@ -110,7 +116,10 @@ const AddExpenseSheet = ({ visible, onVisibleChange, onAdd, isPending }: Props) 
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Track a new expense for your store
       </Text>
-      <Text style={[styles.hint, { color: colors.textSecondary }]} numberOfLines={1}>
+      <Text
+        style={[styles.hint, { color: colors.textSecondary }]}
+        numberOfLines={1}
+      >
         Recording to {resolvedStoreName}
       </Text>
 
@@ -124,7 +133,9 @@ const AddExpenseSheet = ({ visible, onVisibleChange, onAdd, isPending }: Props) 
             key={cat.id}
             label={cat.label}
             active={selectedCategory === cat.id}
-            onPress={() => setSelectedCategory(selectedCategory === cat.id ? "" : cat.id)}
+            onPress={() =>
+              setSelectedCategory(selectedCategory === cat.id ? "" : cat.id)
+            }
             icon={cat.icon as any}
             color={cat.color}
           />
@@ -158,7 +169,11 @@ const AddExpenseSheet = ({ visible, onVisibleChange, onAdd, isPending }: Props) 
       <Pressable
         style={[
           styles.confirmButton,
-          { opacity: selectedCategory && amount && !isPending ? 1 : 0.5 },
+          {
+            opacity: selectedCategory && amount && !isPending ? 1 : 0.5,
+            backgroundColor: colors.buttonPrimary,
+            marginTop: 20,
+          },
         ]}
         disabled={!selectedCategory || !amount || isPending}
         onPress={handleAdd}
@@ -189,8 +204,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    backgroundColor: "#2563eb",
-    borderRadius: 12,
+    borderRadius: 999,
     paddingVertical: 14,
     marginTop: 8,
   },
