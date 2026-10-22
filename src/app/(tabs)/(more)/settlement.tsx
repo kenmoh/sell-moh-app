@@ -1,17 +1,21 @@
 import {
+  createSettlementLink,
   fetchSettlement,
   fetchSettlementBalance,
   SettlementEntry,
 } from "@/api/settlement";
-import Pill from "@/components/pill";
 import { Colors } from "@/constants/theme";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
+import { useToast } from "@/hooks/use-toast";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import * as Clipboard from "expo-clipboard";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Linking,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -19,8 +23,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-type Filter = "all" | "pending" | "deducted";
 
 const formatCurrency = (n: number) => `₦${n.toLocaleString("en-NG")}`;
 
@@ -30,26 +32,31 @@ const methodColors: Record<string, { color: string; bg: string }> = {
   transfer: { color: "#7C3AED", bg: "rgba(124, 58, 237, 0.12)" },
 };
 
-const statusColors: Record<string, { color: string; bg: string }> = {
-  pending: { color: "#D97706", bg: "rgba(217, 119, 6, 0.12)" },
-  deducted: { color: "#059669", bg: "rgba(5, 150, 105, 0.12)" },
-};
+const POLL_MS = 5000;
 
 const SettlementScreen = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
-  const [filter, setFilter] = useState<Filter>("all");
+
+  // Only pending settlements are served here: they are what the tenant
+  // still owes, and they are what the payment link below clears.
+  const [payment, setPayment] = useState<{
+    link: string;
+    amount: number;
+  } | null>(null);
 
   const {
     data: balance,
-    isLoading: isLoadingBalance,
     isError,
     error,
   } = useQuery({
     queryKey: ["settlement-balance"],
     queryFn: fetchSettlementBalance,
+    // While a settlement link is out in the world, poll until the webhook
+    // reports the balance cleared, then the buttons can let go.
+    refetchInterval: payment ? POLL_MS : false,
   });
 
   useApiErrorToast({ isError, error, title: "Couldn't load settlement" });
@@ -60,15 +67,45 @@ const SettlementScreen = () => {
     isRefetching,
     refetch,
   } = useQuery({
-    queryKey: ["settlement", filter],
-    queryFn: () => fetchSettlement(filter === "all" ? undefined : filter),
+    queryKey: ["settlement", "pending"],
+    queryFn: () => fetchSettlement("pending"),
+    refetchInterval: payment ? POLL_MS : false,
   });
 
-  const items = useMemo(() => settlement?.items ?? [], [settlement?.items]);
+  const items = (settlement?.items ?? []).filter(
+    (item) => item.status === "pending",
+  );
+
+  const toast = useToast();
+
+  // Cleared while a link is open: the webhook flipped everything the link
+  // stood for. The set-state runs in a timer callback rather than straight
+  // in the effect body, which is the sanctioned pattern for reacting to an
+  // external system finishing without a cascading render.
+  useEffect(() => {
+    if (payment && (balance?.pending_balance ?? 0) === 0) {
+      const t = setTimeout(() => {
+        setPayment(null);
+        toast.success("Settlement cleared", "Your pending fees are all paid.");
+      }, 0);
+      return () => clearTimeout(t);
+    }
+  }, [payment, balance?.pending_balance, toast]);
+
+  const linkMutation = useMutation({
+    mutationFn: createSettlementLink,
+    onSuccess: (result) => {
+      setPayment({ link: result.link, amount: result.amount });
+      toast.success(
+        "Payment link ready",
+        "Continue to payment when you're ready.",
+      );
+    },
+    onError: (err: Error) => toast.error("Payment link failed", err.message),
+  });
 
   const renderItem = ({ item }: { item: SettlementEntry }) => {
     const method = methodColors[item.payment_method] ?? methodColors.cash;
-    const status = statusColors[item.status] ?? statusColors.pending;
     const date = new Date(item.created_at).toLocaleDateString("en-NG", {
       month: "short",
       day: "numeric",
@@ -76,15 +113,7 @@ const SettlementScreen = () => {
     });
 
     return (
-      <View
-        style={[
-          styles.card,
-          {
-            backgroundColor: colors.card,
-            // borderColor: isDark ? colors.backgroundElement : "#eef0f4",
-          },
-        ]}
-      >
+      <View style={[styles.card, { backgroundColor: colors.card }]}>
         <View style={styles.cardTop}>
           <View style={styles.cardLeft}>
             <View style={[styles.methodBadge, { backgroundColor: method.bg }]}>
@@ -103,11 +132,11 @@ const SettlementScreen = () => {
                 {item.payment_method}
               </Text>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
+            <View style={[styles.statusBadge, { backgroundColor: statusColors.pending.bg }]}>
               <View
-                style={[styles.statusDot, { backgroundColor: status.color }]}
+                style={[styles.statusDot, { backgroundColor: statusColors.pending.color }]}
               />
-              <Text style={[styles.statusText, { color: status.color }]}>
+              <Text style={[styles.statusText, { color: statusColors.pending.color }]}>
                 {item.status}
               </Text>
             </View>
@@ -138,6 +167,9 @@ const SettlementScreen = () => {
     );
   }
 
+  const pendingBalance = balance?.pending_balance ?? 0;
+  const canPay = pendingBalance > 0 && payment === null;
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <FlatList
@@ -147,7 +179,6 @@ const SettlementScreen = () => {
         renderItem={renderItem}
         contentContainerStyle={{
           paddingHorizontal: 16,
-          // paddingTop: insets.top + 8,
           paddingBottom: insets.bottom + 24,
           gap: 10,
         }}
@@ -179,7 +210,7 @@ const SettlementScreen = () => {
                     Pending
                   </Text>
                   <Text style={[styles.dashValue, { color: "#D97706" }]}>
-                    {formatCurrency(balance?.pending_balance ?? 0)}
+                    {formatCurrency(pendingBalance)}
                   </Text>
                 </View>
               </View>
@@ -199,21 +230,83 @@ const SettlementScreen = () => {
                   </Text>
                 </View>
               )}
-            </View>
 
-            {/* Tabs */}
-            <View style={styles.tabRow}>
-              <Pill
-                label="All"
-                active={filter === "all"}
-                onPress={() => setFilter("all")}
-                badge={settlement?.total}
-              />
-              <Pill
-                label="Pending"
-                active={filter === "pending"}
-                onPress={() => setFilter("pending")}
-              />
+              {/* Clear Outstanding: one link covering every pending fee.
+                  Cleared while a link is still open, the continue button
+                  simply drops out — the balance is what it answers to. */}
+              {canPay && !payment && (
+                <Pressable
+                  onPress={() => linkMutation.mutate()}
+                  disabled={linkMutation.isPending}
+                  style={({ pressed }) => [
+                    styles.payButton,
+                    pressed && { opacity: 0.85 },
+                    linkMutation.isPending && { opacity: 0.6 },
+                  ]}
+                >
+                  {linkMutation.isPending ? (
+                    <ActivityIndicator size="small" color="#ffffff" />
+                  ) : (
+                    <>
+                      <Lucide name="badge-check" size={16} color="#ffffff" />
+                      <Text style={styles.payButtonText}>Clear Outstanding</Text>
+                    </>
+                  )}
+                </Pressable>
+              )}
+
+              {/* Continue to payment: the gateway link for the summed
+                  amounts, plus a copy fallback for restricted browsers */}
+              {payment && pendingBalance > 0 && (
+                <View style={styles.payGroup}>
+                  <Pressable
+                    onPress={() => {
+                      void Linking.openURL(payment.link);
+                    }}
+                    style={({ pressed }) => [
+                      styles.payButton,
+                      pressed && { opacity: 0.85 },
+                    ]}
+                  >
+                    <Lucide name="external-link" size={16} color="#ffffff" />
+                    <Text style={styles.payButtonText}>
+                      Continue to payment · {formatCurrency(payment.amount)}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={async () => {
+                      await Clipboard.setStringAsync(payment.link);
+                    }}
+                    style={({ pressed }) => [
+                      styles.payButtonGhost,
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <Lucide
+                      name={isDark ? "copy" : "copy"}
+                      size={14}
+                      color={colors.buttonPrimary}
+                    />
+                    <Text
+                      style={[styles.payGhostText, { color: colors.buttonPrimary }]}
+                    >
+                      Copy link
+                    </Text>
+                  </Pressable>
+                  {payment.amount !== pendingBalance && (
+                    <Text
+                      style={[styles.payNote, { color: colors.textSecondary }]}
+                    >
+                      The link covers ₦
+                      {payment.amount.toLocaleString()} — pay it in full so
+                      every fee above clears.
+                    </Text>
+                  )}
+                  <Text style={[styles.payNote, { color: colors.textSecondary }]}>
+                    This screen refreshes itself once the payment lands.
+                  </Text>
+                </View>
+              )}
             </View>
           </>
         }
@@ -225,20 +318,29 @@ const SettlementScreen = () => {
               color={colors.textSecondary}
             />
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
-              No {filter !== "all" ? filter : ""} entries
+              {payment
+                ? "Payment received — all pending fees are settled"
+                : "No pending fees. You're all settled."}
             </Text>
           </View>
         }
         refreshControl={
           <RefreshControl
             refreshing={isRefetching}
-            onRefresh={() => { refetch(); }}
+            onRefresh={() => {
+              refetch();
+            }}
             tintColor={colors.buttonPrimary}
           />
         }
       />
     </View>
   );
+};
+
+const statusColors: Record<string, { color: string; bg: string }> = {
+  pending: { color: "#D97706", bg: "rgba(217, 119, 6, 0.12)" },
+  deducted: { color: "#059669", bg: "rgba(5, 150, 105, 0.12)" },
 };
 
 export default SettlementScreen;
@@ -294,13 +396,43 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     flex: 1,
   },
-  tabRow: {
+  payButton: {
     flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    marginVertical: 10,
+    backgroundColor: "#059669",
+    borderRadius: 12,
+    paddingVertical: 12,
+    minHeight: 44,
+  },
+  payButtonText: {
+    color: "#ffffff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  payGroup: {
+    gap: 10,
+  },
+  payButtonGhost: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "rgba(5, 150, 105, 0.35)",
+    paddingVertical: 10,
+  },
+  payGhostText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  payNote: {
+    fontSize: 11,
+    textAlign: "center",
   },
   card: {
-    // borderWidth: 1,
     borderRadius: 12,
     padding: 14,
     gap: 10,

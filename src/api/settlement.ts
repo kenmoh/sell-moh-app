@@ -43,6 +43,30 @@ export const fetchSettlement = async (
   return res.data?.data!;
 };
 
+export const createSettlementLink = async (): Promise<{
+  link: string;
+  amount: number;
+  intent_id: string;
+  tx_ref: string;
+  reused: boolean;
+}> => {
+  const res = await apiClient.post<{
+    data: {
+      link: string;
+      amount: number;
+      intent_id: string;
+      tx_ref: string;
+      reused: boolean;
+    };
+  }>(`${URL}/link`, {});
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
+
 export const fetchSettlementBalance =
   async (): Promise<SettlementBalanceResponse> => {
     const res = await apiClient.get<{ data: SettlementBalanceResponse }>(
