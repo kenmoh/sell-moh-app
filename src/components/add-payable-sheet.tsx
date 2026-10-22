@@ -15,6 +15,7 @@ import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApiMutation } from "@/hooks/use-api-mutation";
+import { useActiveStore } from "@/lib/store-context";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -45,6 +46,7 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
+  const { resolvedStoreId, resolvedStoreName } = useActiveStore();
 
   const [vendorName, setVendorName] = useState("");
   const [vendor, setVendor] = useState<Customer | null>(null);
@@ -80,6 +82,7 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
         amount: parseFloat(amount),
         due_date: dueDateValue,
         expense_category: category,
+        store_id: resolvedStoreId,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["payables"] });
@@ -138,6 +141,12 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
         <Text style={[styles.title, { color: colors.text }]}>New Payable</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Record an amount owed to a vendor
+        </Text>
+        <Text
+          style={[styles.hint, { color: colors.textSecondary }]}
+          numberOfLines={1}
+        >
+          Recording to {resolvedStoreName}
         </Text>
       </View>
 

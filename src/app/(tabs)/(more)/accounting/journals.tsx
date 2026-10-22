@@ -33,7 +33,7 @@ const Journals = () => {
   const colors = Colors[isDark ? "dark" : "light"];
   const queryClient = useQueryClient();
 
-  const { activeStoreId } = useActiveStore();
+  const { activeStoreId, resolvedStoreId } = useActiveStore();
 
   const [showAddSheet, setShowAddSheet] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
@@ -69,7 +69,7 @@ const Journals = () => {
 
   const { mutate: addJournal, isPending: isAdding } = useMutation({
     mutationFn: (data: Parameters<typeof createJournal>[0]) =>
-      createJournal({ ...data, store_id: activeStoreId ?? undefined }),
+      createJournal({ ...data, store_id: resolvedStoreId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["journals"] });
       setShowAddSheet(false);

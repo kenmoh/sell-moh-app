@@ -47,7 +47,7 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const queryClient = useQueryClient();
-  const { activeStoreId } = useActiveStore();
+  const { resolvedStoreId, resolvedStoreName } = useActiveStore();
 
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [customerSearch, setCustomerSearch] = useState("");
@@ -150,7 +150,7 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
         amount: Number(amount),
         due_date: dueDateValue,
         invoice_id: invoiceId ?? undefined,
-        store_id: activeStoreId,
+        store_id: resolvedStoreId,
       });
     },
     onSuccess: () => {
@@ -239,6 +239,12 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
         <Text style={[styles.title, { color: colors.text }]}>New Receivable</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Pick a customer and their invoice to fill the details
+        </Text>
+        <Text
+          style={[styles.hint, { color: colors.textSecondary }]}
+          numberOfLines={1}
+        >
+          Recording to {resolvedStoreName}
         </Text>
       </View>
 

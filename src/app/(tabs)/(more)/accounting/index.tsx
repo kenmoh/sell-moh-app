@@ -800,7 +800,7 @@ const AccountingScreen = () => {
   const queryClient = useQueryClient();
   const router = useRouter();
 
-  const { activeStoreId } = useActiveStore();
+  const { activeStoreId, resolvedStoreId } = useActiveStore();
 
   const [activeTab, setActiveTab] = useState<Tab>("receivables");
   const [showAddReceivable, setShowAddReceivable] = useState(false);
@@ -938,7 +938,7 @@ const AccountingScreen = () => {
         description: data.note || "",
         amount: parseFloat(data.amount),
         expense_date: new Date().toISOString().split("T")[0],
-        store_id: activeStoreId ?? undefined,
+        store_id: resolvedStoreId,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["expenses"] });

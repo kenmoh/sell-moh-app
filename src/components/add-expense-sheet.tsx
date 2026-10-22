@@ -1,4 +1,5 @@
 import AppBottomSheet from "@/components/bottom-sheet";
+import { useActiveStore } from "@/lib/store-context";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
@@ -81,6 +82,7 @@ const categories = [
 const AddExpenseSheet = ({ visible, onVisibleChange, onAdd, isPending }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
+  const { resolvedStoreName } = useActiveStore();
   const [selectedCategory, setSelectedCategory] = useState("");
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
@@ -107,6 +109,9 @@ const AddExpenseSheet = ({ visible, onVisibleChange, onAdd, isPending }: Props) 
       <Text style={[styles.title, { color: colors.text }]}>Add Expense</Text>
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Track a new expense for your store
+      </Text>
+      <Text style={[styles.hint, { color: colors.textSecondary }]} numberOfLines={1}>
+        Recording to {resolvedStoreName}
       </Text>
 
       {/* Category Chips */}
@@ -176,6 +181,7 @@ export default AddExpenseSheet;
 const styles = StyleSheet.create({
   title: { fontSize: 18, fontWeight: "700" },
   subtitle: { fontSize: 13, marginBottom: 4 },
+  hint: { fontSize: 11, marginBottom: 4 },
   label: { fontSize: 12, fontWeight: "600", letterSpacing: 0.8, marginTop: 4 },
   chipRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   confirmButton: {
