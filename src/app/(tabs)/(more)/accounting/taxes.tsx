@@ -1,6 +1,5 @@
 import {
   fetchTaxesCollected,
-  fetchTaxesOwed,
   remitTax,
 } from "@/api/accounting";
 import RemitTaxSheet from "@/components/accounting/remit-tax-sheet";
@@ -20,7 +19,6 @@ import { Lucide } from "@react-native-vector-icons/lucide";
 import {
   useInfiniteQuery,
   useMutation,
-  useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
 import { Stack, useRouter } from "expo-router";
@@ -42,7 +40,7 @@ const TaxesScreen = () => {
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
 
-  const { activeStoreId, activeStoreName } = useActiveStore();
+  const { activeStoreId } = useActiveStore();
   const queryClient = useQueryClient();
   const router = useRouter();
   const [showRemitSheet, setShowRemitSheet] = useState(false);
@@ -90,28 +88,12 @@ const TaxesScreen = () => {
   });
 
   const {
-    data: owedLines = [],
-    isError: isOwedError,
-    error: owedError,
-  } = useQuery({
-    queryKey: ["taxes-owed", activeStoreId],
-    queryFn: () => fetchTaxesOwed(activeStoreId),
-  });
-
-  useApiErrorToast({
-    isError: isOwedError,
-    error: owedError,
-    title: "Couldn't load tax balances",
-  });
-
-  const {
     mutate: submitRemittance,
     isPending: isRemitting,
     isError: isRemitError,
     error: remitError,
   } = useMutation({
-    mutationFn: (payload: TaxRemitRequest) =>
-      remitTax({ ...payload, store_id: activeStoreId }),
+    mutationFn: (payload: TaxRemitRequest) => remitTax(payload),
     onSuccess: async () => {
       setShowRemitSheet(false);
       await Promise.all([
@@ -391,9 +373,7 @@ const TaxesScreen = () => {
       <RemitTaxSheet
         visible={showRemitSheet}
         onVisibleChange={setShowRemitSheet}
-        lines={owedLines}
         isPending={isRemitting}
-        storeName={activeStoreName}
         onSubmit={(payload) => submitRemittance(payload)}
       />
     </View>

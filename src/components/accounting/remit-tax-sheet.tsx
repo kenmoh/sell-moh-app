@@ -1,7 +1,10 @@
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
-import type { TaxOwedLine, TaxRemitRequest } from "@/types/accounting";
+import { fetchTaxesOwed } from "@/api/accounting";
+import { useActiveStore } from "@/lib/store-context";
+import { useQuery } from "@tanstack/react-query";
+import type { TaxRemitRequest } from "@/types/accounting";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
 import {
@@ -21,38 +24,58 @@ const METHODS = [
 type Props = {
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
-  lines: TaxOwedLine[];
   isPending?: boolean;
-  storeName?: string;
   onSubmit: (payload: TaxRemitRequest) => void;
 };
 
 const RemitTaxSheet = ({
   visible,
   onVisibleChange,
-  lines,
   isPending,
-  storeName,
   onSubmit,
 }: Props) => {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
+  const { stores, activeStoreId, activeStoreName } = useActiveStore();
+
+  // The active store stays when a concrete one is viewing; under All Stores
+  // the sheet picks which store's tax is being remitted (it names a concrete
+  // store on every post, so Nothing is untagged).
+  const defaultStoreId = activeStoreId ?? stores[0]?.id ?? "";
+  const [storeIdChoice, setStoreIdChoice] = useState<string | null>(null);
+  const remitStoreId = storeIdChoice ?? defaultStoreId;
+  const remitStoreName =
+    stores.find((s) => s.id === remitStoreId)?.name ?? activeStoreName;
 
   const [accountCode, setAccountCode] = useState<string | null>(null);
   const [amount, setAmount] = useState<string | null>(null);
   const [method, setMethod] = useState<"cash" | "bank">("cash");
   const [notes, setNotes] = useState("");
 
+  // ── Owed balances for the remitting store ──────────────────────────────
+  const { data: owedLines = [], isPending: isLoadingLines } = useQuery({
+    queryKey: ["taxes-owed", remitStoreId],
+    queryFn: () => fetchTaxesOwed(remitStoreId),
+    enabled: visible && !!remitStoreId,
+  });
+
   // Nulls fall back to the first account and its still-owed amount, so an
   // opening sheet is always prefilled without rewriting state in an effect.
-  const selectedCode = accountCode ?? lines[0]?.account_code ?? null;
-  const line = lines.find((l) => l.account_code === selectedCode) ?? null;
+  const selectedCode = accountCode ?? owedLines[0]?.account_code ?? null;
+  const line = owedLines.find((l) => l.account_code === selectedCode) ?? null;
   const amountText = amount ?? (line ? String(line.still_owed) : "");
   const parsedAmount = parseFloat(amountText) || 0;
   const overCeiling = line ? parsedAmount - line.still_owed > 0.009 : false;
 
+  const pickStore = (id: string) => {
+    setStoreIdChoice(id);
+    setAccountCode(null);
+    setAmount(null);
+  };
+
   const reset = () => {
+    setStoreIdChoice(null);
     setAccountCode(null);
     setAmount(null);
     setMethod("cash");
@@ -68,6 +91,7 @@ const RemitTaxSheet = ({
       payment_date: paymentDate,
       method,
       notes: notes.trim() || undefined,
+      store_id: remitStoreId,
     });
   };
 
@@ -80,24 +104,72 @@ const RemitTaxSheet = ({
       }}
     >
       <Text style={[styles.title, { color: colors.text }]}>Remit Tax</Text>
-      {storeName && (
-        <View style={styles.storeRow}>
-          <Lucide name="store" size={13} color={colors.textSecondary} />
-          <Text style={[styles.storeName, { color: colors.textSecondary }]}>
-            Remitting from {storeName}
-          </Text>
-        </View>
-      )}
       <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
         Record tax paid to the authority; the ledger keeps the running balance
       </Text>
+
+      {/* Store (pickable only while All Stores is viewing) */}
+      <Text style={[styles.label, { color: colors.textSecondary }]}>
+        Remitting from
+      </Text>
+      {activeStoreId ? (
+        <View style={styles.storeRow}>
+          <Lucide name="store" size={13} color={colors.textSecondary} />
+          <Text style={[styles.storeName, { color: colors.textSecondary }]}>
+            {remitStoreName}
+          </Text>
+        </View>
+      ) : (
+        <View style={styles.storeChips}>
+          {stores.map((s) => {
+            const isSelected = s.id === remitStoreId;
+            return (
+              <Pressable
+                key={s.id}
+                style={[
+                  styles.storeChip,
+                  {
+                    backgroundColor: isSelected
+                      ? "transparent"
+                      : colors.textInput,
+                    borderColor: isSelected
+                      ? colors.buttonPrimary
+                      : isDark
+                        ? "#282b32"
+                        : "#eef0f4",
+                    borderWidth: isSelected ? 1.5 : 1,
+                  },
+                ]}
+                onPress={() => pickStore(s.id)}
+              >
+                <Text
+                  style={[
+                    styles.storeChipName,
+                    { color: isSelected ? colors.buttonPrimary : colors.text },
+                  ]}
+                  numberOfLines={1}
+                >
+                  {s.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      )}
 
       {/* Account select */}
       <Text style={[styles.label, { color: colors.textSecondary }]}>
         Tax account
       </Text>
+      {isLoadingLines ? (
+        <ActivityIndicator size="small" />
+      ) : owedLines.length === 0 ? (
+        <Text style={[styles.emptyLines, { color: colors.textSecondary }]}>
+          No tax is owed by {remitStoreName}
+        </Text>
+      ) : (
       <View style={styles.accountChips}>
-        {lines.map((l) => {
+        {owedLines.map((l) => {
           const isSelected = l.account_code === selectedCode;
           return (
             <Pressable
@@ -149,6 +221,7 @@ const RemitTaxSheet = ({
           );
         })}
       </View>
+      )}
 
       {/* Selected line context */}
       {line && (
@@ -306,6 +379,16 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   storeName: { fontSize: 12, fontWeight: "600" },
+  storeChips: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  storeChip: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    maxWidth: "48%",
+  },
+  storeChipName: { fontSize: 12, fontWeight: "600" },
+  emptyLines: { fontSize: 13, marginTop: 4 },
   subtitle: { fontSize: 13, marginBottom: 12 },
   label: {
     fontSize: 12,
