@@ -70,6 +70,11 @@ const More = () => {
           onPress={() => router.push("/(tabs)/(more)/staff-roles")}
         />
         <LinkItem
+          label="Active Sessions"
+          leadingIcon="shield"
+          onPress={() => router.push("/(tabs)/(more)/sessions")}
+        />
+        <LinkItem
           label="Stores"
           leadingIcon="store"
           onPress={() => router.push("/(tabs)/(more)/store")}

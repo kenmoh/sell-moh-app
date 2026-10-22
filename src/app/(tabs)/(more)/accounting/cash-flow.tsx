@@ -431,3 +431,4 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 17, fontWeight: "700", marginBottom: 6 },
   emptySubtitle: { fontSize: 13, textAlign: "center", marginBottom: 18 },
 });
+

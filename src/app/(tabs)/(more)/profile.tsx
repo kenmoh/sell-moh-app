@@ -365,19 +365,6 @@ const ProfileScreen = () => {
             </View>
             <Lucide name="chevron-right" size={20} color="#aaa" />
           </Pressable>
-
-          <Pressable
-            onPress={() => router.push("/(tabs)/(more)/sessions")}
-            style={styles.pinRow}
-          >
-            <View style={styles.pinRowLeft}>
-              <Lucide name="shield" size={18} color="#aaa" />
-              <Text style={[styles.pinLabel, { color: colors.text }]}>
-                Active Sessions
-              </Text>
-            </View>
-            <Lucide name="chevron-right" size={20} color="#aaa" />
-          </Pressable>
         </View>
       </ScrollView>
 
