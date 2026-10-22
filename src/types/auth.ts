@@ -61,6 +61,8 @@ interface RoleResponse {
   name: string;
   rank: number;
   description: string | null;
+  /** True for the roles every tenant is seeded with; they render read-only. */
+  builtin?: boolean;
 }
 
 interface PermissionResponse {

@@ -1,12 +1,17 @@
-import { assignEmployeeRole, setEmployeeStatus } from "@/api/auth";
+import {
+  assignEmployeeRole,
+  getEmployeeRoles,
+  removeEmployeeRole,
+  setEmployeeStatus,
+} from "@/api/auth";
 import AppBottomSheet from "@/components/bottom-sheet";
 import Pill from "@/components/pill";
 import { Colors, type ColorPalette } from "@/constants/theme";
 import { useToast } from "@/hooks/use-toast";
 import type { Employee, FetchTenantRoles } from "@/types/auth";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
@@ -33,13 +38,17 @@ const initialsOf = (fullName: string | null, email: string) => {
 };
 
 /**
- * Details for one employee: who they are, what role they hold, and whether the
- * account is active.
+ * Details for one employee: who they are, which roles they hold, and whether
+ * the account is active.
  *
- * Role and status are the two things that decide whether someone can work, and
- * both were unreachable from the staff list — the row had no tap target at all.
- * Changing either invalidates the employees and roles queries, because the list
- * shows the very values being edited.
+ * A user can hold several roles; the chips below toggle membership. Save sends
+ * one call for every added role and one for every removed one, leaving the
+ * untouched assignments alone — replacing them wholesale would silently drop
+ * what the employee already holds (which is exactly what broke before).
+ *
+ * Role and status are the two things that decide whether someone can work.
+ * Changing either invalidates the employees and roles queries, because the
+ * list shows the very values being edited.
  */
 const EmployeeSheet = ({ employee, roles, onClose }: Props) => {
   const scheme = useColorScheme();
@@ -48,24 +57,49 @@ const EmployeeSheet = ({ employee, roles, onClose }: Props) => {
   const queryClient = useQueryClient();
   const toast = useToast();
 
-  const [pendingRole, setPendingRole] = useState<string | null>(null);
+  // Null means nothing pending: chips then show what the employee holds.
+  const [pendingRoles, setPendingRoles] = useState<string[] | null>(null);
+
+  const { data: heldRoles } = useQuery({
+    queryKey: ["employee-roles", employee.id],
+    queryFn: () => getEmployeeRoles(employee.id),
+  });
+
+  const heldNames = useMemo(
+    () => (heldRoles ?? []).map((r) => r.name),
+    [heldRoles],
+  );
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["employees"] });
     void queryClient.invalidateQueries({ queryKey: ["roles"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["employee-roles", employee.id],
+    });
   };
 
-  const assign = useMutation({
+  const applyChanges = useMutation({
     mutationFn: async () => {
-      if (!pendingRole) return;
-      await assignEmployeeRole(employee.id, pendingRole);
+      if (!pendingRoles) return;
+      const added = pendingRoles.filter((name) => !heldNames.includes(name));
+      const removed = heldNames.filter((name) => !pendingRoles.includes(name));
+      for (const name of added) {
+        await assignEmployeeRole(employee.id, name);
+      }
+      for (const name of removed) {
+        await removeEmployeeRole(employee.id, name);
+      }
     },
     onSuccess: () => {
-      toast.success("Role updated");
-      setPendingRole(null);
+      toast.success("Roles updated");
+      setPendingRoles(null);
       refresh();
     },
-    onError: (error: Error) => toast.error("Could not change role", error.message),
+    onError: (error: Error) => {
+      toast.error("Could not update roles", error.message);
+      setPendingRoles(null);
+      refresh();
+    },
   });
 
   const toggleStatus = useMutation({
@@ -80,9 +114,27 @@ const EmployeeSheet = ({ employee, roles, onClose }: Props) => {
     onError: (error: Error) => toast.error("Could not change status", error.message),
   });
 
-  const currentRole = employee.role.split(",")[0].trim();
-  const selectedRole = pendingRole ?? currentRole;
-  const dirty = pendingRole !== null && pendingRole !== currentRole;
+  // While the per-employee query is still loading, the list's summary field
+  // (comma separated) keeps the chips accurate enough to stay interactive.
+  const selected =
+    pendingRoles ??
+    (heldNames.length > 0
+      ? heldNames
+      : employee.role
+          .split(",")
+          .map((r) => r.trim())
+          .filter(Boolean));
+  const dirty =
+    pendingRoles !== null &&
+    (pendingRoles.some((name) => !heldNames.includes(name)) ||
+      heldNames.some((name) => !pendingRoles.includes(name)));
+
+  const toggleRole = (name: string) => {
+    const base = pendingRoles ?? heldNames;
+    setPendingRoles(
+      base.includes(name) ? base.filter((r) => r !== name) : [...base, name],
+    );
+  };
 
   return (
     <AppBottomSheet
@@ -130,7 +182,7 @@ const EmployeeSheet = ({ employee, roles, onClose }: Props) => {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.section}>
           <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-            ROLE
+            ROLES
           </Text>
           <View style={styles.pills}>
             {roles.map((role) => (
@@ -138,14 +190,19 @@ const EmployeeSheet = ({ employee, roles, onClose }: Props) => {
                 key={role.id}
                 label={role.name}
                 icon="shield"
-                active={selectedRole === role.name}
-                onPress={() => setPendingRole(role.name)}
+                active={selected.includes(role.name)}
+                onPress={() => toggleRole(role.name)}
               />
             ))}
           </View>
           {roles.length === 0 && (
             <Text style={[styles.hint, { color: colors.textSecondary }]}>
               No roles yet. Create one on the roles list first.
+            </Text>
+          )}
+          {roles.length > 0 && (
+            <Text style={[styles.hint, { color: colors.textSecondary }]}>
+              Tap to grant or take away a role; multiple can be on at once.
             </Text>
           )}
         </View>
@@ -166,15 +223,15 @@ const EmployeeSheet = ({ employee, roles, onClose }: Props) => {
         {dirty && (
           <Pressable
             style={[styles.button, { backgroundColor: colors.buttonPrimary }]}
-            disabled={assign.isPending}
-            onPress={() => assign.mutate()}
+            disabled={applyChanges.isPending}
+            onPress={() => applyChanges.mutate()}
           >
-            {assign.isPending ? (
+            {applyChanges.isPending ? (
               <ActivityIndicator color="#fff" />
             ) : (
               <>
                 <Lucide name="check" size={16} color="#fff" />
-                <Text style={styles.buttonText}>Save role</Text>
+                <Text style={styles.buttonText}>Save roles</Text>
               </>
             )}
           </Pressable>

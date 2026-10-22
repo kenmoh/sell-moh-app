@@ -27,7 +27,6 @@ type Props = {
   /** Opens the edit sheet. Separate from toggling so the tap target is clear. */
   onEdit?: () => void;
 };
-
 const ANIM_MS = 220;
 
 // Android keeps layout animation behind a flag. Enabling it at module load is
@@ -122,10 +121,22 @@ function RoleCard({ role, expanded, onToggle, memberCount, onEdit }: Props) {
         </View>
 
         <View style={styles.info}>
-          <Text style={[styles.name, { color: colors.text }]}>{role.name}</Text>
+          <View style={styles.nameRow}>
+            <Text style={[styles.name, { color: colors.text }]}>{role.name}</Text>
+            {role.builtin && (
+              <Text
+                style={[
+                  styles.builtinTag,
+                  { color: "#6b7280" },
+                ]}
+              >
+                Built-in
+              </Text>
+            )}
+          </View>
           <Text style={[styles.summary, { color: colors.textSecondary }]}>
             {hasPermissions
-              ? `${permissions.length} permission${permissions.length === 1 ? "" : "s"}`
+              ? `${permissions.length} permission${permissions.length === 1 ? "" : "s"} · expand to copy into a custom role`
               : "No permissions"}
             {role.description ? ` · ${role.description}` : ""}
           </Text>
@@ -216,6 +227,8 @@ const styles = StyleSheet.create({
   },
   info: { flex: 1, gap: 2 },
   name: { fontSize: 15, fontWeight: "700" },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  builtinTag: { fontSize: 10, fontWeight: "700", letterSpacing: 0.5, textTransform: "uppercase" },
   summary: { fontSize: 12, lineHeight: 16 },
   members: { fontSize: 12, fontWeight: "600" },
   edit: {

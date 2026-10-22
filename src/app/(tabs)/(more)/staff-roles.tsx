@@ -353,7 +353,7 @@ const StaffRoles = () => {
                 expanded={expandedRoleId === role.id}
                 onToggle={toggleRole}
                 memberCount={memberCounts.get(role.name)}
-                onEdit={() => setEditingRole(role)}
+                onEdit={role.builtin ? undefined : () => setEditingRole(role)}
               />
             ))}
           </View>
