@@ -399,12 +399,23 @@ export const revokeSession = async (sessionId: string): Promise<void> => {
 
 export interface SessionItem {
   id: string;
+  user_id: string;
+  employee_name: string | null;
+  email: string | null;
+  status: string | null;
   device_name: string | null;
   ip_address: string | null;
   user_agent: string | null;
   created_at: string | null;
   last_active_at: string | null;
 }
+
+export const forceSignOut = async (userId: string): Promise<void> => {
+  const res = await apiClient.post(`${URL}/employees/${userId}/force-signout`);
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+};
 
 // ____________________________________Password Management____________________________________
 

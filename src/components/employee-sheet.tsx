@@ -1,5 +1,6 @@
 import {
   assignEmployeeRole,
+  forceSignOut,
   getEmployeeRoles,
   removeEmployeeRole,
   setEmployeeStatus,
@@ -112,6 +113,15 @@ const EmployeeSheet = ({ employee, roles, onClose }: Props) => {
       refresh();
     },
     onError: (error: Error) => toast.error("Could not change status", error.message),
+  });
+
+  const signOutEverywhere = useMutation({
+    mutationFn: () => forceSignOut(employee.id),
+    onSuccess: () => {
+      toast.success("Signed out", `${employee.full_name || employee.email} leaves every device`);
+      refresh();
+    },
+    onError: (error: Error) => toast.error("Could not sign out", error.message),
   });
 
   // While the per-employee query is still loading, the list's summary field
@@ -264,6 +274,22 @@ const EmployeeSheet = ({ employee, roles, onClose }: Props) => {
                 ]}
               >
                 {employee.is_active ? "Suspend access" : "Reactivate"}
+              </Text>
+            </>
+          )}
+        </Pressable>
+        <Pressable
+          style={[styles.button, { backgroundColor: "rgba(220,38,38,0.1)" }]}
+          disabled={signOutEverywhere.isPending}
+          onPress={() => signOutEverywhere.mutate()}
+        >
+          {signOutEverywhere.isPending ? (
+            <ActivityIndicator color={colors.textSecondary} />
+          ) : (
+            <>
+              <Lucide name="log-out" size={16} color="#dc2626" />
+              <Text style={[styles.buttonText, { color: "#dc2626" }]}>
+                Sign out everywhere
               </Text>
             </>
           )}

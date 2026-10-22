@@ -94,6 +94,7 @@ export interface LoginRequest {
   email: string;
   password: string;
   totp_code?: string;
+  device_name?: string;
 }
 
 export interface RegisterRequest {

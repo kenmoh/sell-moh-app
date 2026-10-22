@@ -3,6 +3,7 @@ import AppView from "@/components/app-view";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
+import { deviceName } from "@/lib/device-label";
 import { useGoogleAuth } from "@/lib/google-auth";
 import { useAppleAuth } from "@/lib/apple-auth";
 import { LoginResponseData } from "@/types/auth";
@@ -68,7 +69,11 @@ const SignIn = () => {
 
     setLoading(true);
     try {
-      const res = await login({ email: result.data.email, password: result.data.password });
+      const res = await login({
+        email: result.data.email,
+        password: result.data.password,
+        device_name: deviceName(),
+      });
       const data = res.data as LoginResponseData;
 
       if (data.requires_totp) {
@@ -266,7 +271,7 @@ const SignIn = () => {
 
         <View style={styles.footerRow}>
           <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-            Don't have an account?{" "}
+            Don&apos;t have an account?{" "}
           </Text>
           <TouchableOpacity onPress={() => router.push("/(auth)/sign-up")}>
             <Text style={[styles.footerLink, { color: colors.buttonPrimary }]}>

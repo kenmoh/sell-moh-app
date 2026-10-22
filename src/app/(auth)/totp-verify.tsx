@@ -2,6 +2,7 @@ import { login } from "@/api/auth";
 import AppView from "@/components/app-view";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
+import { deviceName } from "@/lib/device-label";
 import { LoginResponseData } from "@/types/auth";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { router, useLocalSearchParams } from "expo-router";
@@ -39,6 +40,7 @@ const TotpVerify = () => {
         email: email!,
         password: password!,
         totp_code: code,
+        device_name: deviceName(),
       });
       const data = res.data as LoginResponseData;
       signIn(data.tokens.access_token, data.tokens.refresh_token, data.user);
