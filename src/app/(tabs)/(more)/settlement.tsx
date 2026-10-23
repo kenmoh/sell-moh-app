@@ -2,13 +2,14 @@ import {
   createSettlementLink,
   fetchSettlement,
   fetchSettlementBalance,
+  reconcileSettlement,
   SettlementEntry,
 } from "@/api/settlement";
 import { Colors } from "@/constants/theme";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useToast } from "@/hooks/use-toast";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as Clipboard from "expo-clipboard";
 import { useEffect, useState } from "react";
 import {
@@ -77,6 +78,7 @@ const SettlementScreen = () => {
   );
 
   const toast = useToast();
+  const queryClient = useQueryClient();
 
   // Cleared while a link is open: the webhook flipped everything the link
   // stood for. The set-state runs in a timer callback rather than straight
@@ -102,6 +104,25 @@ const SettlementScreen = () => {
       );
     },
     onError: (err: Error) => toast.error("Payment link failed", err.message),
+  });
+
+  // Money already paid whose webhook reply never arrived: ask the backend
+  // to verify the transaction with Flutterwave and sweep the fees inline.
+  const reconcileMutation = useMutation({
+    mutationFn: () => reconcileSettlement(),
+    onSuccess: (result) => {
+      void queryClient.invalidateQueries({ queryKey: ["settlement-balance"] });
+      void queryClient.invalidateQueries({ queryKey: ["settlement"] });
+      setPayment(null);
+      toast.success(
+        result.cleared > 0 ? "Settlement confirmed" : "Nothing to clear",
+        result.cleared > 0
+          ? `${formatCurrency(result.amount)} has been marked as paid.`
+          : "Flutterwave has no successful payment for this link yet.",
+      );
+    },
+    onError: (err: Error) =>
+      toast.error("Couldn't confirm payment", err.message),
   });
 
   const renderItem = ({ item }: { item: SettlementEntry }) => {
@@ -305,6 +326,22 @@ const SettlementScreen = () => {
                   <Text style={[styles.payNote, { color: colors.textSecondary }]}>
                     This screen refreshes itself once the payment lands.
                   </Text>
+                  <Pressable
+                    onPress={() => reconcileMutation.mutate()}
+                    disabled={reconcileMutation.isPending}
+                    style={({ pressed }) => [
+                      styles.recheckButton,
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    {reconcileMutation.isPending ? (
+                      <ActivityIndicator size="small" color={colors.textSecondary} />
+                    ) : (
+                      <Text style={[styles.recheckText, { color: colors.textSecondary }]}>
+                        Already paid? Recheck
+                      </Text>
+                    )}
+                  </Pressable>
                 </View>
               )}
             </View>
@@ -431,6 +468,16 @@ const styles = StyleSheet.create({
   payNote: {
     fontSize: 11,
     textAlign: "center",
+  },
+  recheckButton: {
+    alignSelf: "center",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+  },
+  recheckText: {
+    fontSize: 12,
+    fontWeight: "600",
+    textDecorationLine: "underline",
   },
   card: {
     borderRadius: 12,

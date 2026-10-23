@@ -49,8 +49,7 @@ export const createSettlementLink = async (): Promise<{
   intent_id: string;
   tx_ref: string;
   reused: boolean;
-}> => {
-  const res = await apiClient.post<{
+}> => {  const res = await apiClient.post<{
     data: {
       link: string;
       amount: number;
@@ -79,3 +78,20 @@ export const fetchSettlementBalance =
 
     return res.data?.data!;
   };
+
+// Recovery for settled money a lost webhook never swept.
+export const reconcileSettlement = async (
+  tx_ref?: string,
+): Promise<{ cleared: number; amount: number; intent_id: string }> => {
+  const res = await apiClient.post<{ data: {
+    cleared: number;
+    amount: number;
+    intent_id: string;
+  } }>(`${URL}/reconcile`, tx_ref ? { tx_ref } : {});
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data?.data!;
+};
