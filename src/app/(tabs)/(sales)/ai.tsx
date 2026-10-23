@@ -5,11 +5,11 @@ import {
   getConversation,
 } from "@/api/ai";
 import { Colors } from "@/constants/theme";
-import { streamChat } from "@/lib/sse-client";
-import type { Recommendation, ToolCall } from "@/types/ai-chat";
-import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApiMutation } from "@/hooks/use-api-mutation";
+import { streamChat } from "@/lib/sse-client";
+import type { Recommendation } from "@/types/ai-chat";
+import { Lucide } from "@react-native-vector-icons/lucide";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
 import { Marked } from "marked";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -46,7 +46,6 @@ interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
-  toolCalls?: ToolCall[];
   recommendations?: Recommendation[];
   isStreaming?: boolean;
   confidence?: number;
@@ -61,25 +60,6 @@ const SUGGESTIONS = [
   { label: "Today's revenue summary", icon: "bar-chart-2" as const },
   { label: "Outstanding payments", icon: "credit-card" as const },
 ];
-
-/* ─── Tool Display Names ─── */
-
-const TOOL_LABELS: Record<string, string> = {
-  search_products: "Product Search",
-  get_product_details: "Product Details",
-  check_stock: "Stock Check",
-  get_sales_summary: "Sales Summary",
-  get_top_products: "Top Products",
-  get_revenue_trend: "Revenue Trend",
-  get_recent_transactions: "Recent Transactions",
-  get_customer_insights: "Customer Insights",
-  get_inventory_alerts: "Inventory Alerts",
-  get_profit_loss: "Profit & Loss",
-  get_expenses_by_category: "Expenses",
-  get_accounts_receivable: "Accounts Receivable",
-  compare_product_prices: "Price Comparison",
-  search_product_info: "Product Info",
-};
 
 /* ─── MarkdownText — renders markdown via marked + RN Text ─── */
 
@@ -254,8 +234,12 @@ function TokenRenderer({
                 >
                   <Text style={{ fontSize: 13, fontWeight: "700", color }}>
                     {cell?.tokens && cell.tokens.length > 0
-                      ? renderInlineTokens(cell.tokens, color, backgroundElement)
-                      : cell?.text ?? String(cell)}
+                      ? renderInlineTokens(
+                          cell.tokens,
+                          color,
+                          backgroundElement,
+                        )
+                      : (cell?.text ?? String(cell))}
                   </Text>
                 </View>
               ))}
@@ -280,8 +264,12 @@ function TokenRenderer({
                 >
                   <Text style={{ fontSize: 13, color }}>
                     {cell?.tokens && cell.tokens.length > 0
-                      ? renderInlineTokens(cell.tokens, color, backgroundElement)
-                      : cell?.text ?? String(cell)}
+                      ? renderInlineTokens(
+                          cell.tokens,
+                          color,
+                          backgroundElement,
+                        )
+                      : (cell?.text ?? String(cell))}
                   </Text>
                 </View>
               ))}
@@ -380,9 +368,9 @@ function renderInlineTokens(
 /* ─── Typing Indicator ─── */
 
 function TypingIndicator({ colors }: { colors: any }) {
-  const dot1 = useRef(new Animated.Value(0)).current;
-  const dot2 = useRef(new Animated.Value(0)).current;
-  const dot3 = useRef(new Animated.Value(0)).current;
+  const [dot1] = useState(() => new Animated.Value(0));
+  const [dot2] = useState(() => new Animated.Value(0));
+  const [dot3] = useState(() => new Animated.Value(0));
   const dots = [dot1, dot2, dot3];
 
   useEffect(() => {
@@ -444,38 +432,6 @@ function TypingIndicator({ colors }: { colors: any }) {
   );
 }
 
-/* ─── Tool Call Card ─── */
-
-function ToolCallCard({ tool, colors }: { tool: ToolCall; colors: any }) {
-  const [expanded, setExpanded] = useState(false);
-  const label = TOOL_LABELS[tool.tool] ?? tool.tool;
-
-  return (
-    <Pressable
-      onPress={() => setExpanded(!expanded)}
-      style={[styles.toolCard, { backgroundColor: colors.backgroundElement }]}
-    >
-      <View style={styles.toolHeader}>
-        <Lucide name="wrench" size={12} color="#3b82f6" />
-        <Text style={[styles.toolLabel, { color: colors.text }]}>{label}</Text>
-        <Lucide
-          name={expanded ? "chevron-up" : "chevron-down"}
-          size={14}
-          color={colors.textSecondary}
-        />
-      </View>
-      {expanded && tool.result_summary ? (
-        <Text
-          style={[styles.toolSummary, { color: colors.textSecondary }]}
-          numberOfLines={6}
-        >
-          {tool.result_summary}
-        </Text>
-      ) : null}
-    </Pressable>
-  );
-}
-
 /* ─── Recommendation Chip ─── */
 
 function RecommendationChip({
@@ -514,7 +470,7 @@ function HistoryDrawer({
   onDelete: (id: string) => void;
   colors: any;
 }) {
-  const slideAnim = useRef(new Animated.Value(-300)).current;
+  const [slideAnim] = useState(() => new Animated.Value(-300));
 
   useEffect(() => {
     Animated.spring(slideAnim, {
@@ -712,7 +668,6 @@ const AIScreen = () => {
                         typeof data.answer === "string"
                           ? data.answer
                           : JSON.stringify(data.answer) || accumulatedText,
-                      toolCalls: data.tool_calls,
                       recommendations: data.recommendations,
                       confidence: data.confidence,
                       isStreaming: false,
@@ -729,14 +684,14 @@ const AIScreen = () => {
           refetchHistory();
           queryClient.invalidateQueries({ queryKey: ["ai-conversations"] });
         },
-        onError: (error) => {
+        onError: () => {
           setIsStreaming(false);
           setMessages((prev) =>
             prev.map((m) =>
               m.id === assistantId
                 ? {
                     ...m,
-                    content: `Sorry, something went wrong. ${error.message}`,
+                    content: "Something went wrong. Please try again.",
                     isStreaming: false,
                   }
                 : m,
@@ -814,14 +769,6 @@ const AIScreen = () => {
               ) : null}
             </View>
 
-            {item.toolCalls && item.toolCalls.length > 0 && (
-              <View style={styles.toolCallsContainer}>
-                {item.toolCalls.map((tc, i) => (
-                  <ToolCallCard key={i} tool={tc} colors={colors} />
-                ))}
-              </View>
-            )}
-
             {item.recommendations && item.recommendations.length > 0 && (
               <View style={styles.recContainer}>
                 {item.recommendations.map((rec, i) => (
@@ -839,7 +786,7 @@ const AIScreen = () => {
   /* ─── Empty State ─── */
 
   const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
+    <View style={[styles.emptyContainer]}>
       <View
         style={[
           styles.emptyIconCircle,
@@ -970,6 +917,7 @@ const AIScreen = () => {
                 {
                   backgroundColor: colors.card,
                   borderColor: colors.backgroundElement,
+                  marginBottom: keyboardHeight > 0 ? 0 : insets.bottom,
                 },
               ]}
             >
@@ -1128,29 +1076,6 @@ const styles = StyleSheet.create({
     color: "#ffffff",
     fontSize: 10,
     fontWeight: "700",
-  },
-
-  /* ─── Tool Calls ─── */
-  toolCallsContainer: { gap: 4 },
-  toolCard: {
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-  },
-  toolHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  toolLabel: {
-    flex: 1,
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  toolSummary: {
-    fontSize: 12,
-    marginTop: 6,
-    lineHeight: 17,
   },
 
   /* ─── Recommendations ─── */
