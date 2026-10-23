@@ -1,6 +1,7 @@
 import React, { useMemo, useCallback } from "react";
 import {
   ActivityIndicator,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,6 +15,9 @@ import { useColorScheme } from "react-native";
 import { buildReceiptHtml } from "@/lib/receipt-html";
 import type { ReceiptData } from "@/types/payments";
 import Lucide from "@react-native-vector-icons/lucide";
+
+const GREEN = "#059669";
+const RED = "#ef4444";
 
 export default function ReceiptScreen() {
   const router = useRouter();
@@ -91,6 +95,18 @@ export default function ReceiptScreen() {
     } catch {}
   }, [html]);
 
+  const paidDate = useMemo(() => {
+    const d = receiptData ? new Date(receiptData.created_at) : null;
+    if (!d || isNaN(d.getTime())) return "";
+    return d.toLocaleDateString("en-NG", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [receiptData]);
+
   if (!receiptData) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
@@ -98,6 +114,8 @@ export default function ReceiptScreen() {
       </View>
     );
   }
+
+  const statusColor = isVoid ? RED : GREEN;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -111,136 +129,189 @@ export default function ReceiptScreen() {
         <View style={{ width: 40 }} />
       </View>
 
-      <View style={[styles.receiptCard, { backgroundColor: colors.sheet, borderColor: colors.backgroundElement }]}>
-        {isVoid && (
-          <View style={styles.voidBanner}>
-            <Text style={styles.voidBannerText}>VOID — ITEMS RETURNED TO STOCK</Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Status hero */}
+        <View style={styles.hero}>
+          <View style={[styles.heroBadge, { backgroundColor: `${statusColor}1A` }]}>
+            <Lucide name={isVoid ? "ban" : "check"} size={26} color={statusColor} />
           </View>
-        )}
-        <View style={styles.receiptRow}>
-          <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
-            Receipt #
+          <Text style={[styles.heroTitle, { color: colors.text }]}>
+            {isVoid
+              ? "Sale voided"
+              : `${receiptData.payment_method.toUpperCase()} payment received`}
           </Text>
-          <Text style={[styles.receiptValue, { color: colors.text }]}>
-            {receiptData.receipt_number}
-          </Text>
-        </View>
-        <View style={styles.receiptRow}>
-          <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
-            Sale #
-          </Text>
-          <Text style={[styles.receiptValue, { color: colors.text }]}>
-            {receiptData.sale_number}
-          </Text>
-        </View>
-        <View style={styles.receiptRow}>
-          <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
-            Business
-          </Text>
-          <Text style={[styles.receiptValue, { color: colors.text }]}>
-            {receiptData.business_name}
-          </Text>
-        </View>
-        <View style={styles.receiptRow}>
-          <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
-            Store
-          </Text>
-          <Text style={[styles.receiptValue, { color: colors.text }]}>
-            {receiptData.store_name}
-          </Text>
-        </View>
-        <View style={styles.receiptRow}>
-          <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
-            Payment
-          </Text>
-          <Text style={[styles.receiptValue, { color: colors.text }]}>
-            {receiptData.payment_method.toUpperCase()}
+          <Text style={[styles.heroSub, { color: colors.textSecondary }]}>
+            {paidDate}
           </Text>
         </View>
 
-        <View style={[styles.divider, { borderColor: colors.backgroundElement }]} />
-
-        {receiptData.items.map((item, i) => (
-          <View key={i} style={styles.receiptRow}>
-            <Text style={[styles.receiptLabel, { color: colors.textSecondary, flex: 1 }]}>
-              {item.qty} x {item.product_name}
+        {/* Receipt body */}
+        <View
+          style={[
+            styles.receiptCard,
+            { backgroundColor: colors.sheet, borderColor: colors.backgroundElement },
+          ]}
+        >
+          <View style={styles.businessBlock}>
+            <Text style={[styles.businessName, { color: colors.text }]} numberOfLines={1}>
+              {receiptData.business_name}
             </Text>
-            <Text style={[styles.receiptValue, { color: colors.text }]}>
-              ₦{item.line_total.toLocaleString()}
-            </Text>
+            {!!receiptData.store_name && (
+              <Text style={[styles.businessSub, { color: colors.textSecondary }]}>
+                {receiptData.store_name} · Receipt #{receiptData.receipt_number}
+              </Text>
+            )}
           </View>
-        ))}
 
-        <View style={[styles.divider, { borderColor: colors.backgroundElement }]} />
+          <View style={[styles.dashedDivider, { borderColor: colors.backgroundElement }]} />
 
-        <View style={styles.receiptRow}>
-          <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
-            Subtotal
-          </Text>
-          <Text style={[styles.receiptValue, { color: colors.text }]}>
-            ₦{receiptData.subtotal.toLocaleString()}
-          </Text>
-        </View>
-        {receiptData.discount > 0 && (
           <View style={styles.receiptRow}>
             <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
-              Discount
+              Sale #
             </Text>
             <Text style={[styles.receiptValue, { color: colors.text }]}>
-              -₦{receiptData.discount.toLocaleString()}
+              {receiptData.sale_number}
             </Text>
           </View>
-        )}
-        {receiptData.tax_breakdown.length > 0 ? (
-          receiptData.tax_breakdown.map((t, i) => (
-            <View key={i} style={styles.receiptRow}>
-              <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
-                {t.name} ({t.rate}%)
-              </Text>
-              <Text style={[styles.receiptValue, { color: colors.text }]}>
-                ₦{t.amount.toLocaleString()}
+          <View style={styles.receiptRow}>
+            <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+              Payment
+            </Text>
+            <View
+              style={[
+                styles.methodBadge,
+                { backgroundColor: isVoid ? `${RED}14` : `${GREEN}14` },
+              ]}
+            >
+              <Text style={[styles.methodBadgeText, { color: isVoid ? RED : GREEN }]}>
+                {receiptData.payment_method.toUpperCase()}
               </Text>
             </View>
-          ))
-        ) : receiptData.tax > 0 ? (
+          </View>
+          {!!receiptData.customer_name && (
+            <View style={styles.receiptRow}>
+              <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+                Customer
+              </Text>
+              <Text style={[styles.receiptValue, { color: colors.text }]}>
+                {receiptData.customer_name}
+              </Text>
+            </View>
+          )}
+
+          <View style={[styles.dashedDivider, { borderColor: colors.backgroundElement }]} />
+
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>ITEMS</Text>
+          <View style={styles.itemsBlock}>
+            {receiptData.items.map((item, i) => (
+              <View key={i} style={styles.itemRow}>
+                <View style={[styles.qtyBadge, { backgroundColor: colors.backgroundElement }]}>
+                  <Text style={[styles.qtyText, { color: colors.textSecondary }]}>
+                    {item.qty}
+                  </Text>
+                </View>
+                <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
+                  {item.product_name}
+                </Text>
+                <Text style={[styles.itemTotal, { color: colors.text }]}>
+                  ₦{item.line_total.toLocaleString()}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          <View style={[styles.dashedDivider, { borderColor: colors.backgroundElement }]} />
+
           <View style={styles.receiptRow}>
             <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
-              Tax
+              Subtotal
             </Text>
             <Text style={[styles.receiptValue, { color: colors.text }]}>
-              ₦{receiptData.tax.toLocaleString()}
+              ₦{receiptData.subtotal.toLocaleString()}
             </Text>
           </View>
-        ) : null}
+          {receiptData.discount > 0 && (
+            <View style={styles.receiptRow}>
+              <Text style={[styles.receiptLabel, { color: GREEN }]}>
+                Discount
+              </Text>
+              <Text style={[styles.receiptValue, { color: GREEN }]}>
+                -₦{receiptData.discount.toLocaleString()}
+              </Text>
+            </View>
+          )}
+          {receiptData.tax_breakdown.length > 0
+            ? receiptData.tax_breakdown.map((t, i) => (
+                <View key={i} style={styles.receiptRow}>
+                  <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+                    {t.name} ({t.rate}%)
+                  </Text>
+                  <Text style={[styles.receiptValue, { color: colors.text }]}>
+                    ₦{t.amount.toLocaleString()}
+                  </Text>
+                </View>
+              ))
+            : receiptData.tax > 0 && (
+                <View style={styles.receiptRow}>
+                  <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+                    Tax
+                  </Text>
+                  <Text style={[styles.receiptValue, { color: colors.text }]}>
+                    ₦{receiptData.tax.toLocaleString()}
+                  </Text>
+                </View>
+              )}
 
-        <View style={[styles.divider, { borderColor: colors.backgroundElement, borderWidth: 1.5 }]} />
+          {/* Total highlight */}
+          <View
+            style={[
+              styles.totalBar,
+              { backgroundColor: colors.backgroundElement },
+            ]}
+          >
+            <Text style={[styles.totalLabel, { color: colors.text }]}>TOTAL</Text>
+            <Text style={[styles.totalValue, { color: colors.text }]}>
+              ₦{receiptData.total.toLocaleString()}
+            </Text>
+          </View>
 
-        <View style={styles.receiptRow}>
-          <Text style={[styles.receiptLabel, { color: colors.text, fontWeight: "700", fontSize: 16 }]}>
-            TOTAL
-          </Text>
-          <Text style={[styles.receiptValue, { color: colors.text, fontWeight: "700", fontSize: 16 }]}>
-            ₦{receiptData.total.toLocaleString()}
+          <Text style={[styles.paidLine, { color: colors.textSecondary }]}>
+            {isVoid
+              ? "Voided — items returned to stock"
+              : receiptData.amount_paid >= receiptData.total && receiptData.amount_paid > 0
+                ? `Paid ₦${receiptData.amount_paid.toLocaleString()} via ${receiptData.payment_method.toUpperCase()}`
+                : `Paid ₦${receiptData.amount_paid.toLocaleString()} of ₦${receiptData.total.toLocaleString()}`}
           </Text>
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.btnRow}>
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={handlePrint}
-          style={[styles.printBtn, { backgroundColor: colors.buttonPrimary }]}
+          style={[styles.pillBtn, { backgroundColor: colors.buttonPrimary }]}
         >
-          <Lucide name="printer" size={20} color="#fff" />
-          <Text style={styles.printBtnText}>Print Receipt</Text>
+          <Lucide name="printer" size={18} color="#fff" />
+          <Text style={styles.pillPrimaryText}>Print Receipt</Text>
         </TouchableOpacity>
         <TouchableOpacity
           activeOpacity={0.8}
           onPress={handleSavePdf}
-          style={[styles.printBtn, { backgroundColor: colors.backgroundElement }]}
+          style={[
+            styles.pillBtn,
+            styles.pillGhost,
+            {
+              backgroundColor: "transparent",
+              borderColor: colors.backgroundElement,
+            },
+          ]}
         >
-          <Lucide name="download" size={20} color={colors.text} />
-          <Text style={[styles.printBtnText, { color: colors.text }]}>Save PDF</Text>
+          <Lucide name="download" size={18} color={colors.text} />
+          <Text style={[styles.pillGhostText, { color: colors.text }]}>Save PDF</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -254,50 +325,101 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: 20,
+    marginBottom: 12,
   },
   backBtn: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
   title: { fontSize: 18, fontWeight: "700" },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 8 },
+  hero: { alignItems: "center", marginBottom: 16, gap: 6 },
+  heroBadge: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 2,
+  },
+  heroTitle: { fontSize: 16, fontWeight: "800", textAlign: "center" },
+  heroSub: { fontSize: 12 },
   receiptCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     padding: 16,
     marginBottom: 20,
   },
-  voidBanner: {
-    backgroundColor: "rgba(239, 68, 68, 0.1)",
-    borderColor: "#ef4444",
-    borderWidth: 1.5,
-    borderRadius: 8,
-    paddingVertical: 8,
-    alignItems: "center",
-    marginBottom: 12,
-  },
-  voidBannerText: {
-    color: "#ef4444",
-    fontSize: 14,
-    fontWeight: "800",
-    letterSpacing: 2,
+  businessBlock: { alignItems: "center", marginBottom: 4, gap: 4 },
+  businessName: { fontSize: 16, fontWeight: "800" },
+  businessSub: { fontSize: 12, textAlign: "center" },
+  dashedDivider: {
+    borderTopWidth: 1,
+    borderStyle: "dashed",
+    marginVertical: 12,
   },
   receiptRow: {
     flexDirection: "row",
+    alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 8,
   },
   receiptLabel: { fontSize: 13 },
   receiptValue: { fontSize: 13, fontWeight: "600" },
-  divider: { borderTopWidth: 1, marginVertical: 10 },
+  methodBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  methodBadgeText: { fontSize: 11, fontWeight: "800", letterSpacing: 0.5 },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: "800",
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  itemsBlock: { gap: 10 },
+  itemRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  qtyBadge: {
+    minWidth: 24,
+    height: 24,
+    borderRadius: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  qtyText: { fontSize: 12, fontWeight: "700" },
+  itemName: { flex: 1, fontSize: 13, fontWeight: "500" },
+  itemTotal: { fontSize: 13, fontWeight: "600" },
+  totalBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    marginTop: 6,
+  },
+  totalLabel: { fontSize: 14, fontWeight: "800", letterSpacing: 1 },
+  totalValue: { fontSize: 18, fontWeight: "800" },
+  paidLine: { fontSize: 12, textAlign: "center", marginTop: 12 },
   btnRow: {
     flexDirection: "row",
     gap: 12,
+    paddingTop: 8,
   },
-  printBtn: {
+  pillBtn: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    paddingVertical: 14,
-    borderRadius: 12,
+    paddingVertical: 15,
+    borderRadius: 999,
   },
-  printBtnText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  pillGhost: { borderWidth: 1.5 },
+  pillPrimaryText: { color: "#fff", fontSize: 15, fontWeight: "700" },
+  pillGhostText: { fontSize: 15, fontWeight: "700" },
 });
