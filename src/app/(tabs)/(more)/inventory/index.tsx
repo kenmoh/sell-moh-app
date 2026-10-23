@@ -345,6 +345,7 @@ const InventoryScreen = () => {
         stock: p.qty,
         reorder_point: p.reorder_point ?? 0,
         category: p.category ?? "Uncategorized",
+        expiry_date: p.expiry_date ?? null,
       })),
     [allProducts],
   );

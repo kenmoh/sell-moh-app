@@ -14,6 +14,7 @@ import { CreateProduct, UpdateProduct } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import {
@@ -46,7 +47,6 @@ const AddProduct = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
-  const isDark = scheme === "dark";
   const queryClient = useQueryClient();
   const params = useLocalSearchParams<{
     id?: string;
@@ -58,6 +58,7 @@ const AddProduct = () => {
     reorder_point?: string;
     store_id?: string;
     tax_ids?: string;
+    expiry_date?: string;
   }>();
   const isEditing = Boolean(params.id);
 
@@ -66,6 +67,12 @@ const AddProduct = () => {
   const [costPrice, setCostPrice] = useState(params.cost_price ?? "");
   const [sellingPrice, setSellingPrice] = useState(params.selling_price ?? "");
   const [unit, setUnit] = useState("");
+  const [expiryDate, setExpiryDate] = useState<Date | null>(() => {
+    if (!params.expiry_date) return null;
+    const parsed = new Date(`${params.expiry_date.slice(0, 10)}T12:00:00`);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  });
+  const [showExpiryPicker, setShowExpiryPicker] = useState(false);
   // A product can carry more than one tax, and every one of them applies when
   // it is sold -- so this is a set, not a single choice. It starts from the
   // ids the detail screen passed over, rather than being copied out of a query
@@ -179,6 +186,18 @@ const AddProduct = () => {
     return obj;
   };
 
+  const expiryLabel = expiryDate
+    ? expiryDate.toLocaleDateString("en-NG", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+      })
+    : "No expiry date";
+
+  const expiryIso = expiryDate
+    ? `${expiryDate.getFullYear()}-${String(expiryDate.getMonth() + 1).padStart(2, "0")}-${String(expiryDate.getDate()).padStart(2, "0")}`
+    : null;
+
   const handleSubmit = () => {
     const result = productSchema.safeParse({
       name,
@@ -214,7 +233,11 @@ const AddProduct = () => {
       // The catalog PATCH takes only the fields the detail screen can know
       // about, so anything it cannot show (description, unit, category) is
       // left alone rather than blanked.
-      updateProductMutation({ ...shared, tax_ids: selectedTaxIds });
+      updateProductMutation({
+        ...shared,
+        tax_ids: selectedTaxIds,
+        expiry_date: expiryIso,
+      });
       return;
     }
 
@@ -227,6 +250,7 @@ const AddProduct = () => {
       description: result.data.description || null,
       unit: result.data.unit || null,
       tax_ids: selectedTaxIds,
+      expiry_date: expiryIso,
       metadata: buildMetadataObject(),
       store_id: storeId || null,
     });
@@ -429,6 +453,66 @@ const AddProduct = () => {
             value={unit}
             onChangeText={setUnit}
           />
+        </View>
+
+        {/* Expiry */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            EXPIRY DATE (OPTIONAL)
+          </Text>
+          <Pressable
+            style={[
+              styles.selectorButton,
+              {
+                backgroundColor: colors.backgroundElement,
+                borderColor: colors.backgroundSelected,
+              },
+            ]}
+            onPress={() => setShowExpiryPicker((open) => !open)}
+          >
+            <Lucide name="calendar" size={16} color={colors.textSecondary} />
+            <Text
+              style={[
+                styles.selectorText,
+                { color: expiryDate ? colors.text : colors.textSecondary },
+              ]}
+            >
+              {expiryLabel}
+            </Text>
+            {expiryDate ? (
+              <Pressable
+                hitSlop={10}
+                onPress={() => {
+                  setExpiryDate(null);
+                  setShowExpiryPicker(false);
+                }}
+              >
+                <Lucide name="x" size={16} color={colors.textSecondary} />
+              </Pressable>
+            ) : (
+              <Lucide
+                name="chevron-down"
+                size={16}
+                color={colors.textSecondary}
+              />
+            )}
+          </Pressable>
+          {showExpiryPicker && (
+            <DateTimePicker
+              value={expiryDate ?? new Date()}
+              mode="date"
+              display="compact"
+              presentation="dialog"
+              onValueChange={(_, selectedDate) => {
+                setShowExpiryPicker(false);
+                if (selectedDate) setExpiryDate(selectedDate);
+              }}
+              onDismiss={() => setShowExpiryPicker(false)}
+            />
+          )}
+          <Text style={[styles.hintText, { color: colors.textSecondary }]}>
+            Leave empty for products that do not expire.
+          </Text>
         </View>
 
         {/* Store */}

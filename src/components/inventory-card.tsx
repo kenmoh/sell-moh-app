@@ -1,4 +1,5 @@
 import { Colors } from "@/constants/theme";
+import { isProductExpired } from "@/lib/expiry";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import React from "react";
 import {
@@ -21,6 +22,7 @@ export interface InventoryItem {
   reorder_point: number;
   category: string;
   image?: string;
+  expiry_date?: string | null;
 }
 
 export interface InventoryCardProps {
@@ -115,11 +117,19 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({
           </Text>
         </View>
 
-        <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
-          <View style={[styles.statusDot, { backgroundColor: statusCfg.dot }]} />
-          <Text style={[styles.statusText, { color: statusCfg.color }]}>
-            {item.stock} {statusCfg.label}
-          </Text>
+        <View style={styles.badgeRow}>
+          {isProductExpired(item.expiry_date) && (
+            <View style={styles.expiryBadge}>
+              <Lucide name="calendar-x" size={11} color="#ef4444" />
+              <Text style={styles.expiryText}>Expired</Text>
+            </View>
+          )}
+          <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusCfg.dot }]} />
+            <Text style={[styles.statusText, { color: statusCfg.color }]}>
+              {item.stock} {statusCfg.label}
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -235,6 +245,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: "600",
   },
+  badgeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  expiryBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "rgba(239, 68, 68, 0.12)",
+  },
+  expiryText: { fontSize: 10, fontWeight: "700", color: "#ef4444" },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",

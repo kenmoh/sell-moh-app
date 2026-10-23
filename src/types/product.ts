@@ -55,6 +55,8 @@ export interface ProductResponse {
   available: number;
   min_stock_level: number;
   unit_cost: number | null;
+  /** Best-before date (YYYY-MM-DD), null when the product never expires. */
+  expiry_date: string | null;
   taxes: TaxEntry[];
   history: StockHistoryItem[];
 }
@@ -88,6 +90,7 @@ export interface CreateProduct {
   qty?: number;
   metadata?: Record<string, any> | null;
   store_id?: string | null;
+  expiry_date?: string | null;
 }
 
 /** Fields the catalog lets a store change after creation. */
@@ -100,6 +103,7 @@ export interface UpdateProduct {
   category_id?: string | null;
   description?: string | null;
   unit?: string | null;
+  expiry_date?: string | null;
 }
 
 export interface AdjustProduct {

@@ -16,6 +16,7 @@ import { Colors } from "@/constants/theme";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useToast } from "@/hooks/use-toast";
 import { fillSalesSeries, fillStockSeries } from "@/lib/charts";
+import { formatExpiryDate, isProductExpired } from "@/lib/expiry";
 import { useSession } from "@/lib/ctx";
 import { StockHistoryItem } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -294,6 +295,15 @@ const ProductDetails = () => {
                 {product.category ?? "Uncategorized"}
               </Text>
             </View>
+            {isProductExpired(product.expiry_date) && (
+              <View
+                style={[styles.tag, { backgroundColor: "rgba(220,38,38,0.1)" }]}
+              >
+                <Text style={[styles.tagText, { color: "#dc2626" }]}>
+                  Expired
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -324,6 +334,7 @@ const ProductDetails = () => {
                     .filter((t) => t.id)
                     .map((t) => t.id)
                     .join(","),
+                  expiry_date: product.expiry_date ?? "",
                 },
               })
             }
@@ -450,6 +461,16 @@ const ProductDetails = () => {
                   value: product.status === "active" ? "Active" : "Inactive",
                 },
                 { label: "SKU", value: product.sku?.slice(0, 15) ?? "N/A" },
+                {
+                  label: "Expiry",
+                  value: product.expiry_date
+                    ? `${formatExpiryDate(product.expiry_date)}${
+                        isProductExpired(product.expiry_date)
+                          ? " (expired)"
+                          : ""
+                      }`
+                    : "Not set",
+                },
               ].map((row, i, arr) => (
                 <View
                   key={row.label}
