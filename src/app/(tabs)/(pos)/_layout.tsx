@@ -16,7 +16,7 @@ const POSLayout = () => {
           name="payment-awaiting/[saleId]"
           options={{ headerShown: false }}
         />
-        <Stack.Screen name="receipt" options={{ headerShown: false }} />
+        <Stack.Screen name="receipt" options={{ headerShown: true }} />
       </Stack>
     </AView>
   );

@@ -1,20 +1,20 @@
-import React, { useMemo, useCallback } from "react";
+import { Colors } from "@/constants/theme";
+import { buildReceiptHtml } from "@/lib/receipt-html";
+import type { ReceiptData } from "@/types/payments";
+import Lucide from "@react-native-vector-icons/lucide";
+import * as Print from "expo-print";
+import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import * as Sharing from "expo-sharing";
+import React, { useCallback, useMemo } from "react";
 import {
   ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
+  useColorScheme,
   View,
 } from "react-native";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import * as Print from "expo-print";
-import * as Sharing from "expo-sharing";
-import { Colors } from "@/constants/theme";
-import { useColorScheme } from "react-native";
-import { buildReceiptHtml } from "@/lib/receipt-html";
-import type { ReceiptData } from "@/types/payments";
-import Lucide from "@react-native-vector-icons/lucide";
 
 const GREEN = "#059669";
 const RED = "#ef4444";
@@ -64,7 +64,9 @@ export default function ReceiptScreen() {
         subtotal: parseFloat(params.subtotal || "0"),
         discount: parseFloat(params.discount || "0"),
         tax: parseFloat(params.tax || "0"),
-        tax_breakdown: params.taxBreakdown ? JSON.parse(params.taxBreakdown) : [],
+        tax_breakdown: params.taxBreakdown
+          ? JSON.parse(params.taxBreakdown)
+          : [],
         total: parseFloat(params.total || "0"),
         amount_paid: parseFloat(params.amountPaid || "0"),
         payment_method: params.paymentMethod || "cash",
@@ -119,15 +121,7 @@ export default function ReceiptScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Lucide name="arrow-left" size={22} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>
-          {isVoid ? "Void Receipt" : "Receipt"}
-        </Text>
-        <View style={{ width: 40 }} />
-      </View>
+      <Stack.Screen options={{ title: isVoid ? "Void Receipt" : "Receipt" }} />
 
       <ScrollView
         style={styles.scroll}
@@ -136,8 +130,14 @@ export default function ReceiptScreen() {
       >
         {/* Status hero */}
         <View style={styles.hero}>
-          <View style={[styles.heroBadge, { backgroundColor: `${statusColor}1A` }]}>
-            <Lucide name={isVoid ? "ban" : "check"} size={26} color={statusColor} />
+          <View
+            style={[styles.heroBadge, { backgroundColor: `${statusColor}1A` }]}
+          >
+            <Lucide
+              name={isVoid ? "ban" : "check"}
+              size={26}
+              color={statusColor}
+            />
           </View>
           <Text style={[styles.heroTitle, { color: colors.text }]}>
             {isVoid
@@ -153,24 +153,39 @@ export default function ReceiptScreen() {
         <View
           style={[
             styles.receiptCard,
-            { backgroundColor: colors.sheet, borderColor: colors.backgroundElement },
+            {
+              backgroundColor: colors.sheet,
+              borderColor: colors.backgroundElement,
+            },
           ]}
         >
           <View style={styles.businessBlock}>
-            <Text style={[styles.businessName, { color: colors.text }]} numberOfLines={1}>
+            <Text
+              style={[styles.businessName, { color: colors.text }]}
+              numberOfLines={1}
+            >
               {receiptData.business_name}
             </Text>
             {!!receiptData.store_name && (
-              <Text style={[styles.businessSub, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.businessSub, { color: colors.textSecondary }]}
+              >
                 {receiptData.store_name} · Receipt #{receiptData.receipt_number}
               </Text>
             )}
           </View>
 
-          <View style={[styles.dashedDivider, { borderColor: colors.backgroundElement }]} />
+          <View
+            style={[
+              styles.dashedDivider,
+              { borderColor: colors.backgroundElement },
+            ]}
+          />
 
           <View style={styles.receiptRow}>
-            <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.receiptLabel, { color: colors.textSecondary }]}
+            >
               Sale #
             </Text>
             <Text style={[styles.receiptValue, { color: colors.text }]}>
@@ -178,7 +193,9 @@ export default function ReceiptScreen() {
             </Text>
           </View>
           <View style={styles.receiptRow}>
-            <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.receiptLabel, { color: colors.textSecondary }]}
+            >
               Payment
             </Text>
             <View
@@ -187,14 +204,21 @@ export default function ReceiptScreen() {
                 { backgroundColor: isVoid ? `${RED}14` : `${GREEN}14` },
               ]}
             >
-              <Text style={[styles.methodBadgeText, { color: isVoid ? RED : GREEN }]}>
+              <Text
+                style={[
+                  styles.methodBadgeText,
+                  { color: isVoid ? RED : GREEN },
+                ]}
+              >
                 {receiptData.payment_method.toUpperCase()}
               </Text>
             </View>
           </View>
           {!!receiptData.customer_name && (
             <View style={styles.receiptRow}>
-              <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.receiptLabel, { color: colors.textSecondary }]}
+              >
                 Customer
               </Text>
               <Text style={[styles.receiptValue, { color: colors.text }]}>
@@ -203,18 +227,35 @@ export default function ReceiptScreen() {
             </View>
           )}
 
-          <View style={[styles.dashedDivider, { borderColor: colors.backgroundElement }]} />
+          <View
+            style={[
+              styles.dashedDivider,
+              { borderColor: colors.backgroundElement },
+            ]}
+          />
 
-          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>ITEMS</Text>
+          <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            ITEMS
+          </Text>
           <View style={styles.itemsBlock}>
             {receiptData.items.map((item, i) => (
               <View key={i} style={styles.itemRow}>
-                <View style={[styles.qtyBadge, { backgroundColor: colors.backgroundElement }]}>
-                  <Text style={[styles.qtyText, { color: colors.textSecondary }]}>
+                <View
+                  style={[
+                    styles.qtyBadge,
+                    { backgroundColor: colors.backgroundElement },
+                  ]}
+                >
+                  <Text
+                    style={[styles.qtyText, { color: colors.textSecondary }]}
+                  >
                     {item.qty}
                   </Text>
                 </View>
-                <Text style={[styles.itemName, { color: colors.text }]} numberOfLines={1}>
+                <Text
+                  style={[styles.itemName, { color: colors.text }]}
+                  numberOfLines={1}
+                >
                   {item.product_name}
                 </Text>
                 <Text style={[styles.itemTotal, { color: colors.text }]}>
@@ -224,10 +265,17 @@ export default function ReceiptScreen() {
             ))}
           </View>
 
-          <View style={[styles.dashedDivider, { borderColor: colors.backgroundElement }]} />
+          <View
+            style={[
+              styles.dashedDivider,
+              { borderColor: colors.backgroundElement },
+            ]}
+          />
 
           <View style={styles.receiptRow}>
-            <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.receiptLabel, { color: colors.textSecondary }]}
+            >
               Subtotal
             </Text>
             <Text style={[styles.receiptValue, { color: colors.text }]}>
@@ -247,7 +295,12 @@ export default function ReceiptScreen() {
           {receiptData.tax_breakdown.length > 0
             ? receiptData.tax_breakdown.map((t, i) => (
                 <View key={i} style={styles.receiptRow}>
-                  <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.receiptLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     {t.name} ({t.rate}%)
                   </Text>
                   <Text style={[styles.receiptValue, { color: colors.text }]}>
@@ -257,7 +310,12 @@ export default function ReceiptScreen() {
               ))
             : receiptData.tax > 0 && (
                 <View style={styles.receiptRow}>
-                  <Text style={[styles.receiptLabel, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.receiptLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     Tax
                   </Text>
                   <Text style={[styles.receiptValue, { color: colors.text }]}>
@@ -273,7 +331,9 @@ export default function ReceiptScreen() {
               { backgroundColor: colors.backgroundElement },
             ]}
           >
-            <Text style={[styles.totalLabel, { color: colors.text }]}>TOTAL</Text>
+            <Text style={[styles.totalLabel, { color: colors.text }]}>
+              TOTAL
+            </Text>
             <Text style={[styles.totalValue, { color: colors.text }]}>
               ₦{receiptData.total.toLocaleString()}
             </Text>
@@ -282,7 +342,8 @@ export default function ReceiptScreen() {
           <Text style={[styles.paidLine, { color: colors.textSecondary }]}>
             {isVoid
               ? "Voided — items returned to stock"
-              : receiptData.amount_paid >= receiptData.total && receiptData.amount_paid > 0
+              : receiptData.amount_paid >= receiptData.total &&
+                  receiptData.amount_paid > 0
                 ? `Paid ₦${receiptData.amount_paid.toLocaleString()} via ${receiptData.payment_method.toUpperCase()}`
                 : `Paid ₦${receiptData.amount_paid.toLocaleString()} of ₦${receiptData.total.toLocaleString()}`}
           </Text>
@@ -311,7 +372,9 @@ export default function ReceiptScreen() {
           ]}
         >
           <Lucide name="download" size={18} color={colors.text} />
-          <Text style={[styles.pillGhostText, { color: colors.text }]}>Save PDF</Text>
+          <Text style={[styles.pillGhostText, { color: colors.text }]}>
+            Save PDF
+          </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -319,7 +382,7 @@ export default function ReceiptScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16 },
+  container: { flex: 1, paddingHorizontal: 16 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     flexDirection: "row",
@@ -327,7 +390,12 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 12,
   },
-  backBtn: { width: 40, height: 40, justifyContent: "center", alignItems: "center" },
+  backBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   title: { fontSize: 18, fontWeight: "700" },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 8 },

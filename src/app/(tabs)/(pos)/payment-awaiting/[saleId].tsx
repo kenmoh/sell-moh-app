@@ -113,8 +113,8 @@ export default function PaymentAwaitingScreen() {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* QR Code — shown for card payments */}
-        {method === "card" && (
+        {/* QR Code — hosted link for card, details page for transfer */}
+        {(method === "card" || (method === "transfer" && !!qrCode)) && (
           <View
             style={[
               styles.qrCard,
@@ -131,7 +131,9 @@ export default function PaymentAwaitingScreen() {
                   />
                 </View>
                 <Text style={[styles.qrLabel, { color: colors.textSecondary }]}>
-                  Scan to pay this account
+                  {method === "card"
+                    ? "Scan to pay this account"
+                    : "Scan to copy the account details"}
                 </Text>
               </>
             ) : (
