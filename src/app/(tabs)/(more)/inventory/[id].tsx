@@ -335,6 +335,10 @@ const ProductDetails = () => {
                     .map((t) => t.id)
                     .join(","),
                   expiry_date: product.expiry_date ?? "",
+                  expiry_warning_days:
+                    product.expiry_warning_days != null
+                      ? String(product.expiry_warning_days)
+                      : "",
                 },
               })
             }
@@ -470,6 +474,15 @@ const ProductDetails = () => {
                           : ""
                       }`
                     : "Not set",
+                },
+                {
+                  label: "Expiry alert",
+                  value:
+                    product.expiry_date && product.expiry_warning_days != null
+                      ? `${product.expiry_warning_days} day${
+                          product.expiry_warning_days === 1 ? "" : "s"
+                        } before`
+                      : "Not set",
                 },
               ].map((row, i, arr) => (
                 <View

@@ -1,5 +1,5 @@
 import { Colors } from "@/constants/theme";
-import { isProductExpired } from "@/lib/expiry";
+import { daysUntilExpiry } from "@/lib/expiry";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import React from "react";
 import {
@@ -23,6 +23,7 @@ export interface InventoryItem {
   category: string;
   image?: string;
   expiry_date?: string | null;
+  expiry_warning_days?: number | null;
 }
 
 export interface InventoryCardProps {
@@ -82,6 +83,20 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({
   const statusCfg = statusConfig[status];
   const iconName = categoryIconMap[item.category] || "package";
 
+  const daysLeft = daysUntilExpiry(item.expiry_date);
+  const isExpired = daysLeft !== null && daysLeft < 0;
+  const isExpiringSoon =
+    !isExpired &&
+    daysLeft !== null &&
+    item.expiry_warning_days != null &&
+    daysLeft <= item.expiry_warning_days;
+  const expiryLabel =
+    daysLeft === 0
+      ? "Expires today"
+      : daysLeft === 1
+        ? "Expires tomorrow"
+        : `Expires in ${daysLeft}d`;
+
   const maxBenchmark = item.reorder_point > 0 ? item.reorder_point * 2 : 50;
   const stockRatio = Math.min(Math.max(item.stock / maxBenchmark, 0), 1);
 
@@ -118,10 +133,16 @@ export const InventoryCard: React.FC<InventoryCardProps> = ({
         </View>
 
         <View style={styles.badgeRow}>
-          {isProductExpired(item.expiry_date) && (
+          {isExpired && (
             <View style={styles.expiryBadge}>
               <Lucide name="calendar-x" size={11} color="#ef4444" />
               <Text style={styles.expiryText}>Expired</Text>
+            </View>
+          )}
+          {isExpiringSoon && (
+            <View style={styles.expiringSoonBadge}>
+              <Lucide name="calendar-clock" size={11} color="#b45309" />
+              <Text style={styles.expiringSoonText}>{expiryLabel}</Text>
             </View>
           )}
           <View style={[styles.statusBadge, { backgroundColor: statusCfg.bg }]}>
@@ -231,6 +252,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    gap: 8,
     marginBottom: 10,
   },
   categoryTag: {
@@ -240,12 +262,19 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 8,
+    flexShrink: 1,
   },
   categoryText: {
     fontSize: 11,
     fontWeight: "600",
+    flexShrink: 1,
   },
-  badgeRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  badgeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    flexShrink: 0,
+  },
   expiryBadge: {
     flexDirection: "row",
     alignItems: "center",
@@ -256,6 +285,16 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(239, 68, 68, 0.12)",
   },
   expiryText: { fontSize: 10, fontWeight: "700", color: "#ef4444" },
+  expiringSoonBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    backgroundColor: "rgba(245, 158, 11, 0.14)",
+  },
+  expiringSoonText: { fontSize: 10, fontWeight: "700", color: "#b45309" },
   statusBadge: {
     flexDirection: "row",
     alignItems: "center",

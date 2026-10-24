@@ -37,6 +37,16 @@ const productSchema = z.object({
   category_id: z.string().optional(),
   description: z.string().optional(),
   unit: z.string().optional(),
+  expiry_warning_days: z
+    .string()
+    .optional()
+    .refine(
+      (value) =>
+        !value ||
+        value.trim() === "" ||
+        (/^\d+$/.test(value.trim()) && Number(value) <= 3650),
+      "Enter a whole number of days (0-3650)",
+    ),
 });
 
 type ProductField = keyof z.infer<typeof productSchema>;
@@ -59,6 +69,7 @@ const AddProduct = () => {
     store_id?: string;
     tax_ids?: string;
     expiry_date?: string;
+    expiry_warning_days?: string;
   }>();
   const isEditing = Boolean(params.id);
 
@@ -73,6 +84,9 @@ const AddProduct = () => {
     return Number.isNaN(parsed.getTime()) ? null : parsed;
   });
   const [showExpiryPicker, setShowExpiryPicker] = useState(false);
+  const [expiryWarningDays, setExpiryWarningDays] = useState(
+    params.expiry_warning_days ?? "",
+  );
   // A product can carry more than one tax, and every one of them applies when
   // it is sold -- so this is a set, not a single choice. It starts from the
   // ids the detail screen passed over, rather than being copied out of a query
@@ -208,6 +222,7 @@ const AddProduct = () => {
       category_id: categoryId || undefined,
       description: description || undefined,
       unit: unit || undefined,
+      expiry_warning_days: expiryWarningDays || undefined,
     });
 
     if (!result.success) {
@@ -222,11 +237,14 @@ const AddProduct = () => {
 
     setErrors({});
 
+    const warningDays = result.data.expiry_warning_days?.trim();
     const shared = {
       name: result.data.name,
       cost_price: parseFloat(result.data.cost_price) || 0,
       selling_price: parseFloat(result.data.selling_price) || 0,
       reorder_point: parseInt(result.data.reorder_point, 10) || 0,
+      expiry_warning_days:
+        expiryIso && warningDays ? parseInt(warningDays, 10) : null,
     };
 
     if (isEditing) {
@@ -513,6 +531,34 @@ const AddProduct = () => {
           <Text style={[styles.hintText, { color: colors.textSecondary }]}>
             Leave empty for products that do not expire.
           </Text>
+          {expiryDate && (
+            <>
+              <Text
+                style={[
+                  styles.sectionLabel,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                WARN ME BEFORE EXPIRY (OPTIONAL)
+              </Text>
+              <AppTextInput
+                leftIcon="bell"
+                placeholder="Days before expiry"
+                value={expiryWarningDays}
+                onChangeText={setExpiryWarningDays}
+                keyboardType="number-pad"
+              />
+              {errors.expiry_warning_days && (
+                <Text style={styles.errorText}>
+                  {errors.expiry_warning_days}
+                </Text>
+              )}
+              <Text style={[styles.hintText, { color: colors.textSecondary }]}>
+                Shows an amber warning this many days before expiry. Leave
+                empty to only flag stock once it has expired.
+              </Text>
+            </>
+          )}
         </View>
 
         {/* Store */}

@@ -346,6 +346,7 @@ const InventoryScreen = () => {
         reorder_point: p.reorder_point ?? 0,
         category: p.category ?? "Uncategorized",
         expiry_date: p.expiry_date ?? null,
+        expiry_warning_days: p.expiry_warning_days ?? null,
       })),
     [allProducts],
   );

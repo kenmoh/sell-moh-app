@@ -58,6 +58,8 @@ export interface ProductResponse {
   unit_cost: number | null;
   /** Best-before date (YYYY-MM-DD), null when the product never expires. */
   expiry_date: string | null;
+  /** Days before expiry to start warning; null means no near-expiry warning. */
+  expiry_warning_days?: number | null;
   taxes: TaxEntry[];
   history: StockHistoryItem[];
 }
@@ -92,6 +94,7 @@ export interface CreateProduct {
   metadata?: Record<string, any> | null;
   store_id?: string | null;
   expiry_date?: string | null;
+  expiry_warning_days?: number | null;
 }
 
 /** Fields the catalog lets a store change after creation. */
@@ -105,6 +108,7 @@ export interface UpdateProduct {
   description?: string | null;
   unit?: string | null;
   expiry_date?: string | null;
+  expiry_warning_days?: number | null;
 }
 
 export interface AdjustProduct {
