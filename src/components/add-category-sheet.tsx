@@ -2,7 +2,7 @@ import { createCategory } from "@/api/inventory";
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
-import { CreateCategory } from "@/types/product";
+import { CategoryResponse, CreateCategory } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -24,10 +24,12 @@ const categorySchema = z.object({
 
 type CategoryField = keyof z.infer<typeof categorySchema>;
 
+type CreatedCategory = { id: string; name: string };
+
 type Props = {
   visible: boolean;
   onVisibleChange: (visible: boolean) => void;
-  onCreated?: (name: string) => void;
+  onCreated?: (category: CreatedCategory) => void;
   storeId: string;
 };
 
@@ -46,10 +48,33 @@ const AddCategorySheet = ({ visible, onVisibleChange, onCreated, storeId }: Prop
 
   const { mutate: createCategoryMutation, isPending } = useMutation({
     mutationFn: (data: CreateCategory) => createCategory(storeId, data),
-    onSuccess: () => {
+    onSuccess: (response) => {
+      const created = response.data as
+        | { category_id?: string; name?: string }
+        | null
+        | undefined;
+      const createdName = created?.name ?? name.trim();
+
+      if (created?.category_id) {
+        const category: CategoryResponse = {
+          id: created.category_id,
+          name: createdName,
+          description: description.trim(),
+          parent_id: null,
+          created_at: new Date().toISOString(),
+        };
+        queryClient.setQueryData<CategoryResponse[]>(
+          ["categories", storeId],
+          (current = []) =>
+            current.some((item) => item.id === category.id)
+              ? current
+              : [...current, category],
+        );
+        onCreated?.(category);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["categories"] });
       onVisibleChange(false);
-      onCreated?.(name.trim());
       reset();
     },
     onError: (error) => {

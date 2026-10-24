@@ -672,10 +672,7 @@ const AddProduct = () => {
         visible={sheetVisible}
         onVisibleChange={setSheetVisible}
         storeId={storeId}
-        onCreated={(createdName) => {
-          const newCat = categories.find((c) => c.name === createdName);
-          if (newCat) setCategoryId(newCat.id);
-        }}
+        onCreated={(created) => setCategoryId(created.id)}
       />
       <CategoryActionsSheet
         visible={actionsVisible}
