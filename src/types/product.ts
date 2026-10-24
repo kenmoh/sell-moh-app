@@ -46,6 +46,7 @@ export interface ProductResponse {
   selling_price: number;
   cost_price: number;
   category: string | null;
+  category_id?: string | null;
   status: string;
   image_url: string | null;
   qr_url: string | null;

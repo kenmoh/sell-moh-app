@@ -321,7 +321,7 @@ const ProductDetails = () => {
                   id: product.id,
                   name: product.name,
                   sku: product.sku ?? "",
-                  category_id: product.category ?? "",
+                  category_id: product.category_id ?? "",
                   selling_price: String(product.selling_price),
                   // The edit form validates cost and reorder point as
                   // required, and saves in the store that owns this product.
