@@ -1,17 +1,18 @@
+import { createTenant, socialSignIn } from "@/api/auth";
 import AppView from "@/components/app-view";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
-import { socialSignIn } from "@/api/auth";
-import { useGoogleAuth } from "@/lib/google-auth";
+import { useToast } from "@/hooks/use-toast";
 import { useAppleAuth } from "@/lib/apple-auth";
 import { useSession } from "@/lib/ctx";
-import { LoginResponseData } from "@/types/auth";
-import { RegisterRequest } from "@/types/auth";
+import { useGoogleAuth } from "@/lib/google-auth";
+import { LoginResponseData, RegisterRequest } from "@/types/auth";
+import { Image } from "expo-image";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
   LayoutAnimation,
   Platform,
@@ -29,24 +30,32 @@ const animateStep = () => {
     LayoutAnimation.create(
       300,
       LayoutAnimation.Types.easeInEaseOut,
-      LayoutAnimation.Properties.opacity
-    )
+      LayoutAnimation.Properties.opacity,
+    ),
   );
 };
 
 const stepSchemas = [
   z.object({
-    business_name: z.string().trim().min(1, "Business name is required"),
     business_email: z.string().trim().email("Enter a valid business email"),
   }),
   z.object({
-    owner_name: z.string().trim().min(1, "Full name is required"),
+    owner_name: z
+      .string()
+      .trim()
+      .min(2, "Full name must be at least 2 characters")
+      .max(100, "Full name is too long"),
     owner_email: z.string().trim().email("Enter a valid email"),
     owner_phone: z.string().trim().optional(),
   }),
   z
     .object({
-      password: z.string().min(8, "Password must be at least 8 characters"),
+      password: z
+        .string()
+        .min(8, "Password must be at least 8 characters")
+        .regex(/[A-Z]/, "Add an uppercase letter")
+        .regex(/[a-z]/, "Add a lowercase letter")
+        .regex(/[0-9]/, "Add a number"),
       confirm_password: z.string().min(1, "Confirm your password"),
     })
     .refine((data) => data.password === data.confirm_password, {
@@ -64,9 +73,9 @@ const SignUp = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const { signIn } = useSession();
+  const toast = useToast();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<RegisterRequest>({
-    business_name: "",
     business_email: "",
     owner_name: "",
     owner_email: "",
@@ -76,18 +85,30 @@ const SignUp = () => {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const googleAuth = useGoogleAuth(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "");
+  const googleAuth = useGoogleAuth({
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "",
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "",
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "",
+  });
   const appleAuth = useAppleAuth();
 
-  const handleSocialSignIn = async (provider: "google" | "apple", idToken: string) => {
+  const handleSocialSignIn = async (
+    provider: "google" | "apple",
+    idToken: string,
+  ) => {
     try {
       const res = await socialSignIn({ id_token: idToken, provider });
       const data = res.data as LoginResponseData;
       signIn(data.tokens.access_token, data.tokens.refresh_token, data.user);
-      router.replace("/(tabs)/(pos)");
+      if (data.is_new_user) {
+        router.replace("/(auth)/complete-setup");
+      } else {
+        router.replace("/(tabs)/(pos)");
+      }
     } catch (err: any) {
-      Alert.alert("Sign Up Failed", err.message || "Social sign-in failed");
+      toast.error("Sign Up Failed", err.message || "Social sign-in failed");
     }
   };
 
@@ -128,14 +149,41 @@ const SignUp = () => {
   };
 
   const handleBack = () => {
+    if (loading) return;
     setErrors({});
     animateStep();
     setStep((s) => s - 1);
   };
 
-  const handleSubmit = () => {
-    if (!validateStep()) return;
-    router.replace("/sign-in");
+  const handleSubmit = async () => {
+    if (loading || !validateStep()) return;
+
+    const ownerEmail = form.owner_email.trim();
+    setLoading(true);
+    try {
+      const res = await createTenant({
+        ...form,
+        business_email: form.business_email.trim(),
+        owner_name: form.owner_name.trim(),
+        owner_email: ownerEmail,
+        owner_phone: form.owner_phone?.trim() || undefined,
+      });
+      toast.success(
+        "Account created",
+        res.message || "Sign in to continue to your store.",
+      );
+      router.replace({
+        pathname: "/(auth)/sign-in",
+        params: { email: ownerEmail },
+      });
+    } catch (err: any) {
+      toast.error(
+        "Registration failed",
+        err?.message || "Could not create your account. Please try again.",
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -200,21 +248,10 @@ const SignUp = () => {
             {step === 0 && (
               <>
                 <AppTextInput
-                  label="Business Name"
-                  placeholder="My Store"
-                  value={form.business_name}
-                  onChangeText={(value) => updateField("business_name", value)}
-                  leftIcon="building"
-                  autoCapitalize="words"
-                  error={errors.business_name}
-                />
-                <AppTextInput
                   label="Business Email"
                   placeholder="business@example.com"
                   value={form.business_email}
-                  onChangeText={(value) =>
-                    updateField("business_email", value)
-                  }
+                  onChangeText={(value) => updateField("business_email", value)}
                   leftIcon="mail"
                   keyboardType="email-address"
                   autoCapitalize="none"
@@ -260,17 +297,28 @@ const SignUp = () => {
 
             {step === 2 && (
               <>
-                <AppTextInput
-                  label="Password"
-                  placeholder="@Sn123hsn#"
-                  value={form.password}
-                  onChangeText={(value) => updateField("password", value)}
-                  leftIcon="lock"
-                  secureTextEntry={!showPassword}
-                  rightIcon={showPassword ? "eye-off" : "eye"}
-                  onRightIconPress={() => setShowPassword(!showPassword)}
-                  error={errors.password}
-                />
+                <View style={styles.passwordField}>
+                  <AppTextInput
+                    label="Password"
+                    placeholder="@Sn123hsn#"
+                    value={form.password}
+                    onChangeText={(value) => updateField("password", value)}
+                    leftIcon="lock"
+                    secureTextEntry={!showPassword}
+                    rightIcon={showPassword ? "eye-off" : "eye"}
+                    onRightIconPress={() => setShowPassword(!showPassword)}
+                    error={errors.password}
+                  />
+                  <Text
+                    style={[
+                      styles.passwordHint,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    At least 8 characters, with an uppercase letter, a lowercase
+                    letter, and a number.
+                  </Text>
+                </View>
                 <AppTextInput
                   label="Confirm Password"
                   placeholder="@Sn123hsn#"
@@ -287,46 +335,31 @@ const SignUp = () => {
 
             {step > 0 && (
               <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={[
-                    styles.backButton,
-                    { borderColor: colors.backgroundSelected },
-                  ]}
+                <Button
+                  disabled={loading}
                   onPress={handleBack}
-                >
-                  <Text
-                    style={[styles.backButtonText, { color: colors.text }]}
-                  >
-                    Back
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  activeOpacity={0.8}
-                  style={[
-                    styles.primaryButton,
-                    { backgroundColor: colors.buttonPrimary, flex: 1 },
-                  ]}
+                  size="lg"
+                  title="Back"
+                  variant="outline"
+                />
+                <Button
+                  disabled={loading}
+                  loading={step === 2 && loading}
                   onPress={step === 2 ? handleSubmit : handleNext}
-                >
-                  <Text style={styles.primaryButtonText}>
-                    {step === 2 ? "Create Account" : "Next"}
-                  </Text>
-                </TouchableOpacity>
+                  size="lg"
+                  style={{ flex: 1 }}
+                  title={step === 2 ? "Create Account" : "Next"}
+                />
               </View>
             )}
 
             {step === 0 && (
-              <TouchableOpacity
-                activeOpacity={0.8}
-                style={[
-                  styles.primaryButton,
-                  { backgroundColor: colors.buttonPrimary },
-                ]}
+              <Button
                 onPress={handleNext}
-              >
-                <Text style={styles.primaryButtonText}>Next</Text>
-              </TouchableOpacity>
+                size="lg"
+                style={styles.primaryButton}
+                title="Next"
+              />
             )}
           </View>
 
@@ -337,9 +370,7 @@ const SignUp = () => {
                 { backgroundColor: colors.backgroundSelected },
               ]}
             />
-            <Text
-              style={[styles.dividerText, { color: colors.textSecondary }]}
-            >
+            <Text style={[styles.dividerText, { color: colors.textSecondary }]}>
               Or continue with
             </Text>
             <View
@@ -359,10 +390,10 @@ const SignUp = () => {
                   handleSocialSignIn("google", googleAuth.idToken);
                 }
                 if (googleAuth.error) {
-                  Alert.alert("Google Sign-In", googleAuth.error);
+                  toast.error("Google Sign-In", googleAuth.error);
                 }
               }}
-              disabled={googleAuth.isLoading}
+              disabled={googleAuth.isLoading || loading}
               style={[
                 styles.socialButton,
                 { backgroundColor: colors.backgroundElement },
@@ -371,7 +402,11 @@ const SignUp = () => {
               {googleAuth.isLoading ? (
                 <ActivityIndicator size="small" color={colors.text} />
               ) : (
-                <Text style={styles.socialIcon}>G</Text>
+                <Image
+                  source={require("../../../assets/google.png")}
+                  style={styles.socialImage}
+                  contentFit="contain"
+                />
               )}
               <Text style={[styles.socialLabel, { color: colors.text }]}>
                 Google
@@ -386,10 +421,10 @@ const SignUp = () => {
                   handleSocialSignIn("apple", appleAuth.idToken);
                 }
                 if (appleAuth.error) {
-                  Alert.alert("Apple Sign-In", appleAuth.error);
+                  toast.error("Apple Sign-In", appleAuth.error);
                 }
               }}
-              disabled={appleAuth.isLoading}
+              disabled={appleAuth.isLoading || loading}
               style={[
                 styles.socialButton,
                 { backgroundColor: colors.backgroundElement },
@@ -398,7 +433,11 @@ const SignUp = () => {
               {appleAuth.isLoading ? (
                 <ActivityIndicator size="small" color={colors.text} />
               ) : (
-                <Text style={styles.socialIcon}></Text>
+                <Image
+                  source={require("../../../assets/apple.png")}
+                  style={styles.socialImage}
+                  contentFit="contain"
+                />
               )}
               <Text style={[styles.socialLabel, { color: colors.text }]}>
                 Apple
@@ -407,9 +446,7 @@ const SignUp = () => {
           </View>
 
           <View style={styles.footerRow}>
-            <Text
-              style={[styles.footerText, { color: colors.textSecondary }]}
-            >
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>
               Already have an account?{" "}
             </Text>
             <TouchableOpacity onPress={() => router.push("/(auth)/sign-in")}>
@@ -477,34 +514,21 @@ const styles = StyleSheet.create({
   form: {
     gap: 16,
   },
-  primaryButton: {
-    borderRadius: 50,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 8,
+  passwordField: {
+    gap: 6,
   },
-  primaryButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "700",
+  passwordHint: {
+    fontSize: 12,
+    lineHeight: 17,
+    paddingHorizontal: 4,
+  },
+  primaryButton: {
+    marginTop: 8,
   },
   buttonRow: {
     flexDirection: "row",
     gap: 12,
     marginTop: 8,
-  },
-  backButton: {
-    borderRadius: 50,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 1,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
   },
   dividerRow: {
     flexDirection: "row",
@@ -533,9 +557,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 50,
   },
-  socialIcon: {
-    fontSize: 18,
-    fontWeight: "700",
+  socialImage: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
   },
   socialLabel: {
     fontSize: 15,

@@ -98,7 +98,7 @@ export interface LoginRequest {
 }
 
 export interface RegisterRequest {
-  business_name: string;
+  business_name?: string;
   business_email: string;
   owner_name: string;
   owner_email: string;
@@ -134,6 +134,7 @@ export interface LoginResponseData {
   tokens: AuthTokens;
   user: AuthUser;
   requires_totp: boolean;
+  is_new_user?: boolean;
 }
 
 export interface DataMessageResponse<T = unknown> {
