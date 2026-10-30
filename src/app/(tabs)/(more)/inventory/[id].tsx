@@ -11,6 +11,7 @@ import LineChart from "@/components/charts/LineChart";
 import SegmentedToggle, {
   type SegmentedOption,
 } from "@/components/charts/SegmentedToggle";
+import TransferRequestSheet from "@/components/transfer-request-sheet";
 import TransferSheet from "@/components/transfer-sheet";
 import { Colors } from "@/constants/theme";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
@@ -100,6 +101,7 @@ const ProductDetails = () => {
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const { user } = useSession();
   const [transferVisible, setTransferVisible] = useState(false);
+  const [requestVisible, setRequestVisible] = useState(false);
   const { success, error: toastError } = useToast();
 
   const {
@@ -344,7 +346,7 @@ const ProductDetails = () => {
             }
           >
             <Lucide name="pencil" size={16} color="#3b82f6" />
-            <Text style={styles.actionButtonText}>Edit Product</Text>
+            <Text style={styles.actionButtonText}>Edit</Text>
           </Pressable>
           <Pressable
             style={[
@@ -355,6 +357,16 @@ const ProductDetails = () => {
           >
             <Lucide name="arrow-right-left" size={16} color="#3b82f6" />
             <Text style={styles.actionButtonText}>Transfer</Text>
+          </Pressable>
+          <Pressable
+            style={[
+              styles.actionButton,
+              { borderColor: colors.backgroundElement },
+            ]}
+            onPress={() => setRequestVisible(true)}
+          >
+            <Lucide name="send" size={16} color="#3b82f6" />
+            <Text style={styles.actionButtonText}>Request</Text>
           </Pressable>
         </View>
 
@@ -714,6 +726,13 @@ const ProductDetails = () => {
         productId={id!}
         productName={product?.name ?? ""}
         currentStoreId={storeId}
+      />
+
+      <TransferRequestSheet
+        visible={requestVisible}
+        onVisibleChange={setRequestVisible}
+        currentStoreId={storeId}
+        productName={product?.name ?? undefined}
       />
     </View>
   );

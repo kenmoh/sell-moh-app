@@ -15,6 +15,11 @@ import {
   StockBalancesPaginatedResponse,
   StockMovementsPaginatedResponse,
   StoreDistributePayload,
+  TransferDirection,
+  TransferRequest,
+  TransferRequestCreatePayload,
+  TransferRequestDecisionPayload,
+  TransferRequestsPaginatedResponse,
   UpdateProduct,
 } from "@/types/product";
 import { File, Paths } from "expo-file-system";
@@ -328,6 +333,101 @@ export const distributeStock = async (
   const res = await apiClient.post<{ data: DistributeResult }>(
     `${INVENTORY_URL}/${storeId}/distribute`,
     data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!.data;
+};
+
+export const fetchTransferRequests = async (
+  storeId: string,
+  params?: {
+    status?: string;
+    direction?: TransferDirection;
+    page?: number;
+    page_size?: number;
+  },
+): Promise<TransferRequestsPaginatedResponse> => {
+  const query = new URLSearchParams();
+  if (params?.status) query.append("status", params.status);
+  if (params?.direction) query.append("direction", params.direction);
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.page_size) query.append("page_size", String(params.page_size));
+
+  const qs = query.toString();
+  const url = `${INVENTORY_URL}/${storeId}/transfer-requests${qs ? `?${qs}` : ""}`;
+  const res =
+    await apiClient.get<TransferRequestsPaginatedResponse>(url);
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!;
+};
+
+export const createTransferRequest = async (
+  storeId: string,
+  data: TransferRequestCreatePayload,
+): Promise<TransferRequest> => {
+  const res = await apiClient.post<{ data: TransferRequest }>(
+    `${INVENTORY_URL}/${storeId}/transfer-requests`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!.data;
+};
+
+export const approveTransferRequest = async (
+  requestId: string,
+  data: Pick<TransferRequestDecisionPayload, "approved_qty" | "notes" | "supervisor_pin">,
+): Promise<TransferRequest> => {
+  const res = await apiClient.patch<{ data: TransferRequest }>(
+    `${INVENTORY_URL}/transfer-requests/${requestId}/approve`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!.data;
+};
+
+export const rejectTransferRequest = async (
+  requestId: string,
+  data: Pick<
+    TransferRequestDecisionPayload,
+    "rejection_reason" | "notes" | "supervisor_pin"
+  >,
+): Promise<TransferRequest> => {
+  const res = await apiClient.patch<{ data: TransferRequest }>(
+    `${INVENTORY_URL}/transfer-requests/${requestId}/reject`,
+    data,
+  );
+
+  if (!res.ok) {
+    throw new Error(getErrorMessage(res));
+  }
+
+  return res.data!.data;
+};
+
+export const fulfillTransferRequest = async (
+  storeId: string,
+  requestId: string,
+  supervisorPin?: string,
+): Promise<TransferRequest> => {
+  const res = await apiClient.post<{ data: TransferRequest }>(
+    `${INVENTORY_URL}/${storeId}/transfer-requests/${requestId}/fulfill`,
+    { supervisor_pin: supervisorPin || undefined },
   );
 
   if (!res.ok) {

@@ -60,6 +60,8 @@ export interface ProductResponse {
   expiry_date: string | null;
   /** Days before expiry to start warning; null means no near-expiry warning. */
   expiry_warning_days?: number | null;
+  /** When true, sale paths refuse this product after its expiry day. */
+  block_sale_after_expiry?: boolean;
   taxes: TaxEntry[];
   history: StockHistoryItem[];
 }
@@ -95,6 +97,7 @@ export interface CreateProduct {
   store_id?: string | null;
   expiry_date?: string | null;
   expiry_warning_days?: number | null;
+  block_sale_after_expiry?: boolean;
 }
 
 /** Fields the catalog lets a store change after creation. */
@@ -109,6 +112,7 @@ export interface UpdateProduct {
   unit?: string | null;
   expiry_date?: string | null;
   expiry_warning_days?: number | null;
+  block_sale_after_expiry?: boolean;
 }
 
 export interface AdjustProduct {
@@ -217,6 +221,70 @@ export interface StockBalancesPaginatedResponse {
 
 export interface StockMovementsPaginatedResponse {
   data: StockMovementItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  message: string | null;
+}
+
+// ── Inter-store transfer requests ───────────────────────────────────────────
+
+export type TransferRequestStatus =
+  | "pending"
+  | "approved"
+  | "fulfilled"
+  | "rejected";
+
+export type TransferDirection = "incoming" | "outgoing";
+
+export interface TransferRequest {
+  id: string;
+  request_number: string | null;
+  item_name: string | null;
+  product_id: string;
+  supplying_product_id: string | null;
+  requesting_store_id: string;
+  supplying_store_id: string;
+  requesting_store_name: string | null;
+  supplying_store_name: string | null;
+  requested_qty: number;
+  approved_qty: number | null;
+  fulfilled_qty: number | null;
+  status: TransferRequestStatus;
+  notes: string | null;
+  decision_note: string | null;
+  rejection_reason: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  approved_by: string | null;
+  approved_by_name: string | null;
+  fulfilled_by: string | null;
+  fulfilled_by_name: string | null;
+  pin_verified_by: string | null;
+  pin_verified_by_name: string | null;
+  approved_at: string | null;
+  rejected_at: string | null;
+  fulfilled_at: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface TransferRequestCreatePayload {
+  item_name: string;
+  supplying_store_id: string;
+  requested_qty: number;
+  notes?: string | null;
+}
+
+export interface TransferRequestDecisionPayload {
+  approved_qty?: number;
+  rejection_reason?: string | null;
+  notes?: string | null;
+  supervisor_pin?: string | null;
+}
+
+export interface TransferRequestsPaginatedResponse {
+  data: TransferRequest[];
   total: number;
   page: number;
   page_size: number;
