@@ -4,6 +4,7 @@ import {
   moveReceivableToStore,
 } from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import PillRow from "@/components/pill-row";
 import AppTextInput from "@/components/text-input";
@@ -14,8 +15,6 @@ import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   useColorScheme,
@@ -186,26 +185,15 @@ const MoveToStoreSheet = ({
         </View>
       )}
 
-      <Pressable
-        style={[
-          styles.updateBtn,
-          {
-            backgroundColor: colors.buttonPrimary,
-            opacity: canSubmit ? 1 : 0.5,
-          },
-        ]}
-        disabled={!canSubmit || move.isPending}
+      <Button
+        disabled={!canSubmit}
+        fullWidth
+        leftIcon={(color) => <Lucide name="check" size={18} color={color} />}
+        loading={move.isPending}
         onPress={() => move.mutate()}
-      >
-        {move.isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name="check" size={18} color="#fff" />
-            <Text style={styles.updateBtnText}>Update Store</Text>
-          </>
-        )}
-      </Pressable>
+        style={{ marginTop: 18 }}
+        title="Update Store"
+      />
     </AppBottomSheet>
   );
 };

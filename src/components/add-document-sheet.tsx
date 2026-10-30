@@ -1,6 +1,7 @@
 import { fetchCustomers } from "@/api/customer";
 import { fetchTaxTypes } from "@/api/taxes";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import PillRow from "@/components/pill-row";
 import AppTextInput from "@/components/text-input";
@@ -525,29 +526,15 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
         </View>
       </ScrollView>
 
-      {/* Create Button */}
-      <Pressable
-        style={[
-          styles.createBtn,
-          {
-            backgroundColor: colors.buttonPrimary,
-            opacity: canSubmit && !isCreating ? 1 : 0.5,
-          },
-        ]}
-        disabled={!canSubmit || isCreating}
+      <Button
+        disabled={!canSubmit}
+        fullWidth
+        leftIcon={(color) => <Lucide name="plus" size={18} color={color} />}
+        loading={isCreating}
+        loadingTitle="Creating..."
         onPress={handleCreate}
-      >
-        {isCreating ? (
-          <ActivityIndicator color="#fff" size="small" />
-        ) : (
-          <Lucide name="plus" size={18} color="#fff" />
-        )}
-        <Text style={styles.createBtnText}>
-          {isCreating
-            ? "Creating..."
-            : `Create ${DOC_TYPES.find((t) => t.value === docType)?.label}`}
-        </Text>
-      </Pressable>
+        title={`Create ${DOC_TYPES.find((t) => t.value === docType)?.label}`}
+      />
     </AppBottomSheet>
   );
 };

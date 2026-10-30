@@ -1,11 +1,13 @@
 import { addToCart } from "@/api/cart";
 import { getProductById } from "@/api/inventory";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import CartSheet from "@/components/cart-sheet";
 import NewCartSheet from "@/components/new-cart-sheet";
 import { Colors, Spacing } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
 import { useToast } from "@/hooks/use-toast";
+import { isProductExpired } from "@/lib/expiry";
 import { useActiveStore } from "@/lib/store-context";
 import { ProductResponse } from "@/types/product";
 import { Product } from "@/types/product-types";
@@ -44,6 +46,8 @@ function toScannedProduct(response: ProductResponse): Product {
     price: response.selling_price,
     in_stock: response.qty,
     reorder_point: response.reorder_point ?? 0,
+    expiry_date: response.expiry_date ?? null,
+    block_sale_after_expiry: response.block_sale_after_expiry ?? false,
     imageUrl: response.image_url ?? undefined,
     category: response.category
       ? { id: response.category, name: response.category }
@@ -79,6 +83,9 @@ export default function ScanScreen() {
   });
   const lastScanRef = useRef<{ data: string; time: number } | null>(null);
   const openCartAfterSheetCloseRef = useRef(false);
+  const isExpiredBlocked =
+    product?.block_sale_after_expiry === true &&
+    isProductExpired(product.expiry_date);
 
   const scanFrameAnimatedStyle = useAnimatedStyle(() => ({
     transform: [
@@ -193,6 +200,13 @@ export default function ScanScreen() {
 
   const handleAddToCart = async () => {
     if (!product || isAdding) return;
+    if (isExpiredBlocked) {
+      toast.error(
+        "Product expired",
+        "This product has expired and cannot be sold.",
+      );
+      return;
+    }
     const state = useCartStore.getState();
     const cartId = state.activeCartId;
     if (!cartId || cartId.startsWith("cart-")) {
@@ -263,9 +277,7 @@ export default function ScanScreen() {
         >
           Allow camera access to scan a product QR code and add it to your cart.
         </Text>
-        <Pressable onPress={requestPermission} style={styles.primaryButton}>
-          <Text style={styles.primaryButtonText}>Allow camera access</Text>
-        </Pressable>
+        <Button onPress={requestPermission} title="Allow camera access" />
       </View>
     );
   }
@@ -440,7 +452,9 @@ export default function ScanScreen() {
                     </Text>
                     <Pressable
                       accessibilityLabel="Increase quantity"
-                      disabled={quantity >= product.in_stock}
+                      disabled={
+                        isExpiredBlocked || quantity >= product.in_stock
+                      }
                       onPress={() =>
                         setQuantity((current) =>
                           Math.min(product.in_stock, current + 1),
@@ -450,7 +464,11 @@ export default function ScanScreen() {
                         styles.quantityButton,
                         {
                           backgroundColor: colors.card,
-                          opacity: quantity >= product.in_stock ? 0.4 : 1,
+                          opacity:
+                            isExpiredBlocked ||
+                            quantity >= product.in_stock
+                              ? 0.4
+                              : 1,
                         },
                       ]}
                     >
@@ -460,46 +478,26 @@ export default function ScanScreen() {
                 </View>
 
                 <View style={styles.cartActions}>
-                  <Pressable
-                    style={[
-                      styles.addToCartButton,
-                      { backgroundColor: colors.buttonPrimary },
-                      (isAdding || product.in_stock === 0) && { opacity: 0.6 },
-                    ]}
+                  <Button
+                    disabled={product.in_stock === 0 || isExpiredBlocked}
+                    loading={isAdding}
                     onPress={handleAddToCart}
-                    disabled={isAdding || product.in_stock === 0}
-                  >
-                    {isAdding ? (
-                      <ActivityIndicator color="#fff" size="small" />
-                    ) : (
-                      <Text numberOfLines={1} style={styles.addToCartText}>
-                        Add to cart{quantity > 1 ? ` (${quantity})` : ""}
-                      </Text>
+                    style={{ flex: 1 }}
+                    title={
+                      isExpiredBlocked
+                        ? "Expired"
+                        : `Add to cart${quantity > 1 ? ` (${quantity})` : ""}`
+                    }
+                  />
+                  <Button
+                    leftIcon={(color) => (
+                      <Lucide name="shopping-cart" size={17} color={color} />
                     )}
-                  </Pressable>
-                  <Pressable
-                    style={[
-                      styles.viewCartButton,
-                      {
-                        backgroundColor: colors.backgroundElement,
-                        borderColor: colors.backgroundSelected,
-                      },
-                    ]}
                     onPress={handleViewCart}
-                    accessibilityRole="button"
-                  >
-                    <Lucide
-                      name="shopping-cart"
-                      size={17}
-                      color={colors.text}
-                    />
-                    <Text
-                      numberOfLines={1}
-                      style={[styles.viewCartText, { color: colors.text }]}
-                    >
-                      View cart
-                    </Text>
-                  </Pressable>
+                    style={{ flex: 1 }}
+                    title="View cart"
+                    variant="secondary"
+                  />
                 </View>
               </>
             )}
@@ -637,13 +635,6 @@ const styles = StyleSheet.create({
     marginTop: Spacing.two,
     marginBottom: Spacing.four,
   },
-  primaryButton: {
-    backgroundColor: "#2f7df6",
-    borderRadius: 100,
-    paddingHorizontal: 22,
-    paddingVertical: 14,
-  },
-  primaryButtonText: { color: "#ffffff", fontSize: 15, fontWeight: "700" },
 
   sheetTitle: { fontSize: 18, fontWeight: "700", marginBottom: 12 },
   productCard: {

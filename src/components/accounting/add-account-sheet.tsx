@@ -1,12 +1,11 @@
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   useColorScheme,
@@ -112,27 +111,16 @@ const AddAccountSheet = ({
         ))}
       </View>
 
-      {/* Confirm */}
-      <Pressable
-        style={[
-          styles.confirmButton,
-          {
-            opacity: code && name && selectedType && !isPending ? 1 : 0.5,
-            backgroundColor: colors.buttonPrimary,
-          },
-        ]}
-        disabled={!code || !name || !selectedType || isPending}
+      <Button
+        disabled={!code || !name || !selectedType}
+        fullWidth
+        leftIcon={(color) => <Lucide name="plus" size={18} color={color} />}
+        loading={isPending}
+        loadingTitle="Adding..."
         onPress={handleAdd}
-      >
-        {isPending ? (
-          <ActivityIndicator size={18} color="#fff" />
-        ) : (
-          <Lucide name="plus" size={18} color="#fff" />
-        )}
-        <Text style={styles.confirmText}>
-          {isPending ? "Adding..." : "Add Account"}
-        </Text>
-      </Pressable>
+        style={{ marginTop: 12 }}
+        title="Add Account"
+      />
     </AppBottomSheet>
   );
 };

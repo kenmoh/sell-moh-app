@@ -6,6 +6,7 @@ import {
   updateDocumentStatus,
 } from "@/api/document";
 import AppView from "@/components/app-view";
+import { Button } from "@/components/button";
 import { Colors } from "@/constants/theme";
 import { useToast } from "@/hooks/use-toast";
 import type { Document } from "@/types/document-types";
@@ -539,38 +540,19 @@ const DocumentDetailScreen = () => {
 
         {actions.length > 0 && (
           <View style={[styles.actionBar]}>
-            {actions.map((action) => {
-              const isDanger = action.variant === "danger";
-              const bgColor = isDanger
-                ? "rgba(220, 38, 38, 0.12)"
-                : colors.buttonPrimary;
-              const textColor = isDanger ? "#DC2626" : "#fff";
-
-              return (
-                <Pressable
-                  key={action.status + action.label}
-                  onPress={() => handleAction(action)}
-                  disabled={isPending}
-                  style={({ pressed }) => [
-                    styles.actionBtn,
-                    {
-                      backgroundColor: bgColor,
-                      opacity: isPending ? 0.5 : pressed ? 0.75 : 1,
-                      transform: [{ scale: pressed ? 0.97 : 1 }],
-                    },
-                  ]}
-                >
-                  <Lucide
-                    name={action.icon as any}
-                    size={16}
-                    color={textColor}
-                  />
-                  <Text style={[styles.actionBtnText, { color: textColor }]}>
-                    {action.label}
-                  </Text>
-                </Pressable>
-              );
-            })}
+            {actions.map((action) => (
+              <Button
+                key={action.status + action.label}
+                leftIcon={(color) => (
+                  <Lucide name={action.icon as any} size={16} color={color} />
+                )}
+                loading={isPending}
+                onPress={() => handleAction(action)}
+                style={{ flex: 1 }}
+                title={action.label}
+                variant={action.variant === "danger" ? "danger" : "primary"}
+              />
+            ))}
           </View>
         )}
         {actions.length > 0 && (

@@ -16,6 +16,10 @@ export interface Product {
   reorder_point?: number;
   tax_id?: string;
   tax_rate?: number;
+  /** Best-before date (YYYY-MM-DD), null when the product never expires. */
+  expiry_date?: string | null;
+  /** When true the POS refuses this product after its expiry day. */
+  block_sale_after_expiry?: boolean;
   /** What this product is taxed by, resolved by the server. */
   taxes?: TaxEntry[];
   createdAt?: Date;

@@ -1,4 +1,5 @@
 import { fetchTenantStores } from "@/api/store";
+import { Button } from "@/components/button";
 import SearchInput from "@/components/search-input";
 import StoreSheet from "@/components/store-sheet";
 import { Colors } from "@/constants/theme";
@@ -267,16 +268,11 @@ const StoresScreen = () => {
                 : "Create your first store to get started."}
             </Text>
             {!search && (
-              <Pressable
-                style={[
-                  styles.emptyBtn,
-                  { backgroundColor: colors.buttonPrimary },
-                ]}
+              <Button
+                leftIcon={(color) => <Lucide name="plus" size={16} color={color} />}
                 onPress={handleOpenAdd}
-              >
-                <Lucide name="plus" size={16} color="#fff" />
-                <Text style={styles.emptyBtnText}>Add Store</Text>
-              </Pressable>
+                title="Add Store"
+              />
             )}
           </View>
         }

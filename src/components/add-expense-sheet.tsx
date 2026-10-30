@@ -1,4 +1,5 @@
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
@@ -6,7 +7,6 @@ import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -165,28 +165,16 @@ const AddExpenseSheet = ({
         onChangeText={setNote}
       />
 
-      {/* Confirm */}
-      <Pressable
-        style={[
-          styles.confirmButton,
-          {
-            opacity: selectedCategory && amount && !isPending ? 1 : 0.5,
-            backgroundColor: colors.buttonPrimary,
-            marginTop: 20,
-          },
-        ]}
-        disabled={!selectedCategory || !amount || isPending}
+      <Button
+        disabled={!selectedCategory || !amount}
+        fullWidth
+        leftIcon={(color) => <Lucide name="plus" size={18} color={color} />}
+        loading={isPending}
+        loadingTitle="Adding..."
         onPress={handleAdd}
-      >
-        {isPending ? (
-          <ActivityIndicator size={18} color="#fff" />
-        ) : (
-          <Lucide name="plus" size={18} color="#fff" />
-        )}
-        <Text style={styles.confirmText}>
-          {isPending ? "Adding..." : "Add Expense"}
-        </Text>
-      </Pressable>
+        style={{ marginTop: 20 }}
+        title="Add Expense"
+      />
     </AppBottomSheet>
   );
 };

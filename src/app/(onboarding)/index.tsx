@@ -1,3 +1,4 @@
+import { Button } from "@/components/button";
 import { SLIDES } from "@/components/onboarding/slides";
 import { Colors } from "@/constants/theme";
 import { useOnboarding } from "@/lib/onboarding-context";
@@ -124,42 +125,6 @@ function Dot({ isActive }: { isActive: boolean }) {
   );
 }
 
-function PrimaryButton({
-  label,
-  onPress,
-}: {
-  label: string;
-  onPress: () => void;
-}) {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === "dark" ? "dark" : "light"];
-  const reduced = useReducedMotion();
-  const scale = useSharedValue(1);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: reduced ? 1 : scale.value }],
-  }));
-
-  return (
-    <Animated.View style={[styles.buttonWrapper, animatedStyle]}>
-      <Pressable
-        style={[styles.button, { backgroundColor: colors.buttonPrimary }]}
-        onPress={onPress}
-        onPressIn={() => {
-          // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are mutable by design
-          scale.value = withTiming(0.97, { duration: 120, easing: EASE_OUT });
-        }}
-        onPressOut={() => {
-          // eslint-disable-next-line react-hooks/immutability -- Reanimated shared values are mutable by design
-          scale.value = withTiming(1, { duration: 160, easing: EASE_OUT });
-        }}
-      >
-        <Text style={styles.buttonText}>{label}</Text>
-      </Pressable>
-    </Animated.View>
-  );
-}
-
 export default function Onboarding() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
@@ -241,16 +206,19 @@ export default function Onboarding() {
             <Dot key={s.key} isActive={i === index} />
           ))}
         </View>
-        <PrimaryButton
-          label={isLast ? "Get started" : "Next"}
-          onPress={() => {
-            if (isLast) {
-              finish("/(auth)/sign-up");
-            } else {
-              goTo(index + 1);
-            }
-          }}
-        />
+        <View style={styles.buttonWrapper}>
+          <Button
+            onPress={() => {
+              if (isLast) {
+                finish("/(auth)/sign-up");
+              } else {
+                goTo(index + 1);
+              }
+            }}
+            size="lg"
+            title={isLast ? "Get started" : "Next"}
+          />
+        </View>
       </View>
     </View>
   );
@@ -316,18 +284,5 @@ const styles = StyleSheet.create({
   },
   buttonWrapper: {
     marginHorizontal: 24,
-    borderRadius: 999,
-    overflow: "hidden",
-  },
-  button: {
-    height: 54,
-    borderRadius: 999,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });

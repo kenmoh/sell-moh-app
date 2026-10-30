@@ -1,13 +1,15 @@
 import { login, socialSignIn } from "@/api/auth";
 import AppView from "@/components/app-view";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useAppleAuth } from "@/lib/apple-auth";
 import { useSession } from "@/lib/ctx";
 import { deviceName } from "@/lib/device-label";
 import { useGoogleAuth } from "@/lib/google-auth";
-import { useAppleAuth } from "@/lib/apple-auth";
 import { LoginResponseData } from "@/types/auth";
-import { router } from "expo-router";
+import { Image } from "expo-image";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
@@ -34,22 +36,41 @@ const SignIn = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const { signIn } = useSession();
-  const [email, setEmail] = useState("");
+  const { email: emailParam } = useLocalSearchParams<{
+    email?: string | string[];
+  }>();
+  const [email, setEmail] = useState(() => {
+    const param = Array.isArray(emailParam) ? emailParam[0] : emailParam;
+    return param ?? "";
+  });
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errors, setErrors] = useState<Partial<Record<SignInField, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<SignInField, string>>>(
+    {},
+  );
 
-  const googleAuth = useGoogleAuth(process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "");
+  const googleAuth = useGoogleAuth({
+    androidClientId: process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID || "",
+    iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID || "",
+    webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || "",
+  });
   const appleAuth = useAppleAuth();
 
-  const handleSocialSignIn = async (provider: "google" | "apple", idToken: string) => {
+  const handleSocialSignIn = async (
+    provider: "google" | "apple",
+    idToken: string,
+  ) => {
     try {
       const res = await socialSignIn({ id_token: idToken, provider });
       const data = res.data as LoginResponseData;
       signIn(data.tokens.access_token, data.tokens.refresh_token, data.user);
-      router.replace("/(tabs)/(pos)");
+      if (data.is_new_user) {
+        router.replace("/(auth)/complete-setup");
+      } else {
+        router.replace("/(tabs)/(pos)");
+      }
     } catch (err: any) {
       Alert.alert("Sign In Failed", err.message || "Social sign-in failed");
     }
@@ -104,182 +125,185 @@ const SignIn = () => {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>
-            Welcome Back!
-          </Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Sign in to manage your store, sales, and inventory.
-          </Text>
-        </View>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Welcome Back!
+            </Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              Sign in to manage your store, sales, and inventory.
+            </Text>
+          </View>
 
-        <View style={styles.form}>
-          <AppTextInput
-            label="Email address"
-            placeholder="example@gmail.com"
-            value={email}
-            onChangeText={(value) => {
-              setEmail(value);
-              setErrors((c) => ({ ...c, email: undefined }));
-            }}
-            leftIcon="mail"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            error={errors.email}
-          />
+          <View style={styles.form}>
+            <AppTextInput
+              label="Email address"
+              placeholder="example@gmail.com"
+              value={email}
+              onChangeText={(value) => {
+                setEmail(value);
+                setErrors((c) => ({ ...c, email: undefined }));
+              }}
+              leftIcon="mail"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              autoCorrect={false}
+              error={errors.email}
+            />
 
-          <AppTextInput
-            label="Password"
-            placeholder="@Sn123hsn#"
-            value={password}
-            onChangeText={(value) => {
-              setPassword(value);
-              setErrors((c) => ({ ...c, password: undefined }));
-            }}
-            leftIcon="lock"
-            secureTextEntry={!showPassword}
-            rightIcon={showPassword ? "eye-off" : "eye"}
-            onRightIconPress={() => setShowPassword(!showPassword)}
-            error={errors.password}
-          />
+            <AppTextInput
+              label="Password"
+              placeholder="@Sn123hsn#"
+              value={password}
+              onChangeText={(value) => {
+                setPassword(value);
+                setErrors((c) => ({ ...c, password: undefined }));
+              }}
+              leftIcon="lock"
+              secureTextEntry={!showPassword}
+              rightIcon={showPassword ? "eye-off" : "eye"}
+              onRightIconPress={() => setShowPassword(!showPassword)}
+              error={errors.password}
+            />
 
-          <View style={styles.optionsRow}>
+            <View style={styles.optionsRow}>
+              <TouchableOpacity
+                style={styles.rememberRow}
+                onPress={() => setRememberMe(!rememberMe)}
+              >
+                <View
+                  style={[
+                    styles.checkbox,
+                    { borderColor: colors.textSecondary },
+                    rememberMe && {
+                      backgroundColor: colors.buttonPrimary,
+                      borderColor: colors.buttonPrimary,
+                    },
+                  ]}
+                >
+                  {rememberMe && <Text style={styles.checkmark}>✓</Text>}
+                </View>
+                <Text
+                  style={[styles.rememberText, { color: colors.textSecondary }]}
+                >
+                  Remember me
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                onPress={() => router.push("/(auth)/forgot-password")}
+              >
+                <Text
+                  style={[styles.linkText, { color: colors.buttonPrimary }]}
+                >
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <Button
+              loading={loading}
+              onPress={handleSignIn}
+              size="lg"
+              style={styles.primaryButton}
+              title="Sign in"
+            />
+          </View>
+
+          <View style={styles.dividerRow}>
+            <View
+              style={[
+                styles.dividerLine,
+                { backgroundColor: colors.backgroundSelected },
+              ]}
+            />
+            <Text style={[styles.dividerText, { color: colors.textSecondary }]}>
+              Or continue with
+            </Text>
+            <View
+              style={[
+                styles.dividerLine,
+                { backgroundColor: colors.backgroundSelected },
+              ]}
+            />
+          </View>
+
+          <View style={styles.socialRow}>
             <TouchableOpacity
-              style={styles.rememberRow}
-              onPress={() => setRememberMe(!rememberMe)}
+              activeOpacity={0.7}
+              onPress={async () => {
+                await googleAuth.promptAsync();
+                if (googleAuth.idToken) {
+                  handleSocialSignIn("google", googleAuth.idToken);
+                }
+                if (googleAuth.error) {
+                  Alert.alert("Google Sign-In", googleAuth.error);
+                }
+              }}
+              disabled={googleAuth.isLoading}
+              style={[
+                styles.socialButton,
+                { backgroundColor: colors.backgroundElement },
+              ]}
             >
-              <View
-                style={[
-                  styles.checkbox,
-                  { borderColor: colors.textSecondary },
-                  rememberMe && {
-                    backgroundColor: colors.buttonPrimary,
-                    borderColor: colors.buttonPrimary,
-                  },
-                ]}
-              >
-                {rememberMe && <Text style={styles.checkmark}>✓</Text>}
-              </View>
-              <Text
-                style={[styles.rememberText, { color: colors.textSecondary }]}
-              >
-                Remember me
+              {googleAuth.isLoading ? (
+                <ActivityIndicator size="small" color={colors.text} />
+              ) : (
+                <Image
+                  source={require("../../../assets/google.png")}
+                  style={styles.socialImage}
+                  contentFit="contain"
+                />
+              )}
+              <Text style={[styles.socialLabel, { color: colors.text }]}>
+                Google
               </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
-              onPress={() => router.push("/(auth)/forgot-password")}
+              activeOpacity={0.7}
+              onPress={async () => {
+                await appleAuth.promptAsync();
+                if (appleAuth.idToken) {
+                  handleSocialSignIn("apple", appleAuth.idToken);
+                }
+                if (appleAuth.error) {
+                  Alert.alert("Apple Sign-In", appleAuth.error);
+                }
+              }}
+              disabled={appleAuth.isLoading}
+              style={[
+                styles.socialButton,
+                { backgroundColor: colors.backgroundElement },
+              ]}
             >
-              <Text style={[styles.linkText, { color: colors.buttonPrimary }]}>
-                Forgot Password?
+              {appleAuth.isLoading ? (
+                <ActivityIndicator size="small" color={colors.text} />
+              ) : (
+                <Image
+                  source={require("../../../assets/apple.png")}
+                  style={styles.socialImage}
+                  contentFit="contain"
+                />
+              )}
+              <Text style={[styles.socialLabel, { color: colors.text }]}>
+                Apple
               </Text>
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            onPress={handleSignIn}
-            disabled={loading}
-            style={[
-              styles.primaryButton,
-              { backgroundColor: colors.buttonPrimary },
-              loading && { opacity: 0.7 },
-            ]}
-          >
-            {loading ? (
-              <ActivityIndicator color="#ffffff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Sign in</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.dividerRow}>
-          <View
-            style={[
-              styles.dividerLine,
-              { backgroundColor: colors.backgroundSelected },
-            ]}
-          />
-          <Text style={[styles.dividerText, { color: colors.textSecondary }]}>
-            Or continue with
-          </Text>
-          <View
-            style={[
-              styles.dividerLine,
-              { backgroundColor: colors.backgroundSelected },
-            ]}
-          />
-        </View>
-
-        <View style={styles.socialRow}>
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={async () => {
-              await googleAuth.promptAsync();
-              if (googleAuth.idToken) {
-                handleSocialSignIn("google", googleAuth.idToken);
-              }
-              if (googleAuth.error) {
-                Alert.alert("Google Sign-In", googleAuth.error);
-              }
-            }}
-            disabled={googleAuth.isLoading}
-            style={[
-              styles.socialButton,
-              { backgroundColor: colors.backgroundElement },
-            ]}
-          >
-            {googleAuth.isLoading ? (
-              <ActivityIndicator size="small" color={colors.text} />
-            ) : (
-              <Text style={styles.socialIcon}>G</Text>
-            )}
-            <Text style={[styles.socialLabel, { color: colors.text }]}>
-              Google
+          <View style={styles.footerRow}>
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>
+              Don&apos;t have an account?{" "}
             </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            activeOpacity={0.7}
-            onPress={async () => {
-              await appleAuth.promptAsync();
-              if (appleAuth.idToken) {
-                handleSocialSignIn("apple", appleAuth.idToken);
-              }
-              if (appleAuth.error) {
-                Alert.alert("Apple Sign-In", appleAuth.error);
-              }
-            }}
-            disabled={appleAuth.isLoading}
-            style={[
-              styles.socialButton,
-              { backgroundColor: colors.backgroundElement },
-            ]}
-          >
-            {appleAuth.isLoading ? (
-              <ActivityIndicator size="small" color={colors.text} />
-            ) : (
-              <Text style={styles.socialIcon}></Text>
-            )}
-            <Text style={[styles.socialLabel, { color: colors.text }]}>
-              Apple
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <View style={styles.footerRow}>
-          <Text style={[styles.footerText, { color: colors.textSecondary }]}>
-            Don&apos;t have an account?{" "}
-          </Text>
-          <TouchableOpacity onPress={() => router.push("/(auth)/sign-up")}>
-            <Text style={[styles.footerLink, { color: colors.buttonPrimary }]}>
-              Sign up
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
+            <TouchableOpacity onPress={() => router.push("/(auth)/sign-up")}>
+              <Text
+                style={[styles.footerLink, { color: colors.buttonPrimary }]}
+              >
+                Sign up
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </AppView>
     </KeyboardAvoidingView>
   );
@@ -342,16 +366,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   primaryButton: {
-    borderRadius: 50,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
     marginTop: 8,
-  },
-  primaryButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "700",
   },
   dividerRow: {
     flexDirection: "row",
@@ -380,9 +395,10 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 50,
   },
-  socialIcon: {
-    fontSize: 18,
-    fontWeight: "700",
+  socialImage: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
   },
   socialLabel: {
     fontSize: 15,

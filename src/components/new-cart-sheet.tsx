@@ -1,16 +1,16 @@
 import { createCart } from "@/api/cart";
 import { createCustomer, fetchCustomers } from "@/api/customer";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
 import { Customer } from "@/types/customer";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -175,21 +175,13 @@ const NewCartSheet = ({
           keyboardType="phone-pad"
         />
 
-        <Pressable
-          style={[
-            styles.createButton,
-            { backgroundColor: colors.buttonPrimary },
-            isPending && { opacity: 0.6 },
-          ]}
+        <Button
+          fullWidth
+          loading={isPending}
           onPress={() => handleCreate()}
-          disabled={isPending}
-        >
-          {isPending ? (
-            <ActivityIndicator color="#fff" size="small" />
-          ) : (
-            <Text style={styles.createButtonText}>Create Cart</Text>
-          )}
-        </Pressable>
+          style={{ marginTop: 4 }}
+          title="Create Cart"
+        />
       </View>
     </AppBottomSheet>
   );

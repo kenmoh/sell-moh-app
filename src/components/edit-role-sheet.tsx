@@ -1,5 +1,6 @@
 import { getPermissions, setRolePermissions, updateRole } from "@/api/auth";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors, type ColorPalette } from "@/constants/theme";
 import { useToast } from "@/hooks/use-toast";
@@ -287,20 +288,15 @@ const EditRoleSheet = ({ role, onClose }: Props) => {
           </View>
         </View>
       ) : (
-        <Pressable
-          style={[
-            styles.submit,
-            {
-              backgroundColor: colors.buttonPrimary,
-              opacity: canSubmit ? 1 : 0.5,
-            },
-          ]}
+        <Button
           disabled={!canSubmit}
+          fullWidth
+          leftIcon={(color) => <Lucide name="check" size={18} color={color} />}
+          loading={save.isPending}
           onPress={() => (isSeeded ? setConfirming(true) : save.mutate())}
-        >
-          <Lucide name="check" size={18} color="#fff" />
-          <Text style={styles.submitText}>Save Changes</Text>
-        </Pressable>
+          style={{ marginTop: 14 }}
+          title="Save Changes"
+        />
       )}
     </AppBottomSheet>
   );

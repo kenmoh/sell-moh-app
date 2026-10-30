@@ -1,4 +1,5 @@
 import { confirmPayment, switchPaymentMethod } from "@/api/payments";
+import { Button } from "@/components/button";
 import { Colors, ColorPalette } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
 import { usePaymentStatus } from "@/hooks/usePaymentStatus";
@@ -252,23 +253,16 @@ export default function PaymentDetailsSheet({
               Collect cash from the customer, then confirm below.
             </Text>
           </View>
-          <TouchableOpacity
-            style={[
-              styles.payNowBtn,
-              { backgroundColor: colors.buttonPrimary, opacity: paying ? 0.6 : 1 },
-            ]}
-            onPress={handlePayNow}
-            disabled={paying}
-          >
-            {paying ? (
-              <ActivityIndicator size="small" color="#fff" />
-            ) : (
-              <Lucide name="check-circle" size={18} color="#fff" />
+          <Button
+            fullWidth
+            leftIcon={(color) => (
+              <Lucide name="check-circle" size={18} color={color} />
             )}
-            <Text style={styles.payNowText}>
-              {paying ? "Confirming..." : "Confirm Cash Payment"}
-            </Text>
-          </TouchableOpacity>
+            loading={paying}
+            loadingTitle="Confirming..."
+            onPress={handlePayNow}
+            title="Confirm Cash Payment"
+          />
         </View>
       )}
 
@@ -288,16 +282,12 @@ export default function PaymentDetailsSheet({
               </Text>
             </View>
           )}
-          <TouchableOpacity
-            style={[
-              styles.payNowBtn,
-              { backgroundColor: colors.buttonPrimary },
-            ]}
+          <Button
+            fullWidth
+            leftIcon={(color) => <Lucide name="copy" size={18} color={color} />}
             onPress={handlePayNow}
-          >
-            <Lucide name="copy" size={18} color="#fff" />
-            <Text style={styles.payNowText}>Copy Payment Link</Text>
-          </TouchableOpacity>
+            title="Copy Payment Link"
+          />
         </View>
       )}
 
@@ -361,16 +351,12 @@ export default function PaymentDetailsSheet({
               </View>
             )}
           </View>
-          <TouchableOpacity
-            style={[
-              styles.payNowBtn,
-              { backgroundColor: colors.buttonPrimary },
-            ]}
+          <Button
+            fullWidth
+            leftIcon={(color) => <Lucide name="copy" size={18} color={color} />}
             onPress={handlePayNow}
-          >
-            <Lucide name="copy" size={18} color="#fff" />
-            <Text style={styles.payNowText}>Copy Account Number</Text>
-          </TouchableOpacity>
+            title="Copy Account Number"
+          />
         </View>
       )}
 
@@ -460,19 +446,6 @@ const styles = StyleSheet.create({
   methodInfoSubtitle: {
     fontSize: 13,
     textAlign: "center",
-  },
-  payNowBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 12,
-    paddingVertical: 14,
-  },
-  payNowText: {
-    color: "#fff",
-    fontSize: 15,
-    fontWeight: "600",
   },
   qrCard: {
     borderRadius: 16,

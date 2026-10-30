@@ -1,4 +1,5 @@
 import { ColorPalette, Colors } from "@/constants/theme";
+import { isProductExpired } from "@/lib/expiry";
 import { Product } from "@/types/product-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import {
@@ -25,30 +26,38 @@ const Card = ({ product, onPress, cartQuantity = 0 }: CardProps) => {
   const isOutOfStock = stock <= 0;
   const isAtStock = stock > 0 && cartQuantity >= stock;
   const isLowStock = reorderPoint > 0 && stock > 0 && stock <= reorderPoint;
+  const isExpiredBlocked =
+    product.block_sale_after_expiry === true &&
+    isProductExpired(product.expiry_date);
+  const isDisabled = isOutOfStock || isAtStock || isExpiredBlocked;
 
-  const stockBadgeColor = isOutOfStock
+  const stockBadgeColor = isExpiredBlocked
     ? "#ef4444"
-    : isLowStock
-      ? "#f59e0b"
-      : "#10b981";
+    : isOutOfStock
+      ? "#ef4444"
+      : isLowStock
+        ? "#f59e0b"
+        : "#10b981";
 
-  const stockBadgeBg = isOutOfStock
+  const stockBadgeBg = isExpiredBlocked
     ? "rgba(239, 68, 68, 0.12)"
-    : isLowStock
-      ? "rgba(245, 158, 11, 0.12)"
-      : "rgba(16, 185, 129, 0.12)";
+    : isOutOfStock
+      ? "rgba(239, 68, 68, 0.12)"
+      : isLowStock
+        ? "rgba(245, 158, 11, 0.12)"
+        : "rgba(16, 185, 129, 0.12)";
 
   return (
     <Pressable
       onPress={onPress}
-      disabled={isOutOfStock || isAtStock}
+      disabled={isDisabled}
       style={({ pressed }) => [
         styles.cardContainer,
         {
           backgroundColor: colors.card,
           borderColor: isDark ? "#262930" : "#edf0f5",
-          opacity: isOutOfStock || isAtStock ? 0.6 : pressed ? 0.9 : 1,
-          transform: [{ scale: pressed && !isOutOfStock && !isAtStock ? 0.98 : 1 }],
+          opacity: isDisabled ? 0.6 : pressed ? 0.9 : 1,
+          transform: [{ scale: pressed && !isDisabled ? 0.98 : 1 }],
         },
       ]}
     >
@@ -73,7 +82,13 @@ const Card = ({ product, onPress, cartQuantity = 0 }: CardProps) => {
             style={[styles.stockDot, { backgroundColor: stockBadgeColor }]}
           />
           <Text style={[styles.stockText, { color: stockBadgeColor }]}>
-            {isOutOfStock ? "Out" : isAtStock ? "Full" : `${stock}`}
+            {isExpiredBlocked
+              ? "Exp"
+              : isOutOfStock
+                ? "Out"
+                : isAtStock
+                  ? "Full"
+                  : `${stock}`}
           </Text>
         </View>
       </View>
@@ -111,16 +126,16 @@ const Card = ({ product, onPress, cartQuantity = 0 }: CardProps) => {
           style={[
             styles.addButton,
             {
-              backgroundColor: isOutOfStock
+              backgroundColor: isDisabled
                 ? colors.backgroundElement
                 : "#3b82f6",
             },
           ]}
         >
           <Lucide
-            name="plus"
+            name={isExpiredBlocked ? "ban" : "plus"}
             size={16}
-            color={isOutOfStock ? colors.textSecondary : "#ffffff"}
+            color={isDisabled ? colors.textSecondary : "#ffffff"}
           />
         </View>
       </View>

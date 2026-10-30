@@ -1,9 +1,10 @@
+import { Button } from "@/components/button";
 import { Colors } from "@/constants/theme";
 import { buildReceiptHtml } from "@/lib/receipt-html";
 import type { ReceiptData } from "@/types/payments";
 import Lucide from "@react-native-vector-icons/lucide";
 import * as Print from "expo-print";
-import { Stack, useLocalSearchParams, useRouter } from "expo-router";
+import { Stack, useLocalSearchParams } from "expo-router";
 import * as Sharing from "expo-sharing";
 import React, { useCallback, useMemo } from "react";
 import {
@@ -11,7 +12,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   useColorScheme,
   View,
 } from "react-native";
@@ -20,7 +20,6 @@ const GREEN = "#059669";
 const RED = "#ef4444";
 
 export default function ReceiptScreen() {
-  const router = useRouter();
   const colorScheme = useColorScheme();
   const colors = colorScheme === "dark" ? Colors.dark : Colors.light;
 
@@ -351,31 +350,23 @@ export default function ReceiptScreen() {
       </ScrollView>
 
       <View style={styles.btnRow}>
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Button
+          leftIcon={(color) => (
+            <Lucide name="printer" size={18} color={color} />
+          )}
           onPress={handlePrint}
-          style={[styles.pillBtn, { backgroundColor: colors.buttonPrimary }]}
-        >
-          <Lucide name="printer" size={18} color="#fff" />
-          <Text style={styles.pillPrimaryText}>Print Receipt</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          activeOpacity={0.8}
+          style={styles.btn}
+          title="Print Receipt"
+        />
+        <Button
+          leftIcon={(color) => (
+            <Lucide name="download" size={18} color={color} />
+          )}
           onPress={handleSavePdf}
-          style={[
-            styles.pillBtn,
-            styles.pillGhost,
-            {
-              backgroundColor: "transparent",
-              borderColor: colors.backgroundElement,
-            },
-          ]}
-        >
-          <Lucide name="download" size={18} color={colors.text} />
-          <Text style={[styles.pillGhostText, { color: colors.text }]}>
-            Save PDF
-          </Text>
-        </TouchableOpacity>
+          style={styles.btn}
+          title="Save PDF"
+          variant="outline"
+        />
       </View>
     </View>
   );
@@ -478,16 +469,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingTop: 8,
   },
-  pillBtn: {
+  btn: {
     flex: 1,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    paddingVertical: 15,
-    borderRadius: 999,
   },
-  pillGhost: { borderWidth: 1.5 },
-  pillPrimaryText: { color: "#fff", fontSize: 15, fontWeight: "700" },
-  pillGhostText: { fontSize: 15, fontWeight: "700" },
 });

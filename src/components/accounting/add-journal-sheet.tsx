@@ -1,10 +1,10 @@
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -240,28 +240,16 @@ const AddJournalSheet = ({
         </Text>
       </Pressable>
 
-      {/* Confirm */}
-      <Pressable
-        style={[
-          styles.confirmButton,
-          {
-            opacity:
-              description.trim() && entries.length >= 2 && !isPending ? 1 : 0.5,
-            backgroundColor: colors.buttonPrimary,
-          },
-        ]}
-        disabled={!description.trim() || entries.length < 2 || isPending}
+      <Button
+        disabled={!description.trim() || entries.length < 2}
+        fullWidth
+        leftIcon={(color) => <Lucide name="check" size={18} color={color} />}
+        loading={isPending}
+        loadingTitle="Posting..."
         onPress={handleAdd}
-      >
-        {isPending ? (
-          <ActivityIndicator size={18} color="#fff" />
-        ) : (
-          <Lucide name="check" size={18} color="#fff" />
-        )}
-        <Text style={styles.confirmText}>
-          {isPending ? "Posting..." : "Post Journal"}
-        </Text>
-      </Pressable>
+        style={{ marginTop: 8 }}
+        title="Post Journal"
+      />
     </AppBottomSheet>
   );
 };

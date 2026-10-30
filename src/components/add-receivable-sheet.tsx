@@ -2,6 +2,7 @@ import { createReceivable, fetchReceivables } from "@/api/accounting";
 import { createCustomer, fetchCustomers } from "@/api/customer";
 import { getDocuments } from "@/api/document";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import PillRow from "@/components/pill-row";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
@@ -559,26 +560,14 @@ const AddReceivableSheet = ({ visible, onVisibleChange }: Props) => {
         </View>
       </ScrollView>
 
-      <Pressable
-        style={[
-          styles.createBtn,
-          {
-            backgroundColor: colors.buttonPrimary,
-            opacity: canSubmit ? 1 : 0.5,
-          },
-        ]}
+      <Button
         disabled={!canSubmit}
+        fullWidth
+        leftIcon={(color) => <Lucide name="plus" size={18} color={color} />}
+        loading={isPending}
         onPress={handleCreate}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name="plus" size={18} color="#fff" />
-            <Text style={styles.createBtnText}>Create Receivable</Text>
-          </>
-        )}
-      </Pressable>
+        title="Create Receivable"
+      />
     </AppBottomSheet>
   );
 };

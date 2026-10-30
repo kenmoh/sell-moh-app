@@ -1,5 +1,6 @@
 import { fetchTaxesOwed } from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
@@ -359,28 +360,16 @@ const RemitTaxSheet = ({
         onChangeText={setNotes}
       />
 
-      {/* Confirm */}
-      <Pressable
-        style={[
-          styles.confirmButton,
-          {
-            backgroundColor: colors.buttonPrimary,
-            opacity:
-              line && parsedAmount > 0 && !overCeiling && !isPending ? 1 : 0.5,
-          },
-        ]}
-        disabled={!line || parsedAmount <= 0 || overCeiling || isPending}
+      <Button
+        disabled={!line || parsedAmount <= 0 || overCeiling}
+        fullWidth
+        leftIcon={(color) => <Lucide name="send" size={18} color={color} />}
+        loading={isPending}
+        loadingTitle="Posting..."
         onPress={handleSubmit}
-      >
-        {isPending ? (
-          <ActivityIndicator size={18} color="#fff" />
-        ) : (
-          <Lucide name="send" size={18} color="#fff" />
-        )}
-        <Text style={styles.confirmText}>
-          {isPending ? "Posting..." : "Record Remittance"}
-        </Text>
-      </Pressable>
+        style={{ marginTop: 14 }}
+        title="Record Remittance"
+      />
     </AppBottomSheet>
   );
 };

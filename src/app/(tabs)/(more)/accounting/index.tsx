@@ -1,13 +1,14 @@
 import {
   createExpense,
-  fetchExpenseSummary,
   fetchExpensesPaged,
+  fetchExpenseSummary,
   fetchFinancialDashboard,
   fetchPayablesPaged,
   fetchReceivablesPaged,
 } from "@/api/accounting";
 import AddExpenseSheet from "@/components/add-expense-sheet";
 import AddPayableSheet from "@/components/add-payable-sheet";
+import { Button } from "@/components/button";
 import AddReceivableSheet from "@/components/add-receivable-sheet";
 import MoveToStoreSheet from "@/components/move-to-store-sheet";
 import PaymentHistorySheet from "@/components/payment-history-sheet";
@@ -15,6 +16,7 @@ import Pill from "@/components/pill";
 import RecordPaymentSheet from "@/components/record-payment-sheet";
 import StoreSwitcher from "@/components/store-switcher";
 import { Colors, type ColorPalette } from "@/constants/theme";
+import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useActiveStore } from "@/lib/store-context";
 import type {
   ExpenseResponse,
@@ -25,8 +27,12 @@ import type {
 import { getAccountingMenuIcon } from "@/types/accounting-menu-icon";
 import MoreVert from "@expo/material-symbols/more_vert.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useApiErrorToast } from "@/hooks/use-api-error-toast";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { Stack, useRouter } from "expo-router";
 import { memo, useCallback, useMemo, useState } from "react";
 import {
@@ -324,7 +330,10 @@ const ExpenseRow = memo(function ExpenseRow({
     >
       <View style={styles.listCardHeader}>
         <View
-          style={[styles.listCardIcon, { backgroundColor: "rgba(239,68,68,0.12)" }]}
+          style={[
+            styles.listCardIcon,
+            { backgroundColor: "rgba(239,68,68,0.12)" },
+          ]}
         >
           <Lucide name="receipt" size={16} color="#ef4444" />
         </View>
@@ -546,22 +555,26 @@ const AccountingLists = memo(function AccountingLists({
             },
           ]}
         >
-          <Text style={{ color: colors.text }}>Finacial Overview</Text>
+          <Text style={{ color: colors.text }}>Financial Overview</Text>
           <StoreSwitcher mode="all" />
         </View>
 
-        {/* Dashboard Card */}
-        <View
-          style={[
-            styles.dashboardCard,
-            {
-              backgroundColor: colors.card,
-              borderColor: isDark ? colors.backgroundElement : "#eef0f4",
-            },
-          ]}
+        {/* Dashboard Metrics */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.dashboardRow}
         >
-          <View style={styles.dashboardRow}>
-            <View style={styles.dashboardItem}>
+          <View
+            style={[
+              styles.dashboardItem,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+              },
+            ]}
+          >
+            <View style={styles.dashboardItemTop}>
               <View
                 style={[
                   styles.dashIcon,
@@ -570,16 +583,24 @@ const AccountingLists = memo(function AccountingLists({
               >
                 <Lucide name="wallet" size={14} color="#10b981" />
               </View>
-              <Text
-                style={[styles.dashLabel, { color: colors.textSecondary }]}
-              >
+              <Text style={[styles.dashLabel, { color: colors.textSecondary }]}>
                 Cash
               </Text>
-              <Text style={[styles.dashValue, { color: colors.text }]}>
-                ₦{dashboard?.cash_balance?.toLocaleString() ?? "0"}
-              </Text>
             </View>
-            <View style={styles.dashboardItem}>
+            <Text style={[styles.dashValue, { color: colors.text }]}>
+              ₦{dashboard?.cash_balance?.toLocaleString() ?? "0"}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.dashboardItem,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+              },
+            ]}
+          >
+            <View style={styles.dashboardItemTop}>
               <View
                 style={[
                   styles.dashIcon,
@@ -588,17 +609,24 @@ const AccountingLists = memo(function AccountingLists({
               >
                 <Lucide name="trending-up" size={14} color="#3b82f6" />
               </View>
-              <Text
-                style={[styles.dashLabel, { color: colors.textSecondary }]}
-              >
+              <Text style={[styles.dashLabel, { color: colors.textSecondary }]}>
                 A/R
               </Text>
-              <Text style={[styles.dashValue, { color: "#3b82f6" }]}>
-                ₦
-                {dashboard?.outstanding_receivable?.toLocaleString() ?? "0"}
-              </Text>
             </View>
-            <View style={styles.dashboardItem}>
+            <Text style={[styles.dashValue, { color: "#3b82f6" }]}>
+              ₦{dashboard?.outstanding_receivable?.toLocaleString() ?? "0"}
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.dashboardItem,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? colors.backgroundElement : "#eef0f4",
+              },
+            ]}
+          >
+            <View style={styles.dashboardItemTop}>
               <View
                 style={[
                   styles.dashIcon,
@@ -607,17 +635,15 @@ const AccountingLists = memo(function AccountingLists({
               >
                 <Lucide name="trending-down" size={14} color="#a855f7" />
               </View>
-              <Text
-                style={[styles.dashLabel, { color: colors.textSecondary }]}
-              >
+              <Text style={[styles.dashLabel, { color: colors.textSecondary }]}>
                 A/P
               </Text>
-              <Text style={[styles.dashValue, { color: "#a855f7" }]}>
-                ₦{dashboard?.outstanding_payable?.toLocaleString() ?? "0"}
-              </Text>
             </View>
+            <Text style={[styles.dashValue, { color: "#a855f7" }]}>
+              ₦{dashboard?.outstanding_payable?.toLocaleString() ?? "0"}
+            </Text>
           </View>
-        </View>
+        </ScrollView>
 
         {/* Tabs */}
         <ScrollView
@@ -683,10 +709,7 @@ const AccountingLists = memo(function AccountingLists({
                     {category}
                   </Text>
                   <Text
-                    style={[
-                      styles.summaryItemAmount,
-                      { color: colors.text },
-                    ]}
+                    style={[styles.summaryItemAmount, { color: colors.text }]}
                   >
                     ₦{amount.toLocaleString()}
                   </Text>
@@ -698,26 +721,20 @@ const AccountingLists = memo(function AccountingLists({
 
         {/* Add Button */}
         <View style={styles.addSection}>
-          <Pressable
-            style={[
-              styles.addBtn,
-              { backgroundColor: colors.buttonPrimary },
-            ]}
+          <Button
+            fullWidth
+            leftIcon={(color) => <Lucide name="plus" size={16} color={color} />}
             onPress={onOpenAdd}
-          >
-            <Lucide name="plus" size={16} color="#fff" />
-            <Text style={styles.addBtnText}>
-              Add{" "}
-              {activeTab === "receivables"
+            title={`Add ${
+              activeTab === "receivables"
                 ? "Receivable"
                 : activeTab === "payables"
                   ? "Payable"
-                  : "Expense"}
-            </Text>
-          </Pressable>
+                  : "Expense"
+            }`}
+          />
         </View>
       </View>
-
     ),
     [
       colors,
@@ -734,62 +751,60 @@ const AccountingLists = memo(function AccountingLists({
   );
 
   return (
-      <FlatList
-        key={activeTab}
-        data={currentList}
-        keyExtractor={(item: any) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
-        initialNumToRender={10}
-        maxToRenderPerBatch={8}
-        windowSize={9}
-        removeClippedSubviews={Platform.OS === "android"}
-        onEndReached={onLoadMore}
-        onEndReachedThreshold={0.5}
-        ListHeaderComponent={listHeader}
-        renderItem={renderItem}
-        ListFooterComponent={
-          isLoadingMore ? (
-            <ActivityIndicator
-              color={colors.buttonPrimary}
-              style={{ paddingVertical: 20 }}
-            />
-          ) : undefined
-        }
-        refreshControl={
-          <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
-        }
-        ListEmptyComponent={
-          <View style={styles.emptyContainer}>
-            <View
-              style={[
-                styles.emptyIconBadge,
-                { backgroundColor: colors.backgroundElement },
-              ]}
-            >
-              <Lucide name="inbox" size={32} color={colors.textSecondary} />
-            </View>
-            <Text style={[styles.emptyTitle, { color: colors.text }]}>
-              No{" "}
-              {activeTab === "receivables"
-                ? "Receivables"
-                : activeTab === "payables"
-                  ? "Payables"
-                  : "Expenses"}{" "}
-              Found
-            </Text>
-            <Text
-              style={[styles.emptySubtitle, { color: colors.textSecondary }]}
-            >
-              {activeTab === "receivables"
-                ? "Track amounts owed by customers"
-                : activeTab === "payables"
-                  ? "Track amounts owed to vendors"
-                  : "Record your business expenses"}
-            </Text>
+    <FlatList
+      key={activeTab}
+      data={currentList}
+      keyExtractor={(item: any) => item.id}
+      showsVerticalScrollIndicator={false}
+      contentContainerStyle={{ paddingBottom: 24 }}
+      initialNumToRender={10}
+      maxToRenderPerBatch={8}
+      windowSize={9}
+      removeClippedSubviews={Platform.OS === "android"}
+      onEndReached={onLoadMore}
+      onEndReachedThreshold={0.5}
+      ListHeaderComponent={listHeader}
+      renderItem={renderItem}
+      ListFooterComponent={
+        isLoadingMore ? (
+          <ActivityIndicator
+            color={colors.buttonPrimary}
+            style={{ paddingVertical: 20 }}
+          />
+        ) : undefined
+      }
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={onRefresh} />
+      }
+      ListEmptyComponent={
+        <View style={styles.emptyContainer}>
+          <View
+            style={[
+              styles.emptyIconBadge,
+              { backgroundColor: colors.backgroundElement },
+            ]}
+          >
+            <Lucide name="inbox" size={32} color={colors.textSecondary} />
           </View>
-        }
-      />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            No{" "}
+            {activeTab === "receivables"
+              ? "Receivables"
+              : activeTab === "payables"
+                ? "Payables"
+                : "Expenses"}{" "}
+            Found
+          </Text>
+          <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
+            {activeTab === "receivables"
+              ? "Track amounts owed by customers"
+              : activeTab === "payables"
+                ? "Track amounts owed to vendors"
+                : "Record your business expenses"}
+          </Text>
+        </View>
+      }
+    />
   );
 });
 
@@ -822,7 +837,12 @@ const AccountingScreen = () => {
     type: "ar" | "ap";
   } | null>(null);
 
-  const { data: dashboard, isLoading: isLoadingDashboard, isError, error } = useQuery({
+  const {
+    data: dashboard,
+    isLoading: isLoadingDashboard,
+    isError,
+    error,
+  } = useQuery({
     queryKey: ["financial-dashboard", activeStoreId],
     queryFn: () => fetchFinancialDashboard(activeStoreId),
   });
@@ -929,7 +949,13 @@ const AccountingScreen = () => {
       else if (activeTab === "payables") fetchNextAP();
       else fetchNextExpenses();
     }
-  }, [activeTab, activeTabHasNextPage, fetchNextAR, fetchNextAP, fetchNextExpenses]);
+  }, [
+    activeTab,
+    activeTabHasNextPage,
+    fetchNextAR,
+    fetchNextAP,
+    fetchNextExpenses,
+  ]);
 
   const { mutate: addExpense, isPending: isAddingExpense } = useMutation({
     mutationFn: (data: { category: string; amount: string; note: string }) =>
@@ -1147,26 +1173,29 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     marginBottom: 12,
   },
-  dashboardCard: {
-    marginHorizontal: 16,
-    marginBottom: 16,
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: StyleSheet.hairlineWidth,
-  },
   dashboardRow: {
     flexDirection: "row",
+    paddingHorizontal: 16,
     gap: 10,
+    marginBottom: 16,
   },
   dashboardItem: {
-    flex: 1,
+    flexShrink: 0,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  dashboardItemTop: {
+    flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 6,
+    marginBottom: 6,
   },
   dashIcon: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 6,
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 4,

@@ -1,6 +1,7 @@
 import { createPayable } from "@/api/accounting";
 import { fetchCustomers } from "@/api/customer";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import PillRow from "@/components/pill-row";
 import AppTextInput from "@/components/text-input";
@@ -385,26 +386,14 @@ const AddPayableSheet = ({ visible, onVisibleChange }: Props) => {
         </View>
       </View>
 
-      <Pressable
-        style={[
-          styles.createBtn,
-          {
-            backgroundColor: colors.buttonPrimary,
-            opacity: canSubmit ? 1 : 0.5,
-          },
-        ]}
+      <Button
         disabled={!canSubmit}
+        fullWidth
+        leftIcon={(color) => <Lucide name="plus" size={18} color={color} />}
+        loading={isPending}
         onPress={handleCreate}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name="plus" size={18} color="#fff" />
-            <Text style={styles.createBtnText}>Create Payable</Text>
-          </>
-        )}
-      </Pressable>
+        title="Create Payable"
+      />
     </AppBottomSheet>
   );
 };

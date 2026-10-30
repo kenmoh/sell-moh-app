@@ -7,10 +7,10 @@ import { SplashScreenController } from "@/lib/splash";
 import { ActiveStoreProvider } from "@/lib/store-context";
 import { ToastProvider } from "@/lib/toast-context";
 import { DarkTheme, DefaultTheme, Stack, ThemeProvider } from "expo-router";
-import { useColorScheme } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
+import { useColorScheme } from "@/hooks/use-color-scheme.web";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 
@@ -22,22 +22,24 @@ export const unstable_settings = {
 
 export default function RootLayout() {
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <KeyboardProvider>
-        <QueryClientProvider client={queryClient}>
-          <ToastProvider>
-            <SessionProvider>
-              <ActiveStoreProvider>
-                <OnboardingProvider>
-                  <SplashScreenController />
-                  <RootNavigator />
-                </OnboardingProvider>
-              </ActiveStoreProvider>
-            </SessionProvider>
-          </ToastProvider>
-        </QueryClientProvider>
-      </KeyboardProvider>
-    </GestureHandlerRootView>
+    <>
+      <GestureHandlerRootView style={{ flex: 1 }}>
+        <KeyboardProvider>
+          <QueryClientProvider client={queryClient}>
+            <ToastProvider>
+              <SessionProvider>
+                <ActiveStoreProvider>
+                  <OnboardingProvider>
+                    <SplashScreenController />
+                    <RootNavigator />
+                  </OnboardingProvider>
+                </ActiveStoreProvider>
+              </SessionProvider>
+            </ToastProvider>
+          </QueryClientProvider>
+        </KeyboardProvider>
+      </GestureHandlerRootView>
+    </>
   );
 }
 

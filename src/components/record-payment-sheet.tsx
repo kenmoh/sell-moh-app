@@ -1,14 +1,14 @@
 import { recordApPayment, recordArPayment } from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useApiMutation } from "@/hooks/use-api-mutation";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -265,29 +265,22 @@ const RecordPaymentSheet = ({
         </View>
       </View>
 
-      <Pressable
-        style={[
-          styles.recordBtn,
-          { backgroundColor: colors.buttonPrimary, opacity: canSubmit ? 1 : 0.5 },
-        ]}
+      <Button
         disabled={!canSubmit}
-        onPress={handleRecord}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name="check-circle" size={18} color="#fff" />
-            <Text style={styles.recordBtnText}>
-              {isSettled
-                ? "Nothing to Record"
-                : isFullPayment
-                  ? `Record Full ₦${Math.max(parsedAmount || 0, 0).toLocaleString()}`
-                  : "Record Part Payment"}
-            </Text>
-          </>
+        fullWidth
+        leftIcon={(color) => (
+          <Lucide name="check-circle" size={18} color={color} />
         )}
-      </Pressable>
+        loading={isPending}
+        onPress={handleRecord}
+        title={
+          isSettled
+            ? "Nothing to Record"
+            : isFullPayment
+              ? `Record Full ₦${Math.max(parsedAmount || 0, 0).toLocaleString()}`
+              : "Record Part Payment"
+        }
+      />
     </AppBottomSheet>
   );
 };
@@ -343,13 +336,4 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   datePickerText: { flex: 1, fontSize: 14 },
-  recordBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 50,
-    paddingVertical: 16,
-  },
-  recordBtnText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

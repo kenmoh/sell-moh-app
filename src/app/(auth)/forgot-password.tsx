@@ -1,11 +1,11 @@
 import { forgotPassword } from "@/api/auth";
 import AppView from "@/components/app-view";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -63,17 +63,17 @@ const ForgotPassword = () => {
             Check Your Email
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            We've sent a password reset link to{"\n"}
+            {"We've sent a password reset link to\n"}
             <Text style={{ fontWeight: "700", color: colors.text }}>
               {email}
             </Text>
           </Text>
-          <TouchableOpacity
-            style={[styles.primaryButton, { backgroundColor: colors.buttonPrimary }]}
+          <Button
             onPress={() => router.replace("/(auth)/sign-in")}
-          >
-            <Text style={styles.primaryButtonText}>Back to Sign In</Text>
-          </TouchableOpacity>
+            size="lg"
+            style={styles.primaryButton}
+            title="Back to Sign In"
+          />
         </View>
       </AppView>
     );
@@ -90,7 +90,7 @@ const ForgotPassword = () => {
             Forgot Password?
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Enter your email and we'll send you a password reset link.
+            {"Enter your email and we'll send you a password reset link."}
           </Text>
         </View>
 
@@ -110,22 +110,13 @@ const ForgotPassword = () => {
             error={errors.email}
           />
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            disabled={loading}
-            style={[
-              styles.primaryButton,
-              { backgroundColor: colors.buttonPrimary },
-              loading && { opacity: 0.7 },
-            ]}
+          <Button
+            loading={loading}
             onPress={handleSendCode}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Send Reset Link</Text>
-            )}
-          </TouchableOpacity>
+            size="lg"
+            style={styles.primaryButton}
+            title="Send Reset Link"
+          />
         </View>
 
         <View style={styles.footerRow}>
@@ -176,16 +167,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   primaryButton: {
-    borderRadius: 50,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
     marginTop: 8,
-  },
-  primaryButtonText: {
-    color: "#ffffff",
-    fontSize: 16,
-    fontWeight: "700",
   },
   footerRow: {
     flexDirection: "row",

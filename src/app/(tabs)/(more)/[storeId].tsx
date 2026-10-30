@@ -1,4 +1,5 @@
 import { fetchStoreDetails, syncStore } from "@/api/store";
+import { Button } from "@/components/button";
 import StoreSheet from "@/components/store-sheet";
 import { Colors } from "@/constants/theme";
 import { useToast } from "@/hooks/use-toast";
@@ -341,23 +342,15 @@ const StoreDetailScreen = () => {
                 No products in this store yet
               </Text>
               {!store.is_warehouse && (
-                <Pressable
-                  onPress={() => syncProducts()}
-                  disabled={isSyncing}
-                  style={[
-                    styles.syncBtn,
-                    { backgroundColor: colors.buttonPrimary },
-                  ]}
-                >
-                  {isSyncing ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <>
-                      <Lucide name="refresh-cw" size={14} color="#fff" />
-                      <Text style={styles.syncBtnText}>Sync from Warehouse</Text>
-                    </>
+                <Button
+                  leftIcon={(color) => (
+                    <Lucide name="refresh-cw" size={14} color={color} />
                   )}
-                </Pressable>
+                  loading={isSyncing}
+                  onPress={() => syncProducts()}
+                  size="sm"
+                  title="Sync from Warehouse"
+                />
               )}
             </View>
           )}

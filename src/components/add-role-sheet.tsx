@@ -1,12 +1,13 @@
 import { createRole, getPermissions } from "@/api/auth";
 import AppBottomSheet from "@/components/bottom-sheet";
-import Pill from "@/components/pill";
+import { Button } from "@/components/button";
 import InfoTooltip from "@/components/info-tooltip";
+import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useToast } from "@/hooks/use-toast";
 import { CreateRole } from "@/types/auth";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
@@ -102,6 +103,7 @@ const AddRoleSheet = ({ visible, onVisibleChange }: Props) => {
       snapPoints={["80%", "100%"]}
       visible={visible}
       onVisibleChange={onVisibleChange}
+      index={1}
     >
       <View style={styles.header}>
         <Text style={[styles.title, { color: colors.text }]}>New Role</Text>
@@ -146,7 +148,9 @@ Rank does not grant access by itself — the permission chips below are what act
 
 A role can never rank above the owner, so nothing can outrank the person who owns the business."
             />
-            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.sectionLabel, { color: colors.textSecondary }]}
+            >
               Rank
             </Text>
           </View>
@@ -239,27 +243,14 @@ A role can never rank above the owner, so nothing can outrank the person who own
         </View>
       </ScrollView>
 
-      {/* Create Button */}
-      <Pressable
-        style={[
-          styles.createBtn,
-          {
-            backgroundColor: colors.buttonPrimary,
-            opacity: canSubmit ? 1 : 0.5,
-          },
-        ]}
+      <Button
         disabled={!canSubmit}
+        fullWidth
+        leftIcon={(color) => <Lucide name="plus" size={18} color={color} />}
+        loading={isPending}
         onPress={handleCreate}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name="plus" size={18} color="#fff" />
-            <Text style={styles.createBtnText}>Create Role</Text>
-          </>
-        )}
-      </Pressable>
+        title="Create Role"
+      />
     </AppBottomSheet>
   );
 };

@@ -1,5 +1,6 @@
 import { createCategory } from "@/api/inventory";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { CategoryResponse, CreateCategory } from "@/types/product";
@@ -8,8 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Pressable,
   StyleSheet,
   Text,
   useColorScheme,
@@ -150,26 +149,14 @@ const AddCategorySheet = ({ visible, onVisibleChange, onCreated, storeId }: Prop
         </View>
       </View>
 
-      <Pressable
-        style={[
-          styles.createBtn,
-          {
-            backgroundColor: colors.buttonPrimary,
-            opacity: canSubmit ? 1 : 0.5,
-          },
-        ]}
+      <Button
         disabled={!canSubmit}
+        fullWidth
+        leftIcon={(color) => <Lucide name="plus" size={18} color={color} />}
+        loading={isPending}
         onPress={handleCreate}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name="plus" size={18} color="#fff" />
-            <Text style={styles.createBtnText}>Create Category</Text>
-          </>
-        )}
-      </Pressable>
+        title="Create Category"
+      />
     </AppBottomSheet>
   );
 };

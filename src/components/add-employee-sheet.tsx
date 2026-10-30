@@ -1,17 +1,17 @@
 import { createEmployee, fetchTenantRoles } from "@/api/auth";
 import { fetchTenantStores } from "@/api/store";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useToast } from "@/hooks/use-toast";
 import { CreateEmployee } from "@/types/auth";
 import { Lucide } from "@react-native-vector-icons/lucide";
-import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -126,12 +126,11 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
     <AppBottomSheet
       snapPoints={["75%", "95%"]}
       visible={visible}
+      index={1}
       onVisibleChange={onVisibleChange}
     >
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          Add Employee
-        </Text>
+        <Text style={[styles.title, { color: colors.text }]}>Add Employee</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Invite a new team member
         </Text>
@@ -164,9 +163,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          {errors.email && (
-            <Text style={styles.errorText}>{errors.email}</Text>
-          )}
+          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
           <AppTextInput
             placeholder="Phone (optional)"
             value={phone}
@@ -199,9 +196,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
               ))}
             </View>
           )}
-          {errors.role && (
-            <Text style={styles.errorText}>{errors.role}</Text>
-          )}
+          {errors.role && <Text style={styles.errorText}>{errors.role}</Text>}
         </View>
 
         {/* Store */}
@@ -250,27 +245,14 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
         </View>
       </ScrollView>
 
-      {/* Create Button */}
-      <Pressable
-        style={[
-          styles.createBtn,
-          {
-            backgroundColor: colors.buttonPrimary,
-            opacity: canSubmit ? 1 : 0.5,
-          },
-        ]}
+      <Button
         disabled={!canSubmit}
+        fullWidth
+        leftIcon={(color) => <Lucide name="user-plus" size={18} color={color} />}
+        loading={isPending}
         onPress={handleCreate}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name="user-plus" size={18} color="#fff" />
-            <Text style={styles.createBtnText}>Add Employee</Text>
-          </>
-        )}
-      </Pressable>
+        title="Add Employee"
+      />
     </AppBottomSheet>
   );
 };

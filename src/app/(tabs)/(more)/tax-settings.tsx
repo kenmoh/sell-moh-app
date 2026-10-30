@@ -7,6 +7,7 @@ import {
 } from "@/api/taxes";
 import { fetchAccounts } from "@/api/accounting";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { Host, Switch } from "@expo/ui";
@@ -343,19 +344,13 @@ export default function TaxSettings() {
               },
             )}
           </Pressable>
-          <Pressable
+          <Button
+            fullWidth
+            loading={createMutation.isPending || updateMutation.isPending}
             onPress={handleSave}
-            disabled={createMutation.isPending || updateMutation.isPending}
-            style={[styles.saveBtn, { backgroundColor: "#3b82f6" }]}
-          >
-            {createMutation.isPending || updateMutation.isPending ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.saveBtnText}>
-                {editingTax ? "Update" : "Create"}
-              </Text>
-            )}
-          </Pressable>
+            style={{ marginTop: 4 }}
+            title={editingTax ? "Update" : "Create"}
+          />
         </View>
       </AppBottomSheet>
     </SafeAreaView>

@@ -382,6 +382,31 @@ export const logoutApi = async (
   }
 };
 
+/**
+ * Permanently deletes the signed-in owner's business and all its data.
+ * apisauce's delete helper only supports query params, so the call goes
+ * through apisauce's raw `any()` to send the password confirmation body.
+ * Throws an error with code "password_required" when the backend wants a
+ * password confirmation (email accounts).
+ */
+export const deleteAccount = async (password?: string): Promise<void> => {
+  const res = (await apiClient.any({
+    method: "delete",
+    url: `${URL}/account`,
+    data: password ? { password } : {},
+  })) as any;
+
+  if (!res.ok) {
+    const message = getErrorMessage(res);
+    if (res.status === 428) {
+      const err = new Error(message) as Error & { code?: string };
+      err.code = "password_required";
+      throw err;
+    }
+    throw new Error(message);
+  }
+};
+
 export const listSessions = async (): Promise<SessionItem[]> => {
   const res = await apiClient.get<{ data: SessionItem[] }>(`${URL}/sessions`);
   if (!res.ok) {

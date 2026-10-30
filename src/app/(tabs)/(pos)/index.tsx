@@ -1,5 +1,6 @@
 import { fetchProducts, fetchTenantCategories } from "@/api/inventory";
 import { addToCart } from "@/api/cart";
+import { Button } from "@/components/button";
 import Card from "@/components/card";
 import DraggableCart from "@/components/draggable-cart";
 import ExpandableFAB from "@/components/expandable-fab";
@@ -127,6 +128,8 @@ const POSScreen = () => {
         price: p.selling_price,
         in_stock: p.qty,
         reorder_point: p.reorder_point ?? 0,
+        expiry_date: p.expiry_date ?? null,
+        block_sale_after_expiry: p.block_sale_after_expiry ?? false,
         category: categories.find((c) => c.name === p.category),
         taxes: p.taxes ?? [],
       })),
@@ -329,16 +332,15 @@ const POSScreen = () => {
                   : "No items available."}
               </Text>
               {hasActiveFilters && (
-                <Pressable
-                  style={[styles.resetButton, { backgroundColor: "#3b82f6" }]}
+                <Button
                   onPress={() => {
                     setSearch("");
                     setDebouncedSearch("");
                     setActiveCategory("");
                   }}
-                >
-                  <Text style={styles.resetButtonText}>Reset Catalog</Text>
-                </Pressable>
+                  size="sm"
+                  title="Reset Catalog"
+                />
               )}
             </View>
           )
@@ -462,16 +464,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: "center",
     marginBottom: 18,
-  },
-  resetButton: {
-    borderRadius: 100,
-    paddingHorizontal: 18,
-    paddingVertical: 9,
-  },
-  resetButtonText: {
-    color: "#ffffff",
-    fontSize: 13,
-    fontWeight: "600",
   },
   storeSelector: {
     flexDirection: "row",

@@ -12,7 +12,6 @@ import SegmentedToggle, {
   type SegmentedOption,
 } from "@/components/charts/SegmentedToggle";
 import TransferRequestSheet from "@/components/transfer-request-sheet";
-import TransferSheet from "@/components/transfer-sheet";
 import { Colors } from "@/constants/theme";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useToast } from "@/hooks/use-toast";
@@ -100,7 +99,6 @@ const ProductDetails = () => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const { user } = useSession();
-  const [transferVisible, setTransferVisible] = useState(false);
   const [requestVisible, setRequestVisible] = useState(false);
   const { success, error: toastError } = useToast();
 
@@ -341,22 +339,15 @@ const ProductDetails = () => {
                     product.expiry_warning_days != null
                       ? String(product.expiry_warning_days)
                       : "",
+                  block_sale_after_expiry: String(
+                    product.block_sale_after_expiry ?? false,
+                  ),
                 },
               })
             }
           >
             <Lucide name="pencil" size={16} color="#3b82f6" />
             <Text style={styles.actionButtonText}>Edit</Text>
-          </Pressable>
-          <Pressable
-            style={[
-              styles.actionButton,
-              { borderColor: colors.backgroundElement },
-            ]}
-            onPress={() => setTransferVisible(true)}
-          >
-            <Lucide name="arrow-right-left" size={16} color="#3b82f6" />
-            <Text style={styles.actionButtonText}>Transfer</Text>
           </Pressable>
           <Pressable
             style={[
@@ -495,6 +486,14 @@ const ProductDetails = () => {
                           product.expiry_warning_days === 1 ? "" : "s"
                         } before`
                       : "Not set",
+                },
+                {
+                  label: "After expiry",
+                  value: !product.expiry_date
+                    ? "Not applicable"
+                    : product.block_sale_after_expiry
+                      ? "Sales blocked"
+                      : "Still sells",
                 },
               ].map((row, i, arr) => (
                 <View
@@ -719,14 +718,6 @@ const ProductDetails = () => {
           </View>
         </View>
       </ScrollView>
-
-      <TransferSheet
-        visible={transferVisible}
-        onVisibleChange={setTransferVisible}
-        productId={id!}
-        productName={product?.name ?? ""}
-        currentStoreId={storeId}
-      />
 
       <TransferRequestSheet
         visible={requestVisible}

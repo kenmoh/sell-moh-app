@@ -6,6 +6,7 @@ import {
   setEmployeeStatus,
 } from "@/api/auth";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import { Colors, type ColorPalette } from "@/constants/theme";
 import { useToast } from "@/hooks/use-toast";
@@ -231,20 +232,13 @@ const EmployeeSheet = ({ employee, roles, onClose }: Props) => {
 
       <View style={styles.actions}>
         {dirty && (
-          <Pressable
-            style={[styles.button, { backgroundColor: colors.buttonPrimary }]}
-            disabled={applyChanges.isPending}
+          <Button
+            fullWidth
+            leftIcon={(color) => <Lucide name="check" size={16} color={color} />}
+            loading={applyChanges.isPending}
             onPress={() => applyChanges.mutate()}
-          >
-            {applyChanges.isPending ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <>
-                <Lucide name="check" size={16} color="#fff" />
-                <Text style={styles.buttonText}>Save roles</Text>
-              </>
-            )}
-          </Pressable>
+            title="Save roles"
+          />
         )}
         <Pressable
           style={[

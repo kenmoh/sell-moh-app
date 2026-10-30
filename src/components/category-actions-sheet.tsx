@@ -1,5 +1,6 @@
 import { deleteCategory, updateCategory } from "@/api/inventory";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -7,7 +8,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   Pressable,
   StyleSheet,
@@ -199,31 +199,18 @@ const CategoryActionsSheet = ({ visible, onVisibleChange, category }: Props) => 
           </View>
 
           <View style={styles.editActions}>
-            <Pressable
-              style={[styles.cancelBtn, { borderColor: colors.textSecondary }]}
+            <Button
               onPress={() => setView("menu")}
-            >
-              <Text style={[styles.cancelBtnText, { color: colors.textSecondary }]}>
-                Cancel
-              </Text>
-            </Pressable>
-            <Pressable
-              style={[
-                styles.saveBtn,
-                {
-                  backgroundColor: colors.buttonPrimary,
-                  opacity: isUpdating ? 0.5 : 1,
-                },
-              ]}
-              disabled={isUpdating}
+              style={{ flex: 1 }}
+              title="Cancel"
+              variant="outline"
+            />
+            <Button
+              loading={isUpdating}
               onPress={handleUpdate}
-            >
-              {isUpdating ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.saveBtnText}>Save Changes</Text>
-              )}
-            </Pressable>
+              style={{ flex: 1 }}
+              title="Save Changes"
+            />
           </View>
         </>
       )}

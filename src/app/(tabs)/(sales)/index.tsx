@@ -1,4 +1,5 @@
 import { fetchSales, fetchSalesSummary } from "@/api/sales";
+import { Button } from "@/components/button";
 import OrderCard from "@/components/order-card";
 import Pill from "@/components/pill";
 import SearchInput from "@/components/search-input";
@@ -141,7 +142,7 @@ const SalesScreen = () => {
   const totalRevenue = summary?.total_revenue ?? 0;
 
   const getFilterCount = (filter: FilterStatus) => {
-    if (filter === "All") return orders.length;
+    if (filter === "All") return completedCount + pendingCount;
     if (filter === "Completed") return completedCount;
     if (filter === "Pending") return pendingCount;
     if (filter === "Voided") return voidedCount;
@@ -447,15 +448,14 @@ const SalesScreen = () => {
                   : `There are currently no ${activeFilter.toLowerCase()} orders.`}
               </Text>
               {(search || activeFilter !== "All") && (
-                <Pressable
-                  style={[styles.resetButton, { backgroundColor: "#3b82f6" }]}
+                <Button
                   onPress={() => {
                     setSearch("");
                     setActiveFilter("All");
                   }}
-                >
-                  <Text style={styles.resetButtonText}>Clear Filters</Text>
-                </Pressable>
+                  title="Clear Filters"
+                  variant="secondary"
+                />
               )}
             </View>
           }

@@ -1,18 +1,11 @@
 import { changePassword } from "@/api/auth";
 import AppView from "@/components/app-view";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
-import { Colors } from "@/constants/theme";
 import { useToast } from "@/hooks/use-toast";
 import { router } from "expo-router";
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  useColorScheme,
-  View,
-} from "react-native";
+import { StyleSheet, View } from "react-native";
 import { z } from "zod";
 
 const schema = z
@@ -33,8 +26,6 @@ const schema = z
 type Field = keyof z.infer<typeof schema>;
 
 export default function ChangePasswordScreen() {
-  const scheme = useColorScheme();
-  const colors = Colors[scheme === "dark" ? "dark" : "light"];
   const toast = useToast();
   const [current, setCurrent] = useState("");
   const [newPass, setNewPass] = useState("");
@@ -113,22 +104,13 @@ export default function ChangePasswordScreen() {
             error={errors.confirm_password}
           />
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            disabled={loading}
-            style={[
-              styles.primaryButton,
-              { backgroundColor: colors.buttonPrimary },
-              loading && { opacity: 0.7 },
-            ]}
+          <Button
+            loading={loading}
             onPress={handleChange}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Update Password</Text>
-            )}
-          </TouchableOpacity>
+            size="lg"
+            style={styles.primaryButton}
+            title="Update Password"
+          />
         </View>
       </View>
     </AppView>
@@ -142,11 +124,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   form: { gap: 16 },
   primaryButton: {
-    borderRadius: 50,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
     marginTop: 8,
   },
-  primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

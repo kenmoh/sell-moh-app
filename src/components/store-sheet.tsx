@@ -4,6 +4,7 @@ import {
   updateTenantStore,
 } from "@/api/store";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -213,25 +214,16 @@ const StoreSheet = ({ visible, onVisibleChange, store }: Props) => {
         </View>
       </View>
 
-      <Pressable
-        style={[
-          styles.saveBtn,
-          { backgroundColor: colors.buttonPrimary, opacity: canSubmit ? 1 : 0.5 },
-        ]}
+      <Button
         disabled={!canSubmit}
-        onPress={handleSave}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name={isEditing ? "check" : "plus"} size={18} color="#fff" />
-            <Text style={styles.saveBtnText}>
-              {isEditing ? "Save Changes" : "Create Store"}
-            </Text>
-          </>
+        fullWidth
+        leftIcon={(color) => (
+          <Lucide name={isEditing ? "check" : "plus"} size={18} color={color} />
         )}
-      </Pressable>
+        loading={isPending}
+        onPress={handleSave}
+        title={isEditing ? "Save Changes" : "Create Store"}
+      />
 
       {isEditing && (
         <>

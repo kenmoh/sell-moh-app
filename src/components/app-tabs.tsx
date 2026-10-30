@@ -12,7 +12,7 @@ const staticPathList = [
   "/customers",
   "/notifications",
   "/store",
-  "/store-profile",
+  "/organization",
   "/discounts",
   "/staff-roles",
   "/add-product",

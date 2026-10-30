@@ -1,10 +1,11 @@
-import { getPinStatus, setSupervisorPin } from "@/api/auth";
+import { deleteAccount, getPinStatus, setSupervisorPin } from "@/api/auth";
 import {
   fetchBusinessSettings,
   updateBusinessSettings,
   uploadBusinessLogo,
 } from "@/api/business";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import { Colors } from "@/constants/theme";
 import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/lib/ctx";
@@ -30,7 +31,8 @@ const ProfileScreen = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
-  const { user } = useSession();
+  const { user, signOut } = useSession();
+  const canManageBusiness = user?.permissions?.includes("sync:manage") ?? false;
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -42,6 +44,37 @@ const ProfileScreen = () => {
   const [bizName, setBizName] = useState("");
   const [bizPhone, setBizPhone] = useState("");
   const [bizAddress, setBizAddress] = useState("");
+
+  const [deleteSheetVisible, setDeleteSheetVisible] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [needDeletePassword, setNeedDeletePassword] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteAccount(deletePassword.trim() || undefined);
+      toast.success(
+        "Account deleted",
+        "Your business and all its data have been removed",
+      );
+      setDeleteSheetVisible(false);
+      await signOut();
+      router.replace("/(auth)/sign-in");
+    } catch (e: any) {
+      if (e?.code === "password_required") {
+        setNeedDeletePassword(true);
+        toast.error(
+          "Confirm with password",
+          e?.message || "Enter your password to confirm",
+        );
+      } else {
+        toast.error("Error", e?.message || "Failed to delete account");
+      }
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const { data: pinData, error: pinError } = useQuery({
     queryKey: ["pin-status"],
@@ -99,7 +132,8 @@ const ProfileScreen = () => {
     ? Math.max(
         0,
         Math.ceil(
-          (new Date(pinData.expires_at).getTime() - nowTs) / (1000 * 60 * 60 * 24),
+          (new Date(pinData.expires_at).getTime() - nowTs) /
+            (1000 * 60 * 60 * 24),
         ),
       )
     : null;
@@ -240,7 +274,11 @@ const ProfileScreen = () => {
             BUSINESS
           </Text>
 
-          <Pressable onPress={handlePickLogo} style={styles.logoRow}>
+          <Pressable
+            onPress={handlePickLogo}
+            disabled={!canManageBusiness}
+            style={styles.logoRow}
+          >
             {bizData?.logo_url ? (
               <Image
                 source={{ uri: bizData.logo_url }}
@@ -272,7 +310,11 @@ const ProfileScreen = () => {
                 Business Logo
               </Text>
               <Text style={[styles.pinStatus, { color: colors.textSecondary }]}>
-                {isUploadingLogo ? "Uploading..." : "Tap to change"}
+                {isUploadingLogo
+                  ? "Uploading..."
+                  : canManageBusiness
+                    ? "Tap to change"
+                    : "View only"}
               </Text>
             </View>
             <Lucide name="chevron-right" size={20} color="#aaa" />
@@ -303,15 +345,33 @@ const ProfileScreen = () => {
             colors={colors}
           />
 
-          <Pressable onPress={openBizSheet} style={styles.pinRow}>
-            <View style={styles.pinRowLeft}>
-              <Lucide name="pencil" size={16} color="#aaa" />
-              <Text style={[styles.pinLabel, { color: colors.buttonPrimary }]}>
-                Edit Business Details
-              </Text>
+          {canManageBusiness ? (
+            <Pressable onPress={openBizSheet} style={styles.pinRow}>
+              <View style={styles.pinRowLeft}>
+                <Lucide name="pencil" size={16} color="#aaa" />
+                <Text
+                  style={[styles.pinLabel, { color: colors.buttonPrimary }]}
+                >
+                  Edit Business Details
+                </Text>
+              </View>
+              <Lucide name="chevron-right" size={20} color="#aaa" />
+            </Pressable>
+          ) : (
+            <View style={styles.pinRow}>
+              <View style={styles.pinRowLeft}>
+                <Lucide name="lock" size={16} color="#aaa" />
+                <Text
+                  style={[
+                    styles.pinStatus,
+                    { color: colors.textSecondary, flex: 1 },
+                  ]}
+                >
+                  Only owners and permitted users can edit
+                </Text>
+              </View>
             </View>
-            <Lucide name="chevron-right" size={20} color="#aaa" />
-          </Pressable>
+          )}
         </View>
 
         {/* Security */}
@@ -366,13 +426,40 @@ const ProfileScreen = () => {
             <Lucide name="chevron-right" size={20} color="#aaa" />
           </Pressable>
         </View>
+
+        {/* Danger Zone — owners only */}
+        {canManageBusiness ? (
+          <View style={[styles.card, { backgroundColor: colors.card }]}>
+            <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
+              DANGER ZONE
+            </Text>
+
+            <Pressable
+              onPress={() => {
+                setDeletePassword("");
+                setNeedDeletePassword(false);
+                setDeleteSheetVisible(true);
+              }}
+              style={styles.pinRow}
+            >
+              <View style={styles.pinRowLeft}>
+                <Lucide name="trash-2" size={18} color="#ef4444" />
+                <Text style={[styles.pinLabel, { color: "#ef4444" }]}>
+                  Delete Account
+                </Text>
+              </View>
+              <Lucide name="chevron-right" size={20} color="#ef4444" />
+            </Pressable>
+          </View>
+        ) : null}
       </ScrollView>
 
       {/* PIN Sheet */}
       <AppBottomSheet
         visible={pinSheetVisible}
         onVisibleChange={setPinSheetVisible}
-        snapPoints={["45%"]}
+        snapPoints={["70%", "85%"]}
+        index={0}
       >
         <Text style={[styles.sheetTitle, { color: colors.text }]}>
           {pinData?.has_pin ? "Update Supervisor PIN" : "Set Supervisor PIN"}
@@ -410,25 +497,14 @@ const ProfileScreen = () => {
             secureTextEntry
           />
 
-          <Pressable
+          <Button
+            disabled={!pinInput.trim() || !pinConfirm.trim()}
+            fullWidth
+            loading={isSavingPin}
             onPress={handleSavePin}
-            disabled={isSavingPin || !pinInput.trim() || !pinConfirm.trim()}
-            style={[
-              styles.saveBtn,
-              {
-                backgroundColor:
-                  !pinInput.trim() || !pinConfirm.trim()
-                    ? colors.textSecondary
-                    : colors.buttonPrimary,
-              },
-            ]}
-          >
-            {isSavingPin ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.saveBtnText}>Save PIN</Text>
-            )}
-          </Pressable>
+            style={{ marginTop: 4 }}
+            title="Save PIN"
+          />
         </View>
       </AppBottomSheet>
 
@@ -436,7 +512,8 @@ const ProfileScreen = () => {
       <AppBottomSheet
         visible={bizSheetVisible}
         onVisibleChange={setBizSheetVisible}
-        snapPoints={["60%"]}
+        snapPoints={["60%", "75"]}
+        index={0}
       >
         <Text style={[styles.sheetTitle, { color: colors.text }]}>
           Business Details
@@ -478,17 +555,55 @@ const ProfileScreen = () => {
             onChangeText={setBizAddress}
           />
 
-          <Pressable
+          <Button
+            fullWidth
+            loading={isSavingBiz}
             onPress={() => saveBiz()}
-            disabled={isSavingBiz}
-            style={[styles.saveBtn, { backgroundColor: colors.buttonPrimary }]}
-          >
-            {isSavingBiz ? (
-              <ActivityIndicator color="#fff" size="small" />
-            ) : (
-              <Text style={styles.saveBtnText}>Save Changes</Text>
-            )}
-          </Pressable>
+            style={{ marginTop: 4 }}
+            title="Save Changes"
+          />
+        </View>
+      </AppBottomSheet>
+
+      {/* Delete Account Sheet */}
+      <AppBottomSheet
+        visible={deleteSheetVisible}
+        onVisibleChange={setDeleteSheetVisible}
+        snapPoints={["55%"]}
+        index={0}
+      >
+        <Text style={[styles.sheetTitle, { color: colors.text }]}>
+          Delete Account
+        </Text>
+        <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+          This permanently deletes your business, every store, product, sale,
+          and record. It cannot be undone.
+        </Text>
+
+        <View style={{ gap: 12, marginTop: 16 }}>
+          {needDeletePassword ? (
+            <TextInput
+              style={[
+                styles.pinInput,
+                { color: colors.text, borderColor: colors.backgroundElement },
+              ]}
+              placeholder="Your password"
+              placeholderTextColor={colors.textSecondary}
+              value={deletePassword}
+              onChangeText={(t) => setDeletePassword(t)}
+              secureTextEntry
+              autoFocus
+            />
+          ) : null}
+
+          <Button
+            fullWidth
+            variant="danger"
+            loading={isDeleting}
+            onPress={handleDeleteAccount}
+            style={{ marginTop: 4 }}
+            title="Confirm Deletion"
+          />
         </View>
       </AppBottomSheet>
     </View>

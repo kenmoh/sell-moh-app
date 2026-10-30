@@ -1,12 +1,13 @@
 import { fetchTenantRoles, getEmployees } from "@/api/auth";
-import EmployeeSheet from "@/components/employee-sheet";
 import AddEmployeeSheet from "@/components/add-employee-sheet";
 import AddRoleSheet from "@/components/add-role-sheet";
+import { Button } from "@/components/button";
 import EditRoleSheet from "@/components/edit-role-sheet";
+import EmployeeSheet from "@/components/employee-sheet";
 import RoleCard from "@/components/role-card";
 import SearchInput from "@/components/search-input";
-import type { Employee, FetchTenantRoles } from "@/types/auth";
 import { Colors } from "@/constants/theme";
+import type { Employee, FetchTenantRoles } from "@/types/auth";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
 import { Stack } from "expo-router";
@@ -21,7 +22,6 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
 
 const ROLE_TINTS: { bg: string; fg: string }[] = [
   { bg: "rgba(59,130,246,0.1)", fg: "#3b82f6" },
@@ -44,11 +44,13 @@ const initialsOf = (fullName: string | null, email: string) => {
 /** Stable index for a string, so a role or person keeps the same colour. */
 const tintIndex = (key: string, length: number) => {
   let hash = 0;
-  for (let i = 0; i < key.length; i++) hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
+  for (let i = 0; i < key.length; i++)
+    hash = (hash * 31 + key.charCodeAt(i)) >>> 0;
   return hash % length;
 };
 
-const roleTint = (role: string) => ROLE_TINTS[tintIndex(role, ROLE_TINTS.length)];
+const roleTint = (role: string) =>
+  ROLE_TINTS[tintIndex(role, ROLE_TINTS.length)];
 
 const StaffRoles = () => {
   const insets = useSafeAreaInsets();
@@ -59,7 +61,9 @@ const StaffRoles = () => {
   const [expandedRoleId, setExpandedRoleId] = useState<string | null>(null);
   const [employeeSheetVisible, setEmployeeSheetVisible] = useState(false);
   const [editingRole, setEditingRole] = useState<FetchTenantRoles | null>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
+    null,
+  );
 
   const {
     data: rolesData,
@@ -69,7 +73,11 @@ const StaffRoles = () => {
     queryKey: ["roles"],
     queryFn: fetchTenantRoles,
   });
-  const { data: employees, isLoading: isLoadingStaff, refetch: refetchStaff } = useQuery({
+  const {
+    data: employees,
+    isLoading: isLoadingStaff,
+    refetch: refetchStaff,
+  } = useQuery({
     queryKey: ["employees"],
     queryFn: getEmployees,
   });
@@ -86,7 +94,8 @@ const StaffRoles = () => {
           id: employee.id,
           name: employee.full_name?.trim() || employee.email,
           initials: initialsOf(employee.full_name, employee.email),
-          avatarColor: AVATAR_TINTS[tintIndex(employee.id, AVATAR_TINTS.length)],
+          avatarColor:
+            AVATAR_TINTS[tintIndex(employee.id, AVATAR_TINTS.length)],
           role: primaryRole,
           roleColor: tint.fg,
           roleBg: tint.bg,
@@ -142,7 +151,7 @@ const StaffRoles = () => {
       <Stack.Screen
         options={{
           headerShown: true,
-          title: "Staff & Roles",
+          title: "Employees & Roles",
           headerRight: () => (
             <Pressable
               style={styles.addButton}
@@ -172,11 +181,16 @@ const StaffRoles = () => {
             <View style={styles.statsRow}>
               <View style={[styles.statChip, { backgroundColor: colors.card }]}>
                 <View
-                  style={[styles.statIcon, { backgroundColor: "rgba(59,130,246,0.1)" }]}
+                  style={[
+                    styles.statIcon,
+                    { backgroundColor: "rgba(59,130,246,0.1)" },
+                  ]}
                 >
                   <Lucide name="users" size={14} color="#3b82f6" />
                 </View>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.statLabel, { color: colors.textSecondary }]}
+                >
                   Total Staff
                 </Text>
                 <Text style={[styles.statValue, { color: colors.text }]}>
@@ -185,11 +199,16 @@ const StaffRoles = () => {
               </View>
               <View style={[styles.statChip, { backgroundColor: colors.card }]}>
                 <View
-                  style={[styles.statIcon, { backgroundColor: "rgba(22,163,74,0.1)" }]}
+                  style={[
+                    styles.statIcon,
+                    { backgroundColor: "rgba(22,163,74,0.1)" },
+                  ]}
                 >
                   <Lucide name="clock" size={14} color="#16a34a" />
                 </View>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.statLabel, { color: colors.textSecondary }]}
+                >
                   Active Now
                 </Text>
                 <Text style={[styles.statValue, { color: colors.text }]}>
@@ -198,11 +217,16 @@ const StaffRoles = () => {
               </View>
               <View style={[styles.statChip, { backgroundColor: colors.card }]}>
                 <View
-                  style={[styles.statIcon, { backgroundColor: "rgba(168,85,247,0.1)" }]}
+                  style={[
+                    styles.statIcon,
+                    { backgroundColor: "rgba(168,85,247,0.1)" },
+                  ]}
                 >
                   <Lucide name="shield" size={14} color="#a855f7" />
                 </View>
-                <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                <Text
+                  style={[styles.statLabel, { color: colors.textSecondary }]}
+                >
                   Roles
                 </Text>
                 <Text style={[styles.statValue, { color: colors.text }]}>
@@ -255,7 +279,12 @@ const StaffRoles = () => {
                   { backgroundColor: `${staffMember.avatarColor}18` },
                 ]}
               >
-                <Text style={[styles.avatarText, { color: staffMember.avatarColor }]}>
+                <Text
+                  style={[
+                    styles.avatarText,
+                    { color: staffMember.avatarColor },
+                  ]}
+                >
                   {staffMember.initials}
                 </Text>
               </View>
@@ -265,9 +294,17 @@ const StaffRoles = () => {
                 </Text>
                 <View style={styles.pillRow}>
                   <View
-                    style={[styles.rolePill, { backgroundColor: staffMember.roleBg }]}
+                    style={[
+                      styles.rolePill,
+                      { backgroundColor: staffMember.roleBg },
+                    ]}
                   >
-                    <Text style={[styles.roleText, { color: staffMember.roleColor }]}>
+                    <Text
+                      style={[
+                        styles.roleText,
+                        { color: staffMember.roleColor },
+                      ]}
+                    >
                       {staffMember.role}
                     </Text>
                   </View>
@@ -297,14 +334,12 @@ const StaffRoles = () => {
         }}
         ListEmptyComponent={
           isLoadingStaff ? (
-            <ActivityIndicator style={{ marginTop: 32 }} color={colors.textSecondary} />
+            <ActivityIndicator
+              style={{ marginTop: 32 }}
+              color={colors.textSecondary}
+            />
           ) : (
-            <Text
-              style={[
-                styles.emptyState,
-                { color: colors.textSecondary },
-              ]}
-            >
+            <Text style={[styles.emptyState, { color: colors.textSecondary }]}>
               No staff yet. Add an employee to give them a role.
             </Text>
           )
@@ -320,29 +355,12 @@ const StaffRoles = () => {
               >
                 ROLES
               </Text>
-              <Pressable
+              <Button
+                leftIcon={(color) => <Lucide name="plus" size={16} color={color} />}
                 onPress={() => setRoleSheetVisible(true)}
-                style={({ pressed }) => [
-                  {
-                    backgroundColor: pressed
-                      ? "rgba(10,14,18,0.6)"
-                      : colors.buttonPrimary,
-                    flexDirection: "row",
-                    borderRadius: 20,
-                    paddingHorizontal: 5,
-                    paddingVertical: 5,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  },
-                ]}
-              >
-                <Lucide name="plus" size={20} color="#fff" />
-                <Text
-                  style={{ color: "#fff", fontWeight: "600", fontSize: 12 }}
-                >
-                  Add Role
-                </Text>
-              </Pressable>
+                size="sm"
+                title="Add Role"
+              />
             </View>
 
             {/* Roles */}
@@ -469,7 +487,12 @@ const styles = StyleSheet.create({
   roleText: { fontSize: 11, fontWeight: "600" },
   staffRight: { alignItems: "flex-end", gap: 6 },
   pillRow: { flexDirection: "row", gap: 6 },
-  emptyState: { textAlign: "center", fontSize: 13, marginTop: 32, paddingHorizontal: 24 },
+  emptyState: {
+    textAlign: "center",
+    fontSize: 13,
+    marginTop: 32,
+    paddingHorizontal: 24,
+  },
   roleCard: {
     flexDirection: "row",
     alignItems: "center",

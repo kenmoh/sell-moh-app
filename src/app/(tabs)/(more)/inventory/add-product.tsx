@@ -7,6 +7,7 @@ import { fetchTenantStores } from "@/api/store";
 import { fetchTaxTypes } from "@/api/taxes";
 import AddCategorySheet from "@/components/add-category-sheet";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import CategoryActionsSheet from "@/components/category-actions-sheet";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
@@ -14,6 +15,7 @@ import { CreateProduct, UpdateProduct } from "@/types/product";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Host, Switch } from "@expo/ui";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -51,8 +53,6 @@ const productSchema = z.object({
 
 type ProductField = keyof z.infer<typeof productSchema>;
 
-type MetadataEntry = { key: string; value: string };
-
 const AddProduct = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
@@ -70,6 +70,7 @@ const AddProduct = () => {
     tax_ids?: string;
     expiry_date?: string;
     expiry_warning_days?: string;
+    block_sale_after_expiry?: string;
   }>();
   const isEditing = Boolean(params.id);
 
@@ -87,6 +88,9 @@ const AddProduct = () => {
   const [expiryWarningDays, setExpiryWarningDays] = useState(
     params.expiry_warning_days ?? "",
   );
+  const [blockSaleAfterExpiry, setBlockSaleAfterExpiry] = useState(
+    params.block_sale_after_expiry === "true",
+  );
   // A product can carry more than one tax, and every one of them applies when
   // it is sold -- so this is a set, not a single choice. It starts from the
   // ids the detail screen passed over, rather than being copied out of a query
@@ -100,7 +104,6 @@ const AddProduct = () => {
   const [initialStock, setInitialStock] = useState("");
   const [trackInventory, setTrackInventory] = useState(true);
   const [categoryId, setCategoryId] = useState(params.category_id ?? "");
-  const [metadata, setMetadata] = useState<MetadataEntry[]>([]);
   const [errors, setErrors] = useState<Partial<Record<ProductField, string>>>(
     {},
   );
@@ -170,36 +173,6 @@ const AddProduct = () => {
 
   const categories = categoriesData ?? [];
 
-  const addMetadataField = () => {
-    setMetadata((current) => [...current, { key: "", value: "" }]);
-  };
-
-  const updateMetadata = (
-    index: number,
-    field: "key" | "value",
-    newValue: string,
-  ) => {
-    setMetadata((current) =>
-      current.map((item, i) =>
-        i === index ? { ...item, [field]: newValue } : item,
-      ),
-    );
-  };
-
-  const removeMetadataField = (index: number) => {
-    setMetadata((current) => current.filter((_, i) => i !== index));
-  };
-
-  const buildMetadataObject = (): Record<string, string> | null => {
-    const valid = metadata.filter((m) => m.key.trim() !== "");
-    if (valid.length === 0) return null;
-    const obj: Record<string, string> = {};
-    valid.forEach((m) => {
-      obj[m.key.trim()] = m.value.trim();
-    });
-    return obj;
-  };
-
   const expiryLabel = expiryDate
     ? expiryDate.toLocaleDateString("en-NG", {
         day: "numeric",
@@ -245,6 +218,7 @@ const AddProduct = () => {
       reorder_point: parseInt(result.data.reorder_point, 10) || 0,
       expiry_warning_days:
         expiryIso && warningDays ? parseInt(warningDays, 10) : null,
+      block_sale_after_expiry: expiryIso ? blockSaleAfterExpiry : false,
     };
 
     if (isEditing) {
@@ -269,7 +243,7 @@ const AddProduct = () => {
       unit: result.data.unit || null,
       tax_ids: selectedTaxIds,
       expiry_date: expiryIso,
-      metadata: buildMetadataObject(),
+      metadata: null,
       store_id: storeId || null,
     });
   };
@@ -502,6 +476,8 @@ const AddProduct = () => {
                 hitSlop={10}
                 onPress={() => {
                   setExpiryDate(null);
+                  setExpiryWarningDays("");
+                  setBlockSaleAfterExpiry(false);
                   setShowExpiryPicker(false);
                 }}
               >
@@ -531,34 +507,62 @@ const AddProduct = () => {
           <Text style={[styles.hintText, { color: colors.textSecondary }]}>
             Leave empty for products that do not expire.
           </Text>
-          {expiryDate && (
-            <>
-              <Text
-                style={[
-                  styles.sectionLabel,
-                  { color: colors.textSecondary },
-                ]}
-              >
-                WARN ME BEFORE EXPIRY (OPTIONAL)
+          <View
+            style={[
+              styles.expiryRule,
+              !expiryDate && styles.expiryRuleDisabled,
+            ]}
+          >
+            <Text
+              style={[styles.sectionLabel, { color: colors.textSecondary }]}
+            >
+              WARN ME BEFORE EXPIRY (OPTIONAL)
+            </Text>
+            <AppTextInput
+              leftIcon="bell"
+              placeholder={
+                expiryDate
+                  ? "Days before expiry"
+                  : "Add an expiry date first"
+              }
+              value={expiryWarningDays}
+              onChangeText={setExpiryWarningDays}
+              keyboardType="number-pad"
+              editable={!!expiryDate}
+            />
+            {errors.expiry_warning_days && (
+              <Text style={styles.errorText}>
+                {errors.expiry_warning_days}
               </Text>
-              <AppTextInput
-                leftIcon="bell"
-                placeholder="Days before expiry"
-                value={expiryWarningDays}
-                onChangeText={setExpiryWarningDays}
-                keyboardType="number-pad"
-              />
-              {errors.expiry_warning_days && (
-                <Text style={styles.errorText}>
-                  {errors.expiry_warning_days}
+            )}
+            <Text style={[styles.hintText, { color: colors.textSecondary }]}>
+              Shows an amber warning this many days before expiry. Leave
+              empty to only flag stock once it has expired.
+            </Text>
+
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={[styles.switchLabel, { color: colors.text }]}>
+                  Block sales after expiry
                 </Text>
-              )}
-              <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-                Shows an amber warning this many days before expiry. Leave
-                empty to only flag stock once it has expired.
-              </Text>
-            </>
-          )}
+                <Text
+                  style={[
+                    styles.switchHint,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Disables this product on the POS once it has expired.
+                </Text>
+              </View>
+              <Host matchContents>
+                <Switch
+                  value={blockSaleAfterExpiry}
+                  onValueChange={setBlockSaleAfterExpiry}
+                  disabled={!expiryDate}
+                />
+              </Host>
+            </View>
+          </View>
         </View>
 
         {/* Store */}
@@ -646,72 +650,16 @@ const AddProduct = () => {
           </Pressable>
         </View>
 
-        {/* Metadata */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text
-              style={[styles.sectionLabel, { color: colors.textSecondary }]}
-            >
-              METADATA
-            </Text>
-            <Pressable onPress={addMetadataField} style={styles.addBtn}>
-              <Lucide name="plus" size={14} color={colors.buttonPrimary} />
-              <Text
-                style={[styles.addBtnText, { color: colors.buttonPrimary }]}
-              >
-                Add field
-              </Text>
-            </Pressable>
-          </View>
-          {metadata.length === 0 && (
-            <Text style={[styles.hintText, { color: colors.textSecondary }]}>
-              Add custom key-value pairs for this product
-            </Text>
-          )}
-          {metadata.map((item, index) => (
-            <View key={index} style={styles.metadataRow}>
-              <View style={styles.metadataField}>
-                <AppTextInput
-                  placeholder="Key"
-                  value={item.key}
-                  onChangeText={(v) => updateMetadata(index, "key", v)}
-                />
-              </View>
-              <View style={styles.metadataField}>
-                <AppTextInput
-                  placeholder="Value"
-                  value={item.value}
-                  onChangeText={(v) => updateMetadata(index, "value", v)}
-                />
-              </View>
-              <Pressable
-                style={[
-                  styles.removeBtn,
-                  { backgroundColor: "rgba(220,38,38,0.08)" },
-                ]}
-                onPress={() => removeMetadataField(index)}
-              >
-                <Lucide name="x" size={16} color="#DC2626" />
-              </Pressable>
-            </View>
-          ))}
-        </View>
-
         {/* Save */}
-        <Pressable
-          style={[styles.saveBtn, isSaving && { opacity: 0.5 }]}
-          disabled={isSaving}
+        <Button
+          fullWidth
+          leftIcon={(color) => <Lucide name="save" size={18} color={color} />}
+          loading={isSaving}
+          loadingTitle="Saving..."
           onPress={handleSubmit}
-        >
-          <Lucide name="save" size={18} color="#fff" />
-          <Text style={styles.saveBtnText}>
-            {isSaving
-              ? "Saving..."
-              : isEditing
-                ? "Update Product"
-                : "Save Product"}
-          </Text>
-        </Pressable>
+          style={{ marginTop: 4 }}
+          title={isEditing ? "Update Product" : "Save Product"}
+        />
       </ScrollView>
 
       <AddCategorySheet
@@ -928,6 +876,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontStyle: "italic",
   },
+  expiryRule: {
+    gap: 10,
+  },
+  expiryRuleDisabled: {
+    opacity: 0.5,
+  },
+  switchRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+    paddingTop: 4,
+  },
+  switchCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  switchLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  switchHint: {
+    fontSize: 11,
+    lineHeight: 15,
+  },
   selectorButton: {
     flexDirection: "row",
     alignItems: "center",
@@ -961,36 +934,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#DC2626",
     marginTop: -6,
-  },
-  metadataRow: {
-    flexDirection: "row",
-    alignItems: "flex-end",
-    gap: 8,
-  },
-  metadataField: {
-    flex: 1,
-  },
-  removeBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 2,
-  },
-  saveBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#3b82f6",
-    borderRadius: 50,
-    paddingVertical: 16,
-    gap: 8,
-    marginTop: 4,
-  },
-  saveBtnText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
   },
 });

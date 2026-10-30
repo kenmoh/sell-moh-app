@@ -1,5 +1,6 @@
 import { login } from "@/api/auth";
 import AppView from "@/components/app-view";
+import { Button } from "@/components/button";
 import { Colors } from "@/constants/theme";
 import { useSession } from "@/lib/ctx";
 import { deviceName } from "@/lib/device-label";
@@ -8,7 +9,6 @@ import { Lucide } from "@react-native-vector-icons/lucide";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   StyleSheet,
   Text,
@@ -99,26 +99,14 @@ const TotpVerify = () => {
           ))}
         </View>
 
-        <TouchableOpacity
-          activeOpacity={0.8}
-          disabled={loading || code.length !== 6}
-          style={[
-            styles.primaryButton,
-            {
-              backgroundColor:
-                code.length === 6 && !loading
-                  ? colors.buttonPrimary
-                  : colors.backgroundSelected,
-            },
-          ]}
+        <Button
+          disabled={code.length !== 6}
+          loading={loading}
           onPress={handleVerify}
-        >
-          {loading ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.primaryButtonText}>Verify</Text>
-          )}
-        </TouchableOpacity>
+          size="lg"
+          style={styles.primaryButton}
+          title="Verify"
+        />
 
         <TouchableOpacity
           onPress={() => router.back()}
@@ -169,14 +157,8 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   primaryButton: {
-    width: "100%",
-    borderRadius: 50,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
     marginTop: 8,
   },
-  primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
   backLink: { marginTop: 16 },
   backText: { fontSize: 14, fontWeight: "600" },
 });

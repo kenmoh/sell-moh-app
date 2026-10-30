@@ -5,6 +5,7 @@ import {
   initiatePayment,
   recordSplitPayment,
 } from "@/api/payments";
+import { Button } from "@/components/button";
 import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
 import { CartTaxLine, computeCartTax } from "@/lib/cart-tax";
@@ -171,59 +172,32 @@ export const CartSuccessView = ({
       </View>
 
       {receipt.receiptData && (
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Button
+          fullWidth
+          leftIcon={(color) => (
+            <Lucide name="printer" size={18} color={color} />
+          )}
           onPress={handlePrint}
-          style={[
-            styles.primaryButton,
-            {
-              backgroundColor: colors.sheet,
-              borderColor: colors.backgroundElement,
-              borderWidth: 1,
-              width: "100%",
-              marginBottom: 10,
-            },
-          ]}
-        >
-          <Lucide name="printer" size={18} color={colors.text} />
-          <Text style={[styles.primaryButtonText, { color: colors.text }]}>
-            Print Receipt
-          </Text>
-        </TouchableOpacity>
+          style={{ marginBottom: 10 }}
+          title="Print Receipt"
+          variant="outline"
+        />
       )}
 
       {receipt.receiptData && (
-        <TouchableOpacity
-          activeOpacity={0.8}
+        <Button
+          fullWidth
+          leftIcon={(color) => (
+            <Lucide name="download" size={18} color={color} />
+          )}
           onPress={handleSavePdf}
-          style={[
-            styles.primaryButton,
-            {
-              backgroundColor: colors.sheet,
-              borderColor: colors.backgroundElement,
-              borderWidth: 1,
-              width: "100%",
-              marginBottom: 10,
-            },
-          ]}
-        >
-          <Lucide name="download" size={18} color={colors.text} />
-          <Text style={[styles.primaryButtonText, { color: colors.text }]}>
-            Save PDF
-          </Text>
-        </TouchableOpacity>
+          style={{ marginBottom: 10 }}
+          title="Save PDF"
+          variant="outline"
+        />
       )}
 
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={onFinish}
-        style={[
-          styles.primaryButton,
-          { backgroundColor: "#10b981", width: "100%" },
-        ]}
-      >
-        <Text style={styles.primaryButtonText}>Start New Sale</Text>
-      </TouchableOpacity>
+      <Button fullWidth onPress={onFinish} title="Start New Sale" />
     </View>
   );
 };
@@ -990,29 +964,17 @@ export const CartCheckoutButton = ({
         .damping(SPLIT_SPRING.damping)
         .stiffness(SPLIT_SPRING.stiffness)}
     >
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => onCheckout()}
-        disabled={!isPaidValid || isCheckingOut}
-        style={[
-          styles.primaryButton,
-          {
-            backgroundColor:
-              isPaidValid && !isCheckingOut ? "#2f7df6" : "#2f7df670",
-          },
-        ]}
-      >
-        {isCheckingOut ? (
-          <ActivityIndicator size="small" color="#ffffff" />
-        ) : (
-          <Lucide name="check-circle" size={20} color="#ffffff" />
+      <Button
+        disabled={!isPaidValid}
+        fullWidth
+        leftIcon={(color) => (
+          <Lucide name="check-circle" size={20} color={color} />
         )}
-        <Text style={styles.primaryButtonText}>
-          {isCheckingOut
-            ? "Processing..."
-            : `Pay ₦${totalPrice.toLocaleString()} • ${paymentMethod.toUpperCase()}`}
-        </Text>
-      </TouchableOpacity>
+        loading={isCheckingOut}
+        onPress={() => onCheckout()}
+        style={{ marginTop: 4 }}
+        title={`Pay ₦${totalPrice.toLocaleString()} • ${paymentMethod.toUpperCase()}`}
+      />
     </Animated.View>
   );
 };
@@ -2115,21 +2077,6 @@ const styles = StyleSheet.create({
     fontWeight: "800",
   },
 
-  /* Primary Button */
-  primaryButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 25,
-    paddingVertical: 14,
-    marginTop: 4,
-  },
-  primaryButtonText: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "700",
-  },
   splitButtonRow: {
     flexDirection: "row",
     gap: 10,

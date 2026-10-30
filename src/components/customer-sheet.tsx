@@ -1,5 +1,6 @@
 import { createCustomer, deleteCustomer, updateCustomer } from "@/api/customer";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
@@ -234,32 +235,20 @@ const CustomerSheet = ({ visible, onVisibleChange, customer }: Props) => {
         </View>
       </ScrollView>
 
-      <Pressable
-        style={[
-          styles.saveBtn,
-          {
-            backgroundColor: colors.buttonPrimary,
-            opacity: canSubmit ? 1 : 0.5,
-          },
-        ]}
+      <Button
         disabled={!canSubmit}
-        onPress={handleSave}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide
-              name={isEditing ? "check" : "user-plus"}
-              size={18}
-              color="#fff"
-            />
-            <Text style={styles.saveBtnText}>
-              {isEditing ? "Save Changes" : "Add Customer"}
-            </Text>
-          </>
+        fullWidth
+        leftIcon={(color) => (
+          <Lucide
+            name={isEditing ? "check" : "user-plus"}
+            size={18}
+            color={color}
+          />
         )}
-      </Pressable>
+        loading={isPending}
+        onPress={handleSave}
+        title={isEditing ? "Save Changes" : "Add Customer"}
+      />
 
       {isEditing && (
         <>

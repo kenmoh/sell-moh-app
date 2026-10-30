@@ -1,6 +1,7 @@
 import { distributeStock } from "@/api/inventory";
 import { fetchTenantStores } from "@/api/store";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { StoreDistributePayload } from "@/types/product";
@@ -9,7 +10,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -185,28 +185,17 @@ export default function TransferSheet({
         />
       </View>
 
-      <Pressable
-        style={[
-          styles.confirmButton,
-          {
-            backgroundColor:
-              parsedQty > 0 && toStoreId && !isPending
-                ? colors.buttonPrimary
-                : colors.backgroundSelected,
-          },
-        ]}
-        disabled={parsedQty <= 0 || !toStoreId || isPending}
-        onPress={handleConfirm}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name="arrow-right-left" size={18} color="#fff" />
-            <Text style={styles.confirmText}>Transfer Stock</Text>
-          </>
+      <Button
+        disabled={parsedQty <= 0 || !toStoreId}
+        fullWidth
+        leftIcon={(color) => (
+          <Lucide name="arrow-right-left" size={18} color={color} />
         )}
-      </Pressable>
+        loading={isPending}
+        onPress={handleConfirm}
+        style={{ marginTop: 4 }}
+        title="Transfer Stock"
+      />
     </AppBottomSheet>
   );
 }
@@ -232,14 +221,4 @@ const styles = StyleSheet.create({
   storeChipText: { fontSize: 14, fontWeight: "600" },
   empty: { fontSize: 13, fontStyle: "italic" },
   error: { fontSize: 12, color: "#DC2626", marginTop: -6 },
-  confirmButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 50,
-    paddingVertical: 16,
-    marginTop: 4,
-  },
-  confirmText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

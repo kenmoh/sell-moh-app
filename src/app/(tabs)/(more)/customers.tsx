@@ -1,4 +1,5 @@
 import { fetchCustomers } from "@/api/customer";
+import { Button } from "@/components/button";
 import CustomerSheet from "@/components/customer-sheet";
 import SearchInput from "@/components/search-input";
 import { Colors } from "@/constants/theme";
@@ -211,16 +212,11 @@ const CustomersScreen = () => {
                 : "Add your first customer to get started."}
             </Text>
             {!search && (
-              <Pressable
-                style={[
-                  styles.emptyBtn,
-                  { backgroundColor: colors.buttonPrimary },
-                ]}
+              <Button
+                leftIcon={(color) => <Lucide name="plus" size={16} color={color} />}
                 onPress={handleOpenAdd}
-              >
-                <Lucide name="plus" size={16} color="#fff" />
-                <Text style={styles.emptyBtnText}>Add Customer</Text>
-              </Pressable>
+                title="Add Customer"
+              />
             )}
           </View>
         }

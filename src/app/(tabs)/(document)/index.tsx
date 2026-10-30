@@ -1,5 +1,6 @@
 import { createDocument, getDocuments } from "@/api/document";
 import AddDocumentSheet from "@/components/add-document-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import PillRow from "@/components/pill-row";
 import SearchInput from "@/components/search-input";
@@ -156,13 +157,12 @@ const DocumentListScreen = () => {
         headerShadowVisible: false,
         headerShown: true,
         headerRight: () => (
-          <Pressable
-            style={[styles.addBtn, { backgroundColor: colors.buttonPrimary }]}
+          <Button
+            leftIcon={(color) => <Lucide name="plus" size={18} color={color} />}
             onPress={() => setShowAddSheet(true)}
-          >
-            <Lucide name="plus" size={18} color="#fff" />
-            <Text style={styles.addBtnText}>New</Text>
-          </Pressable>
+            size="sm"
+            title="New"
+          />
         ),
       }}
     />
@@ -311,18 +311,13 @@ const DocumentListScreen = () => {
                 Try adjusting your filters or create a new document.
               </Text>
               {hasNextPage && (
-                <Pressable
-                  style={[
-                    styles.loadMoreBtn,
-                    { backgroundColor: colors.buttonPrimary },
-                  ]}
+                <Button
+                  fullWidth
+                  loading={isFetchingNextPage}
                   onPress={() => void fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                >
-                  <Text style={styles.loadMoreBtnText}>
-                    Load more documents
-                  </Text>
-                </Pressable>
+                  title="Load more documents"
+                  variant="secondary"
+                />
               )}
             </View>
           )

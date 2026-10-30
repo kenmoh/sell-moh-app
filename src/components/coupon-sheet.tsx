@@ -1,5 +1,6 @@
 import { createCoupon, deleteCoupon, updateCoupon } from "@/api/discount";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Coupon } from "@/types/discount";
@@ -229,25 +230,16 @@ const CouponSheet = ({ visible, onVisibleChange, coupon }: Props) => {
         </View>
       </ScrollView>
 
-      <Pressable
-        style={[
-          styles.saveBtn,
-          { backgroundColor: colors.buttonPrimary, opacity: canSubmit ? 1 : 0.5 },
-        ]}
+      <Button
         disabled={!canSubmit}
-        onPress={handleSave}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name={isEditing ? "check" : "plus"} size={18} color="#fff" />
-            <Text style={styles.saveBtnText}>
-              {isEditing ? "Save Changes" : "Create Coupon"}
-            </Text>
-          </>
+        fullWidth
+        leftIcon={(color) => (
+          <Lucide name={isEditing ? "check" : "plus"} size={18} color={color} />
         )}
-      </Pressable>
+        loading={isPending}
+        onPress={handleSave}
+        title={isEditing ? "Save Changes" : "Create Coupon"}
+      />
 
       {isEditing && (
         <>

@@ -2,6 +2,7 @@ import { createDiscount, deleteDiscount, updateDiscount } from "@/api/discount";
 import { fetchTenantCategories, fetchProducts } from "@/api/inventory";
 import { fetchTenantStores } from "@/api/store";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
@@ -385,25 +386,16 @@ const DiscountSheet = ({ visible, onVisibleChange, discount }: Props) => {
         </View>
       </ScrollView>
 
-      <Pressable
-        style={[
-          styles.saveBtn,
-          { backgroundColor: colors.buttonPrimary, opacity: canSubmit ? 1 : 0.5 },
-        ]}
+      <Button
         disabled={!canSubmit}
-        onPress={handleSave}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name={isEditing ? "check" : "plus"} size={18} color="#fff" />
-            <Text style={styles.saveBtnText}>
-              {isEditing ? "Save Changes" : "Create Promotion"}
-            </Text>
-          </>
+        fullWidth
+        leftIcon={(color) => (
+          <Lucide name={isEditing ? "check" : "plus"} size={18} color={color} />
         )}
-      </Pressable>
+        loading={isPending}
+        onPress={handleSave}
+        title={isEditing ? "Save Changes" : "Create Promotion"}
+      />
 
       {isEditing && (
         <>
@@ -556,12 +548,11 @@ const ProductPickerSheet = ({
         </View>
       )}
 
-      <Pressable
-        style={[styles.okBtn, { backgroundColor: colors.buttonPrimary }]}
+      <Button
+        fullWidth
         onPress={() => onVisibleChange(false)}
-      >
-        <Text style={styles.okBtnText}>OK</Text>
-      </Pressable>
+        title="OK"
+      />
     </AppBottomSheet>
   );
 };
@@ -622,12 +613,11 @@ const CategoryPickerSheet = ({
         </View>
       )}
 
-      <Pressable
-        style={[styles.okBtn, { backgroundColor: colors.buttonPrimary }]}
+      <Button
+        fullWidth
         onPress={() => onVisibleChange(false)}
-      >
-        <Text style={styles.okBtnText}>OK</Text>
-      </Pressable>
+        title="OK"
+      />
     </AppBottomSheet>
   );
 };

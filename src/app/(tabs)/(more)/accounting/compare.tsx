@@ -5,6 +5,7 @@ import {
   fetchProfitAndLoss,
   fetchTrialBalance,
 } from "@/api/accounting";
+import { Button } from "@/components/button";
 import InfoTooltip from "@/components/info-tooltip";
 import Pill from "@/components/pill";
 import { Colors } from "@/constants/theme";
@@ -913,15 +914,10 @@ On the Balance Sheet tab, the Balance Check row is Assets minus Liabilities minu
           <Text style={[styles.errorText, { color: colors.textSecondary }]}>
             Could not load the comparison
           </Text>
-          <Pressable
+          <Button
             onPress={() => results.forEach((r) => r.refetch())}
-            style={[
-              styles.retryButton,
-              { backgroundColor: colors.buttonPrimary },
-            ]}
-          >
-            <Text style={styles.retryText}>Retry</Text>
-          </Pressable>
+            title="Retry"
+          />
         </View>
       ) : (
         <View style={[styles.tableArea]}>

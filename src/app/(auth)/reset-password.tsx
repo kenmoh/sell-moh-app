@@ -1,16 +1,15 @@
 import { resetPassword } from "@/api/auth";
 import AppView from "@/components/app-view";
+import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
   Alert,
   StyleSheet,
   Text,
-  TouchableOpacity,
   useColorScheme,
   View,
 } from "react-native";
@@ -103,22 +102,13 @@ const ResetPassword = () => {
             error={errors.confirm_password}
           />
 
-          <TouchableOpacity
-            activeOpacity={0.8}
-            disabled={loading}
-            style={[
-              styles.primaryButton,
-              { backgroundColor: colors.buttonPrimary },
-              loading && { opacity: 0.7 },
-            ]}
+          <Button
+            loading={loading}
             onPress={handleReset}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryButtonText}>Reset Password</Text>
-            )}
-          </TouchableOpacity>
+            size="lg"
+            style={styles.primaryButton}
+            title="Reset Password"
+          />
         </View>
       </View>
     </AppView>
@@ -148,11 +138,6 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 14, textAlign: "center", lineHeight: 20 },
   form: { gap: 16, marginTop: 16 },
   primaryButton: {
-    borderRadius: 50,
-    paddingVertical: 16,
-    alignItems: "center",
-    justifyContent: "center",
     marginTop: 8,
   },
-  primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "700" },
 });

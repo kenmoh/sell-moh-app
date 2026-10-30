@@ -1,5 +1,6 @@
 import { adjustProduct } from "@/api/inventory";
 import AppBottomSheet from "@/components/bottom-sheet";
+import { Button } from "@/components/button";
 import Pill from "@/components/pill";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
@@ -10,7 +11,6 @@ import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
-  ActivityIndicator,
   Pressable,
   StyleSheet,
   Text,
@@ -232,29 +232,17 @@ const AdjustStockSheet = ({
       </View>
 
       {/* Confirm */}
-      <Pressable
-        style={[
-          styles.confirmButton,
-          {
-            backgroundColor:
-              parsedQty !== 0 && !isPending
-                ? colors.buttonPrimary
-                : colors.backgroundSelected,
-            opacity: isPending ? 0.5 : 1,
-          },
-        ]}
-        disabled={parsedQty === 0 || isPending}
-        onPress={handleConfirm}
-      >
-        {isPending ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <>
-            <Lucide name="package-plus" size={18} color="#fff" />
-            <Text style={styles.confirmText}>Confirm Adjustment</Text>
-          </>
+      <Button
+        disabled={parsedQty === 0}
+        fullWidth
+        leftIcon={(color) => (
+          <Lucide name="package-plus" size={18} color={color} />
         )}
-      </Pressable>
+        loading={isPending}
+        onPress={handleConfirm}
+        style={{ marginTop: 4 }}
+        title="Confirm Adjustment"
+      />
     </AppBottomSheet>
   );
 };
@@ -312,19 +300,5 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#DC2626",
     marginTop: -6,
-  },
-  confirmButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 8,
-    borderRadius: 50,
-    paddingVertical: 16,
-    marginTop: 4,
-  },
-  confirmText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "700",
   },
 });

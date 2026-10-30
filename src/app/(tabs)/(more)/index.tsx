@@ -54,11 +54,11 @@ const More = () => {
     >
       <Stack.Screen options={{ title: "Store Settings", headerShown: true }} />
       <MoreCard label="Store">
-        {/* <LinkItem
-          label="Store Profile"
+        <LinkItem
+          label="Organization"
           leadingIcon="building-2"
-          onPress={() => router.push("/(tabs)/(more)/store-profile")}
-        /> */}
+          onPress={() => router.push("/(tabs)/(more)/organization")}
+        />
         <LinkItem
           label="User Profile"
           leadingIcon="user-circle"
