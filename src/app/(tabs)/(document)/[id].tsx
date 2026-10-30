@@ -1,5 +1,6 @@
 import {
   convertDocumentToSale,
+  downloadDocumentCsv,
   downloadDocumentPdf,
   getDocumentById,
   updateDocumentStatus,
@@ -235,6 +236,13 @@ const DocumentDetailScreen = () => {
     },
   });
 
+  const csvMutation = useMutation({
+    mutationFn: () => downloadDocumentCsv(doc!),
+    onError: (e: Error) => {
+      toast.error("Failed", e.message || "Could not download CSV");
+    },
+  });
+
   const actions = useMemo(
     () => (doc ? getActions(doc.doc_type, doc.status) : []),
     [doc?.doc_type, doc?.status],
@@ -331,6 +339,7 @@ const DocumentDetailScreen = () => {
               <Pressable
                 onPress={() => downloadMutation.mutate()}
                 disabled={downloadMutation.isPending}
+                accessibilityLabel="Download PDF"
                 style={[
                   styles.downloadBtn,
                   { backgroundColor: colors.backgroundElement },
@@ -341,6 +350,25 @@ const DocumentDetailScreen = () => {
                 ) : (
                   <Lucide
                     name="download"
+                    size={14}
+                    color={colors.textSecondary}
+                  />
+                )}
+              </Pressable>
+              <Pressable
+                onPress={() => csvMutation.mutate()}
+                disabled={csvMutation.isPending}
+                accessibilityLabel="Download CSV"
+                style={[
+                  styles.downloadBtn,
+                  { backgroundColor: colors.backgroundElement },
+                ]}
+              >
+                {csvMutation.isPending ? (
+                  <ActivityIndicator size={14} color={colors.textSecondary} />
+                ) : (
+                  <Lucide
+                    name="file-spreadsheet"
                     size={14}
                     color={colors.textSecondary}
                   />

@@ -10,6 +10,8 @@ import Pill from "@/components/pill";
 import { Colors } from "@/constants/theme";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useActiveStore } from "@/lib/store-context";
+import { shareCsv, sharePdf } from "@/lib/export";
+import { useToast } from "@/hooks/use-toast";
 import type {
   BalanceSheetResponse,
   CashFlowResponse,
@@ -18,6 +20,7 @@ import type {
   ProfitAndLossResponse,
   TrialBalanceItem,
 } from "@/types/accounting";
+import Download from "@expo/material-symbols/download.xml";
 import Info from "@expo/material-symbols/info.xml";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide, type LucideIconName } from "@react-native-vector-icons/lucide";
@@ -26,6 +29,7 @@ import { Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   RefreshControl,
@@ -108,8 +112,10 @@ const CompareStores = () => {
 
   const { stores } = useActiveStore();
   const insets = useSafeAreaInsets();
+  const toast = useToast();
 
   const [statement, setStatement] = useState<StatementKey>("pnl");
+  const [isExporting, setIsExporting] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const [picker, setPicker] = useState<null | "from" | "to" | "asAt">(null);
   const [tableScrollH, setTableScrollH] = useState(0);
@@ -537,6 +543,68 @@ const CompareStores = () => {
   const needsRange = statement === "pnl" || statement === "cashflow";
   const needsPoint = statement === "tb" || statement === "bs";
 
+  const statementLabel =
+    STATEMENTS.find((entry) => entry.key === statement)?.label ?? statement;
+  const periodLabel = needsRange
+    ? `${from} to ${to}`
+    : needsPoint
+      ? `as at ${asAt}`
+      : "All journals";
+
+  const exportComparison = async (format: "csv" | "pdf") => {
+    if (isExporting || sections.length === 0) return;
+    setIsExporting(true);
+    try {
+      const headers = ["Statement", ...columns.map((column) => column.label)];
+      const rows: (string | number)[][] = [];
+      sections.forEach((section) => {
+        rows.push([section.title]);
+        section.rows.forEach((row) => {
+          rows.push([
+            row.code ? `${row.code} ${row.label}` : row.label,
+            ...row.values.map((value) =>
+              row.count ? fmtCount(value) : fmt(value),
+            ),
+          ]);
+        });
+      });
+
+      const base = `compare-stores-${statement}-${needsRange ? `${from}-to-${to}` : needsPoint ? asAt : "all"}`;
+      if (format === "csv") {
+        await shareCsv(`${base}.csv`, [
+          ["Store comparison", statementLabel],
+          ["Period", periodLabel],
+          [],
+          headers,
+          ...rows,
+        ]);
+      } else {
+        await sharePdf(
+          `${base}.pdf`,
+          `Store comparison — ${statementLabel}`,
+          [`Period: ${periodLabel}`],
+          [{ heading: statementLabel, columns: headers, rows }],
+        );
+      }
+      toast.success("Export ready", `${statementLabel} comparison shared`);
+    } catch (e) {
+      toast.error(
+        "Export failed",
+        e instanceof Error ? e.message : "Please try again.",
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const openExport = () => {
+    Alert.alert("Export comparison", "Choose a format", [
+      { text: "CSV", onPress: () => void exportComparison("csv") },
+      { text: "PDF", onPress: () => void exportComparison("pdf") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
   const dateRow = (
     <View
       style={[
@@ -789,6 +857,12 @@ const CompareStores = () => {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "square.and.arrow.down" : Download}
+          disabled={isExporting || isLoading || sections.length === 0}
+          onPress={openExport}
+          accessibilityLabel="Export comparison"
+        />
         <Stack.Toolbar.Button
           icon={process.env.EXPO_OS === "ios" ? "info.circle" : Info}
           onPress={() => setShowInfo(true)}

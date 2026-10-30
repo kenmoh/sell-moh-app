@@ -1,4 +1,5 @@
 import {
+  fetchAllTaxesCollected,
   fetchTaxesCollected,
   remitTax,
 } from "@/api/accounting";
@@ -7,12 +8,15 @@ import StoreSwitcher from "@/components/store-switcher";
 import { Colors } from "@/constants/theme";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useActiveStore } from "@/lib/store-context";
+import { shareCsv, sharePdf } from "@/lib/export";
+import { useToast } from "@/hooks/use-toast";
 import type {
   TaxCollectedItem,
   TaxCollectedLine,
   TaxRemitRequest,
 } from "@/types/accounting";
 import Add from "@expo/material-symbols/add.xml";
+import Download from "@expo/material-symbols/download.xml";
 import History from "@expo/material-symbols/history.xml";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -25,6 +29,7 @@ import { Stack, useRouter } from "expo-router";
 import { Fragment, useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -40,10 +45,12 @@ const TaxesScreen = () => {
   const isDark = scheme === "dark";
   const colors = Colors[isDark ? "dark" : "light"];
 
-  const { activeStoreId } = useActiveStore();
+  const { activeStoreId, stores } = useActiveStore();
   const queryClient = useQueryClient();
   const router = useRouter();
+  const toast = useToast();
   const [showRemitSheet, setShowRemitSheet] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   const [fromDate, setFromDate] = useState(() => {
     const d = new Date();
@@ -124,6 +131,93 @@ const TaxesScreen = () => {
     () => data?.pages.flatMap((page) => page.items) ?? [],
     [data],
   );
+
+  const storeLabel = activeStoreId
+    ? (stores.find((store) => store.id === activeStoreId)?.name ?? "Selected store")
+    : "All Stores";
+
+  const exportTaxes = async (format: "csv" | "pdf") => {
+    if (isExporting) return;
+    setIsExporting(true);
+    try {
+      const exported = await fetchAllTaxesCollected({
+        fromDate: from,
+        toDate: to,
+        storeId: activeStoreId,
+      });
+      const base = `taxes-collected-${from}-to-${to}`;
+      const money = (value: number) => `₦${value.toLocaleString("en-NG")}`;
+      const summaryRows: (string | number)[][] = [
+        ["Tax", "Rate (%)", "Sales", "Amount"],
+        ...exported.taxes.map((tax) => [
+          tax.name,
+          tax.rate,
+          tax.sale_count,
+          money(tax.amount),
+        ]),
+      ];
+      const saleRows: (string | number)[][] = [
+        ["Sale", "Tax", "Rate (%)", "Date", "Amount"],
+        ...exported.items.map((line) => [
+          line.sale_number,
+          line.name,
+          line.rate,
+          line.date ? formatDate(new Date(line.date)) : "",
+          money(line.amount),
+        ]),
+      ];
+
+      if (format === "csv") {
+        await shareCsv(`${base}.csv`, [
+          ["Taxes collected", `${from} to ${to}`],
+          ["Store", storeLabel],
+          [],
+          ["Total collected", money(exported.total_collected)],
+          ["Untaxed sales", exported.zero_tax_sales],
+          [],
+          ...summaryRows,
+          [],
+          ...saleRows,
+        ]);
+      } else {
+        await sharePdf(`${base}.pdf`, "Taxes collected", [
+          `${from} to ${to}`,
+          `Store: ${storeLabel}`,
+          `Total collected: ${money(exported.total_collected)}`,
+        ], [
+          {
+            heading: "Summary by tax",
+            columns: summaryRows[0],
+            rows: summaryRows.slice(1),
+          },
+          {
+            heading: "Collected from sales",
+            columns: saleRows[0],
+            rows: saleRows.slice(1),
+          },
+        ]);
+      }
+      toast.success(
+        "Export ready",
+        `${exported.items.length} tax lines shared`,
+      );
+    } catch (e) {
+      toast.error(
+        "Export failed",
+        e instanceof Error ? e.message : "Please try again.",
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const openExport = () => {
+    Alert.alert("Export taxes", "Choose a format", [
+      { text: "CSV", onPress: () => void exportTaxes("csv") },
+      { text: "PDF", onPress: () => void exportTaxes("pdf") },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
 
   const renderSummaryCard = useCallback(
     (tax: TaxCollectedItem) => (
@@ -313,6 +407,12 @@ const TaxesScreen = () => {
       // edges={["top", "left", "right"]}
     >
       <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "square.and.arrow.down" : Download}
+          disabled={isExporting}
+          onPress={openExport}
+          accessibilityLabel="Export taxes"
+        />
         <Stack.Toolbar.Button
           icon={process.env.EXPO_OS === "ios" ? "clock.arrow.circlepath" : History}
           onPress={() => router.push("/(tabs)/(more)/accounting/taxes-remit")}

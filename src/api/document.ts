@@ -1,10 +1,12 @@
 import { DataMessageResponse } from "@/types/auth";
 import {
+  Document,
   DocumentCreateRequest,
   DocumentListFilters,
   DocumentListResponse,
   DocumentResponse,
 } from "@/types/document-types";
+import { shareCsv } from "@/lib/export";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { getErrorMessage } from "./auth";
@@ -101,4 +103,36 @@ export const downloadDocumentPdf = async (
     mimeType: "application/pdf",
     dialogTitle: `${docType} ${docNumber}`,
   });
+};
+
+export const downloadDocumentCsv = async (doc: Document): Promise<void> => {
+  const tax = Number(doc.tax ?? 0);
+  const rows: (string | number)[][] = [
+    ["Document", doc.doc_number],
+    ["Type", doc.doc_type],
+    ["Status", doc.status],
+    ["Customer", doc.customer_name],
+    ["Created", new Date(doc.created_at).toLocaleDateString()],
+    [
+      "Due",
+      doc.due_date ? new Date(doc.due_date).toLocaleDateString() : "",
+    ],
+    [],
+    ["Description", "Qty", "Unit price", "Discount %", "Tax %", "Line total"],
+    ...doc.items.map((item) => [
+      item.description,
+      item.qty,
+      item.unit_price,
+      item.discount_pct,
+      item.tax_rate ?? "",
+      item.line_total,
+    ]),
+    [],
+    ["Subtotal", doc.subtotal ?? ""],
+    ["Discount", doc.discount ?? 0],
+    ["Tax", tax],
+    ["Total", doc.total],
+  ];
+
+  await shareCsv(`${doc.doc_number}.csv`, rows);
 };

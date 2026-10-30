@@ -342,6 +342,48 @@ export const fetchTaxesCollected = async ({
   return res.data?.data!;
 };
 
+export const fetchAllTaxesCollected = async ({
+  fromDate,
+  toDate,
+  storeId,
+}: {
+  fromDate?: string;
+  toDate?: string;
+  storeId?: string | null;
+}): Promise<TaxesCollectedResponse> => {
+  const pageSize = 100;
+  let page = 1;
+  let first: TaxesCollectedResponse | null = null;
+  const items: TaxesCollectedResponse["items"] = [];
+
+  for (;;) {
+    const result = await fetchTaxesCollected({
+      fromDate,
+      toDate,
+      storeId,
+      page,
+      pageSize,
+    });
+    first ??= result;
+    items.push(...result.items);
+    if (!result.has_more || page >= 200) break;
+    page += 1;
+  }
+
+  if (!first) {
+    throw new Error("No tax data returned");
+  }
+
+  return {
+    ...first,
+    items,
+    page: 1,
+    page_size: pageSize,
+    total_items: items.length,
+    has_more: false,
+  };
+};
+
 // ── Tax Remittance ────────────────────────────────────────────────────────
 
 export const fetchTaxesOwed = async (
