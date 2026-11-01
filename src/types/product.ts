@@ -290,3 +290,117 @@ export interface TransferRequestsPaginatedResponse {
   page_size: number;
   message: string | null;
 }
+
+// ── Warehouse distributions ──────────────────────────────────────────────────
+
+export type DistributionStatus = "in_transit" | "received" | "cancelled";
+
+export type DistributionDirection = "incoming" | "outgoing";
+
+export interface DistributionItem {
+  id: string;
+  distribution_id: string;
+  source_product_id: string;
+  destination_product_id: string | null;
+  item_name: string;
+  qty_dispatched: number;
+  qty_received: number;
+  qty_damaged: number;
+  shortage: number;
+  condition_dispatched: string | null;
+  condition_received: string | null;
+  damage_notes: string | null;
+  receive_notes: string | null;
+  notes: string | null;
+  created_at: string | null;
+}
+
+export interface Distribution {
+  id: string;
+  tenant_id: string;
+  distribution_number: string | null;
+  from_store_id: string;
+  to_store_id: string;
+  from_store_name: string | null;
+  to_store_name: string | null;
+  status: DistributionStatus;
+  notes: string | null;
+  dispatched_by: string | null;
+  dispatched_by_name: string | null;
+  dispatched_at: string | null;
+  received_by: string | null;
+  received_by_name: string | null;
+  cancelled_by: string | null;
+  cancelled_by_name: string | null;
+  cancelled_at: string | null;
+  cancel_reason: string | null;
+  pin_verified_by: string | null;
+  pin_verified_by_name: string | null;
+  created_by: string | null;
+  created_by_name: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  items: DistributionItem[];
+  qty_dispatched: number;
+  qty_received: number;
+  qty_damaged: number;
+  shortage: number;
+}
+
+export interface DistributionListItem {
+  id: string;
+  distribution_number: string | null;
+  from_store_id: string;
+  to_store_id: string;
+  from_store_name: string | null;
+  to_store_name: string | null;
+  status: DistributionStatus;
+  notes: string | null;
+  qty_dispatched: number;
+  qty_received: number;
+  qty_damaged: number;
+  shortage: number;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface DistributeLineInput {
+  product_id: string;
+  item_name: string;
+  qty_dispatched: number;
+  condition_dispatched?: string | null;
+}
+
+export interface DistributeCreatePayload {
+  from_store_id: string;
+  to_store_id: string;
+  lines: DistributeLineInput[];
+  notes?: string | null;
+}
+
+export interface DistributeLineReceiveInput {
+  item_id: string;
+  qty_received: number;
+  qty_damaged: number;
+  condition_received?: string | null;
+  receive_notes?: string | null;
+}
+
+export interface DistributeReceivePayload {
+  lines: DistributeLineReceiveInput[];
+  supervisor_pin?: string | null;
+}
+
+export interface DistributeCancelPayload {
+  cancel_reason?: string | null;
+  supervisor_pin?: string | null;
+}
+
+export interface DistributionsPaginatedResponse {
+  data: DistributionListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  message: string | null;
+}
+

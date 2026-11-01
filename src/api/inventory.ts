@@ -15,6 +15,14 @@ import {
   StockBalancesPaginatedResponse,
   StockMovementsPaginatedResponse,
   StoreDistributePayload,
+  Distribution,
+  DistributionListItem,
+  DistributeCreatePayload,
+  DistributeReceivePayload,
+  DistributeCancelPayload,
+  DistributionsPaginatedResponse,
+  DistributionDirection,
+  DistributionStatus,
   TransferDirection,
   TransferRequest,
   TransferRequestCreatePayload,
@@ -435,4 +443,97 @@ export const fulfillTransferRequest = async (
   }
 
   return res.data!.data;
+};
+
+
+// _____________________________WAREHOUSE DISTRIBUTIONS__________________________
+
+export const fetchDistributions = async (
+  params?: {
+    storeId?: string;
+    direction?: DistributionDirection;
+    status?: DistributionStatus;
+    page?: number;
+    page_size?: number;
+  },
+): Promise<DistributionsPaginatedResponse> => {
+  const query = new URLSearchParams();
+  if (params?.storeId) query.append("storeId", params.storeId);
+  if (params?.direction) query.append("direction", params.direction);
+  if (params?.status) query.append("status", params.status);
+  if (params?.page) query.append("page", String(params.page));
+  if (params?.page_size) query.append("page_size", String(params.page_size));
+  const qs = query.toString();
+  const res = await apiClient.get<DistributionsPaginatedResponse>(
+    `${INVENTORY_URL}/distributions${qs ? "?" + qs : ""}`,
+  );
+  if (!res.ok) throw new Error(getErrorMessage(res));
+  return res.data!;
+};
+
+export const fetchDistribution = async (
+  distributionId: string,
+): Promise<Distribution> => {
+  const res = await apiClient.get<{ data: Distribution }>(
+    `${INVENTORY_URL}/distributions/${distributionId}`,
+  );
+  if (!res.ok) throw new Error(getErrorMessage(res));
+  return res.data!.data!;
+};
+
+export const createDistribution = async (
+  data: DistributeCreatePayload,
+): Promise<Distribution> => {
+  const res = await apiClient.post<{ data: Distribution }>(
+    `${INVENTORY_URL}/distributions`,
+    {
+      from_store_id: data.from_store_id,
+      to_store_id: data.to_store_id,
+      lines: data.lines.map((l) => ({
+        product_id: l.product_id,
+        item_name: l.item_name,
+        qty_dispatched: l.qty_dispatched,
+        condition_dispatched: l.condition_dispatched || undefined,
+      })),
+      notes: data.notes || undefined,
+    },
+  );
+  if (!res.ok) throw new Error(getErrorMessage(res));
+  return res.data!.data!;
+};
+
+export const receiveDistribution = async (
+  distributionId: string,
+  data: DistributeReceivePayload,
+): Promise<Distribution> => {
+  const res = await apiClient.post<{ data: Distribution }>(
+    `${INVENTORY_URL}/distributions/${distributionId}/receive`,
+    {
+      lines: data.lines.map((l) => ({
+        item_id: l.item_id,
+        qty_received: l.qty_received,
+        qty_damaged: l.qty_damaged,
+        condition_received: l.condition_received || undefined,
+        receive_notes: l.receive_notes || undefined,
+      })),
+      supervisor_pin: data.supervisor_pin || undefined,
+    },
+  );
+  if (!res.ok) throw new Error(getErrorMessage(res));
+  return res.data!.data!;
+};
+
+export const cancelDistribution = async (
+  distributionId: string,
+  data: DistributeCancelPayload,
+): Promise<Distribution> => {
+  const res = await apiClient.post<{ data: Distribution }>(
+    `${INVENTORY_URL}/distributions/${distributionId}/cancel`,
+    {
+      cancel_reason: data.cancel_reason || undefined,
+      supervisor_pin: data.supervisor_pin || undefined,
+    },
+  );
+  if (!res.ok) throw new Error(getErrorMessage(res));
+  return res.data!.data!;
 };

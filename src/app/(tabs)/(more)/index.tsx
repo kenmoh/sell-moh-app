@@ -102,6 +102,11 @@ const More = () => {
           leadingIcon="arrow-right-left"
           onPress={() => router.push("/(tabs)/(more)/transfers")}
         />
+        <LinkItem
+          label="Distributions"
+          leadingIcon="truck"
+          onPress={() => router.push("/(tabs)/(more)/distributions")}
+        />
       </MoreCard>
 
       <MoreCard label="POS">
