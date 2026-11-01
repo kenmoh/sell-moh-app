@@ -1,4 +1,5 @@
 import { fetchCustomers } from "@/api/customer";
+import { fetchProducts } from "@/api/inventory";
 import { fetchTaxTypes } from "@/api/taxes";
 import AppBottomSheet from "@/components/bottom-sheet";
 import { Button } from "@/components/button";
@@ -8,6 +9,7 @@ import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
 import { Customer } from "@/types/customer";
+import type { ProductResponse } from "@/types/product";
 import {
   DocumentCreateRequest,
   DocumentItemLine,
@@ -72,6 +74,23 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
     queryFn: () => fetchTaxTypes(true),
   });
   const activeTaxes = taxTypes.filter((t) => t.is_active);
+  const activeStoreId = isOwner ? (storeId ?? resolvedStoreId) : resolvedStoreId;
+  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const { data: productsData } = useQuery({
+    queryKey: ["document-products", activeStoreId],
+    queryFn: () => fetchProducts(activeStoreId, { page_size: 100 }),
+    enabled: !!activeStoreId,
+  });
+  const products = productsData?.data ?? [];
+
+  const pickItem = (index: number, product: ProductResponse) => {
+    updateItem(index, {
+      product_id: product.id,
+      description: product.name,
+      unit_price: product.selling_price || 0,
+    });
+    setOpenDropdown(null);
+  };
 
   const { data: customerResults, isPending: isSearchingCustomers } = useQuery({
     queryKey: ["customers", "picker", customerSearch],
@@ -368,12 +387,50 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
                 { backgroundColor: colors.backgroundElement },
               ]}
             >
-              <AppTextInput
-                placeholder="Item description"
-                value={item.description}
-                onChangeText={(v) => updateItem(index, { description: v })}
-                autoCapitalize="sentences"
-              />
+              <Pressable
+                onPress={() =>
+                  setOpenDropdown(openDropdown === index ? null : index)
+                }
+                style={styles.itemSelect}
+              >
+                <Text
+                  style={[
+                    styles.itemSelectText,
+                    { color: colors.text },
+                  ]}
+                >
+                  {item.product_id
+                    ? products.find((p) => p.id === item.product_id)?.name ??
+                      item.description
+                    : item.description || "Select item"}
+                </Text>
+                <Lucide name="chevron-down" size={14} color={colors.textSecondary} />
+              </Pressable>
+              {openDropdown === index && (
+                <View style={styles.itemDropdown}>
+                  {products.map((p) => (
+                    <Pressable
+                      key={p.id}
+                      onPress={() => pickItem(index, p)}
+                      style={styles.dropdownOption}
+                    >
+                      <Text style={[styles.dropdownOptionText, { color: colors.text }]}>
+                        {p.name}
+                      </Text>
+                    </Pressable>
+                  ))}
+                  {products.length === 0 && (
+                    <Text
+                      style={[
+                        styles.dropdownOptionText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      No items in this store
+                    </Text>
+                  )}
+                </View>
+              )}
               <View style={styles.itemMeta}>
                 <View style={styles.itemField}>
                   <Text
@@ -628,6 +685,40 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.4,
+  },
+  itemSelect: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 12,
+  },
+  itemSelectText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  itemDropdown: {
+    borderTopWidth: 1,
+    borderColor: "#e2e8f0",
+    backgroundColor: "#fff",
+    borderBottomLeftRadius: 12,
+    borderBottomRightRadius: 12,
+    maxHeight: 220,
+  },
+  dropdownOption: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+  },
+  dropdownOptionText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
   lineTaxes: {
     flexDirection: "row",

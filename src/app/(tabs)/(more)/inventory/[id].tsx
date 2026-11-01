@@ -227,6 +227,9 @@ const ProductDetails = () => {
   const initial = product.name.charAt(0).toUpperCase();
   const priceFormatted = `₦${product.selling_price.toLocaleString()}`;
   const stockStatus = getStockStatus(product.qty, product.reorder_point);
+  const costPrice = product.unit_cost ?? product.cost_price ?? 0;
+  const unitsSold = salesSeries?.totals.units_sold ?? 0;
+  const profit = unitsSold * (product.selling_price - costPrice);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -389,6 +392,10 @@ const ProductDetails = () => {
                   {
                     label: "Cost Price",
                     value: `₦${(product.unit_cost ?? product.cost_price ?? 0).toLocaleString()}`,
+                  },
+                  {
+                    label: "Profit",
+                    value: money(profit),
                   },
                 ] as {
                   label: string;
