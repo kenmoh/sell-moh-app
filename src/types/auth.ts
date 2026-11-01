@@ -31,7 +31,7 @@ export interface CreateEmployee {
   email: string;
   full_name: string;
   phone?: string | null;
-  role: string;
+  roles: string[];
   store_id: string | null;
   password: string;
 }

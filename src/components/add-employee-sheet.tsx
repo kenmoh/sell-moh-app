@@ -24,7 +24,7 @@ const employeeSchema = z.object({
   fullName: z.string().trim().min(1, "Full name is required"),
   email: z.string().trim().email("Enter a valid email"),
   phone: z.string().optional(),
-  role: z.string().min(1, "Select a role"),
+  roles: z.array(z.string()).min(1, "Select at least one role"),
   storeId: z.string().min(1, "Select a store"),
   password: z.string().min(6, "Password must be at least 6 characters"),
 });
@@ -44,7 +44,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [role, setRole] = useState("");
+  const [roles, setRoles] = useState<string[]>([]);
   const [password, setPassword] = useState("");
   const [storeId, setStoreId] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -82,11 +82,17 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
     setFullName("");
     setEmail("");
     setPhone("");
-    setRole("");
+    setRoles([]);
     setPassword("");
     setStoreId(null);
     setShowPassword(false);
     setErrors({});
+  };
+
+  const toggleRole = (roleName: string) => {
+    setRoles((prev) =>
+      prev.includes(roleName) ? prev.filter((r) => r !== roleName) : [...prev, roleName],
+    );
   };
 
   const handleCreate = () => {
@@ -94,7 +100,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
       fullName,
       email,
       phone: phone || undefined,
-      role,
+      roles,
       storeId: storeId || "",
       password,
     });
@@ -114,7 +120,7 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
       full_name: result.data.fullName,
       email: result.data.email,
       phone: result.data.phone || null,
-      role: result.data.role,
+      roles: result.data.roles,
       password: result.data.password,
       store_id: result.data.storeId,
     });
@@ -190,13 +196,13 @@ const AddEmployeeSheet = ({ visible, onVisibleChange }: Props) => {
                 <Pill
                   key={r.id}
                   label={r.name}
-                  active={role === r.name}
-                  onPress={() => setRole(role === r.name ? "" : r.name)}
+                  active={roles.includes(r.name)}
+                  onPress={() => toggleRole(r.name)}
                 />
               ))}
             </View>
           )}
-          {errors.role && <Text style={styles.errorText}>{errors.role}</Text>}
+          {errors.roles && <Text style={styles.errorText}>{errors.roles}</Text>}
         </View>
 
         {/* Store */}
