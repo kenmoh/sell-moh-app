@@ -376,6 +376,7 @@ export interface DistributeCreatePayload {
   to_store_id: string;
   lines: DistributeLineInput[];
   notes?: string | null;
+  supervisor_pin?: string;
 }
 
 export interface DistributeLineReceiveInput {

@@ -496,6 +496,7 @@ export const createDistribution = async (
         condition_dispatched: l.condition_dispatched || undefined,
       })),
       notes: data.notes || undefined,
+      supervisor_pin: data.supervisor_pin || undefined,
     },
   );
   if (!res.ok) throw new Error(getErrorMessage(res));

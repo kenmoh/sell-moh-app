@@ -5,6 +5,8 @@ import AppTextInput from "@/components/text-input";
 import StoreSwitcher from "@/components/store-switcher";
 import { Colors, ColorPalette } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
+import { isOwnerRole } from "@/lib/roles";
+import { useSession } from "@/lib/ctx";
 import { useToast } from "@/hooks/use-toast";
 import type {
   Distribution,
@@ -163,7 +165,9 @@ const Distributions = () => {
   const insets = useSafeAreaInsets();
   const scheme = useColorScheme();
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
-  const { resolvedStoreId, stores, isOwner } = useActiveStore();
+  const { resolvedStoreId, stores } = useActiveStore();
+  const { user } = useSession();
+  const canCreate = user?.permissions?.includes("inventory:distribution_create") ?? false;
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -252,7 +256,7 @@ const Distributions = () => {
         <View style={{ flex: 1 }}>
           <StoreSwitcher mode="store" />
         </View>
-        {isWarehouse && isOwner && warehouseStores.length > 0 && (
+        {isWarehouse && canCreate && warehouseStores.length > 0 && (
           <Pressable
             onPress={() => setCreateSheetVisible(true)}
             style={[
@@ -331,7 +335,7 @@ const Distributions = () => {
         onVisibleChange={setCreateSheetVisible}
         warehouseStores={warehouseStores}
         destinationStores={destinationStores}
-        disabled={!isOwner || warehouseStores.length === 0}
+        disabled={!canCreate || warehouseStores.length === 0}
       />
       <ReceiveDistributionSheet
         visible={receiveSheetVisible}
@@ -472,6 +476,8 @@ function CreateDistributionSheet({
   disabled: boolean;
 }) {
   const toast = useToast();
+  const { user } = useSession();
+  const isOwner = isOwnerRole(user);
   const { mutate, isPending } = useMutation({
     mutationFn: (payload: DistributeCreatePayload) => createDistribution(payload),
     onSuccess: () => {
@@ -487,6 +493,7 @@ function CreateDistributionSheet({
   const [fromStoreId, setFromStoreId] = useState(warehouseStores[0]?.id ?? "");
   const [toStoreId, setToStoreId] = useState("");
   const [notes, setNotes] = useState("");
+  const [pin, setPin] = useState("");
   const [lines, setLines] = useState<{
     id: string;
     product_id: string;
@@ -498,20 +505,28 @@ function CreateDistributionSheet({
   const addLine = () =>
     setLines([
       ...lines,
-      { id: String(Date.now()), product_id: "", item_name: "", qty_dispatched: "", condition_dispatched: "" },
+      {
+        id: String(Date.now()),
+        product_id: "",
+        item_name: "",
+        qty_dispatched: "",
+        condition_dispatched: "GOOD",
+      },
     ]);
   const removeLine = (id: string) => setLines(lines.filter((l) => l.id !== id));
 
   const valid =
     lines.length > 0 &&
     lines.every((l) => l.product_id && l.item_name && Number(l.qty_dispatched) > 0) &&
-    !!toStoreId;
+    !!toStoreId &&
+    (isOwner || pin.trim().length > 0);
 
   const handleVisibleChange = (next: boolean) => {
     if (!next) {
       setFromStoreId(warehouseStores[0]?.id ?? "");
       setToStoreId("");
       setNotes("");
+      setPin("");
       setLines([]);
     }
     onVisibleChange(next);
@@ -599,6 +614,19 @@ function CreateDistributionSheet({
           />
         </View>
 
+        {!isOwner && (
+          <View style={styles.sheetSection}>
+            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Supervisor PIN</Text>
+            <AppTextInput
+              value={pin}
+              onChangeText={setPin}
+              placeholder="Required to create a distribution"
+              keyboardType="numeric"
+              style={styles.pinInput}
+            />
+          </View>
+        )}
+
         <View style={styles.sheetFooter}>
           <Pressable onPress={() => onVisibleChange(false)} style={styles.cancelPress}>
             <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
@@ -615,6 +643,7 @@ function CreateDistributionSheet({
                   condition_dispatched: l.condition_dispatched || undefined,
                 })),
                 notes: notes || null,
+                supervisor_pin: isOwner ? undefined : pin || undefined,
               });
             }}
             disabled={disabled || !valid || isPending}
@@ -644,6 +673,8 @@ function ReceiveDistributionSheet({
   distribution: Distribution | null;
 }) {
   const toast = useToast();
+  const { user } = useSession();
+  const isOwner = isOwnerRole(user);
   const { mutate, isPending } = useMutation({
     mutationFn: ({ distributionId, payload }: { distributionId: string; payload: DistributeReceivePayload }) =>
       receiveDistribution(distributionId, payload),
@@ -678,9 +709,9 @@ function ReceiveDistributionSheet({
         item_id: item.id,
         item_name: item.item_name,
         qty_dispatched: item.qty_dispatched,
-        qty_received: "",
-        qty_damaged: "",
-        condition_received: "",
+        qty_received: String(item.qty_dispatched),
+        qty_damaged: "0",
+        condition_received: "GOOD",
         receive_notes: "",
       })),
     );
@@ -699,7 +730,7 @@ function ReceiveDistributionSheet({
           condition_received: l.condition_received || undefined,
           receive_notes: l.receive_notes || undefined,
         })),
-        supervisor_pin: anyDamage ? pin || undefined : undefined,
+        supervisor_pin: anyDamage && !isOwner ? pin || undefined : undefined,
       },
     });
   };
@@ -762,7 +793,7 @@ function ReceiveDistributionSheet({
           </View>
         </View>
 
-        {anyDamage && (
+        {anyDamage && !isOwner && (
           <View style={styles.sheetSection}>
             <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Supervisor PIN</Text>
             <AppTextInput
@@ -808,6 +839,8 @@ function CancelDistributionSheet({
   distribution: DistributionListItem | null;
 }) {
   const toast = useToast();
+  const { user } = useSession();
+  const isOwner = isOwnerRole(user);
   const { mutate, isPending } = useMutation({
     mutationFn: ({ distributionId, payload }: { distributionId: string; payload: DistributeCancelPayload }) =>
       cancelDistribution(distributionId, payload),
@@ -856,16 +889,18 @@ function CancelDistributionSheet({
           />
         </View>
 
-        <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Supervisor PIN</Text>
-          <AppTextInput
-            value={pin}
-            onChangeText={setPin}
-            placeholder="Required to cancel"
-            keyboardType="numeric"
-            style={styles.pinInput}
-          />
-        </View>
+        {!isOwner && (
+          <View style={styles.sheetSection}>
+            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Supervisor PIN</Text>
+            <AppTextInput
+              value={pin}
+              onChangeText={setPin}
+              placeholder="Required to cancel"
+              keyboardType="numeric"
+              style={styles.pinInput}
+            />
+          </View>
+        )}
 
         <View style={styles.sheetFooter}>
           <Pressable onPress={() => onVisibleChange(false)} style={styles.cancelPress}>
@@ -877,7 +912,7 @@ function CancelDistributionSheet({
                 distributionId: distribution!.id,
                 payload: {
                   cancel_reason: reason || null,
-                  supervisor_pin: pin || undefined,
+                  supervisor_pin: isOwner ? undefined : pin || undefined,
                 },
               });
             }}
