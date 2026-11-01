@@ -184,6 +184,10 @@ const Distributions = () => {
     () => (stores ?? []).filter((s) => !s.is_warehouse),
     [stores],
   );
+  const isWarehouse = useMemo(
+    () => (stores ?? []).some((s) => s.id === resolvedStoreId && s.is_warehouse),
+    [stores, resolvedStoreId],
+  );
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ["distributions", resolvedStoreId, status, direction],
@@ -248,16 +252,17 @@ const Distributions = () => {
         <View style={{ flex: 1 }}>
           <StoreSwitcher mode="store" />
         </View>
-        <Pressable
-          onPress={() => setCreateSheetVisible(true)}
-          style={[
-            styles.headerIconButton,
-            { backgroundColor: colors.backgroundElement },
-          ]}
-          disabled={!isOwner || warehouseStores.length === 0}
-        >
-          <Lucide name="plus" size={16} color={colors.text} />
-        </Pressable>
+        {isWarehouse && isOwner && warehouseStores.length > 0 && (
+          <Pressable
+            onPress={() => setCreateSheetVisible(true)}
+            style={[
+              styles.headerIconButton,
+              { backgroundColor: colors.backgroundElement },
+            ]}
+          >
+            <Lucide name="plus" size={16} color={colors.text} />
+          </Pressable>
+        )}
       </View>
 
       <View style={styles.filters}>
