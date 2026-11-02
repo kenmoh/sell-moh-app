@@ -1,5 +1,6 @@
 import { fetchDistributions, fetchDistribution, createDistribution, receiveDistribution, cancelDistribution } from "@/api/inventory";
 import { Button } from "@/components/button";
+import Pill from "@/components/pill";
 import AppBottomSheet from "@/components/bottom-sheet";
 import AppTextInput from "@/components/text-input";
 import StoreSwitcher from "@/components/store-switcher";
@@ -92,16 +93,12 @@ const DistributionCard: React.FC<{
             {distribution.to_store_name ?? "?"}
           </Text>
         </View>
-        <View
-          style={[
-            styles.status,
-            { backgroundColor: `${statusColor}1A`, borderColor: statusColor },
-          ]}
-        >
-          <Text style={[styles.statusText, { color: statusColor }]}>
-            {STATUS_LABELS[distribution.status]}
-          </Text>
-        </View>
+        <Pill
+          label={STATUS_LABELS[distribution.status]}
+          active
+          color={statusColor}
+          size="sm"
+        />
       </View>
 
       <View style={styles.metaRow}>
@@ -384,8 +381,6 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
   item: { fontSize: 16, fontWeight: "700" },
   route: { fontSize: 13, marginTop: 2 },
-  status: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
-  statusText: { fontSize: 11, fontWeight: "700" },
   metaRow: { flexDirection: "row", justifyContent: "space-between", gap: 10 },
   meta: { fontSize: 12 },
   metaLabel: { fontSize: 11, fontWeight: "600", color: "#666" },
@@ -436,26 +431,6 @@ const styles = StyleSheet.create({
   submitDisabled: { opacity: 0.5 },
   submitText: { fontSize: 14, fontWeight: "700" },
   fromText: { fontSize: 14 },
-});
-
-function Pill({ label, active, onPress, size = "sm" }: { label: string; active: boolean; onPress: () => void; size?: "sm" | "md" }) {
-  return (
-    <Pressable onPress={onPress} style={[sheetStyles.pill, active && sheetStyles.pillActive]}>
-      <Text style={[sheetStyles.pillText, active && sheetStyles.pillTextActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-const sheetStyles = StyleSheet.create({
-  pill: {
-    borderWidth: 1,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  pillActive: {},
-  pillText: { fontSize: 12 },
-  pillTextActive: { fontWeight: "700" },
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -972,11 +947,12 @@ function DistributionDetail({
         </View>
 
         <View style={styles.sheetSection}>
-          <View style={[styles.status, { backgroundColor: `${statusColor}1A`, borderColor: statusColor }]}>
-            <Text style={[styles.statusText, { color: statusColor }]}>
-              {STATUS_LABELS[distribution.status]}
-            </Text>
-          </View>
+          <Pill
+            label={STATUS_LABELS[distribution.status]}
+            active
+            color={statusColor}
+            size="sm"
+          />
         </View>
 
         <View style={styles.sheetSection}>
