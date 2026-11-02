@@ -189,10 +189,6 @@ const Distributions = () => {
     () => (stores ?? []).filter((s) => s.is_warehouse),
     [stores],
   );
-  const destinationStores = useMemo(
-    () => (stores ?? []).filter((s) => !s.is_warehouse),
-    [stores],
-  );
   const isWarehouse = useMemo(
     () =>
       (stores ?? []).some((s) => s.id === resolvedStoreId && s.is_warehouse),
