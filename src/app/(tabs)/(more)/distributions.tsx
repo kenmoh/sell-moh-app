@@ -720,8 +720,9 @@ function ReceiveDistributionSheet({
   const anyDamage = lines.some((l) => Number(l.qty_damaged) > 0);
 
   const handleSubmit = () => {
+    if (!distribution) return;
     mutate({
-      distributionId: distribution!.id,
+      distributionId: distribution.id,
       payload: {
         lines: lines.map((l) => ({
           item_id: l.item_id,
@@ -916,15 +917,16 @@ function CancelDistributionSheet({
           </Pressable>
           <Pressable
             onPress={() => {
+              if (!distribution) return;
               mutate({
-                distributionId: distribution!.id,
+                distributionId: distribution.id,
                 payload: {
                   cancel_reason: reason || null,
                   supervisor_pin: isOwner ? undefined : pin || undefined,
                 },
               });
             }}
-            disabled={isPending}
+            disabled={isPending || !distribution}
             style={[styles.submitPress, {}]}
           >
             <Text style={[styles.submitText, { color: "#dc2626", fontWeight: "700" }]}>
