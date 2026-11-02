@@ -14,6 +14,7 @@ export interface ToastOptions {
   type?: ToastType;
   timeout?: number;
   actions?: ToastAction[];
+  sheetOnly?: boolean;
 }
 
 interface Toast extends ToastOptions {

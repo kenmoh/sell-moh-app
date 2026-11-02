@@ -1,6 +1,7 @@
 import { fetchTransferRequests } from "@/api/inventory";
 import { Button } from "@/components/button";
 import Pill from "@/components/pill";
+import StoreSwitcher from "@/components/store-switcher";
 import TransferDecisionSheet, {
   type DecisionMode,
 } from "@/components/transfer-decision-sheet";
@@ -201,6 +202,10 @@ const Transfers = () => {
           onPress={() => setRequestSheetVisible(true)}
         />
       </Stack.Toolbar>
+
+      <View style={styles.headerRow}>
+        <StoreSwitcher mode="store" presentation="picker" />
+      </View>
 
       <View style={styles.filters}>
         {DIRECTION_FILTERS.map((filter) => (

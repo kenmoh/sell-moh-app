@@ -104,7 +104,8 @@ export default function TransferDecisionSheet({
       );
       onVisibleChange(false);
     },
-    onError: (error) => toast.error("Action failed", friendlyError(error.message)),
+    onError: (error) =>
+      toast.sheetError("Action failed", friendlyError(error.message)),
   });
 
   if (!request) return null;

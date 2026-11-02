@@ -1,16 +1,20 @@
-import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
 import { registerPushToken as apiRegisterPushToken } from "@/api/notifications";
-
-let _registered = false;
+import * as Notifications from "expo-notifications";
+import { AndroidImportance } from "expo-notifications";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
-    shouldShowAlert: true as const,
-    shouldPlaySound: true as const,
-    shouldSetBadge: false as const,
-    shouldShowBanner: true as const,
-    shouldShowList: true as const,
+    // shouldPlaySound: true as const,
+    // shouldSetBadge: false as const,
+    // shouldShowBanner: true as const,
+    // shouldShowList: true as const,
+
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
   }),
 });
 
@@ -24,24 +28,32 @@ export async function requestPushPermissions(): Promise<boolean> {
 
 export async function registerForPushNotifications(): Promise<string | null> {
   try {
-    const hasPermission = await requestPushPermissions();
-    if (!hasPermission) return null;
-
-    const tokenData = await Notifications.getExpoPushTokenAsync();
-    const token = tokenData.data;
-
-    if (!_registered) {
-      const platform = Platform.OS === "ios" ? "ios" : "android";
-      await apiRegisterPushToken(token, platform);
-      _registered = true;
-    }
+    if (Platform.OS !== "ios" && Platform.OS !== "android") return null;
 
     if (Platform.OS === "android") {
       await Notifications.setNotificationChannelAsync("default", {
         name: "default",
-        importance: Notifications.AndroidImportance.HIGH,
+        importance: AndroidImportance.HIGH,
       });
     }
+
+    const hasPermission = await requestPushPermissions();
+    if (!hasPermission) {
+      console.warn("Push notification permission was not granted");
+      return null;
+    }
+
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.easConfig?.projectId;
+    if (!projectId) {
+      throw new Error("EAS project ID is missing from the app configuration");
+    }
+
+    const tokenData = await Notifications.getExpoPushTokenAsync({ projectId });
+    const token = tokenData.data;
+
+    await apiRegisterPushToken(token, Platform.OS);
 
     return token;
   } catch (err) {

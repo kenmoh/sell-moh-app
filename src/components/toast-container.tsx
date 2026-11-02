@@ -6,8 +6,9 @@ import ToastItem from "./toast";
 
 export const ToastContainer: React.FC = () => {
   const { toasts, dismissToast } = useToastContext();
+  const visibleToasts = toasts.filter((toast) => !toast.sheetOnly);
 
-  if (toasts.length === 0) return null;
+  if (visibleToasts.length === 0) return null;
 
   return (
     <Modal
@@ -15,13 +16,13 @@ export const ToastContainer: React.FC = () => {
       transparent
       statusBarTranslucent
       onRequestClose={() => {
-        const top = toasts[toasts.length - 1];
+        const top = visibleToasts[visibleToasts.length - 1];
         if (top) dismissToast(top.id);
       }}
     >
       <GestureHandlerRootView style={styles.root}>
         <View pointerEvents="box-none" style={styles.container}>
-          {toasts.map((toast, index) => (
+          {visibleToasts.map((toast, index) => (
             <ToastItem
               key={toast.id}
               id={toast.id}

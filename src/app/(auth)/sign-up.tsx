@@ -10,7 +10,7 @@ import { useGoogleAuth } from "@/lib/google-auth";
 import { LoginResponseData, RegisterRequest } from "@/types/auth";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -94,7 +94,7 @@ const SignUp = () => {
   });
   const appleAuth = useAppleAuth();
 
-  const handleSocialSignIn = async (
+  const handleSocialSignIn = useCallback(async (
     provider: "google" | "apple",
     idToken: string,
   ) => {
@@ -110,7 +110,7 @@ const SignUp = () => {
     } catch (err: any) {
       toast.error("Sign Up Failed", err.message || "Social sign-in failed");
     }
-  };
+  }, [signIn, toast]);
 
   const updateField = (field: RegisterField, value: string) => {
     setForm((current) => {
@@ -385,12 +385,16 @@ const SignUp = () => {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={async () => {
-                await googleAuth.promptAsync();
-                if (googleAuth.idToken) {
-                  handleSocialSignIn("google", googleAuth.idToken);
-                }
-                if (googleAuth.error) {
-                  toast.error("Google Sign-In", googleAuth.error);
+                try {
+                  const idToken = await googleAuth.promptAsync();
+                  if (idToken) await handleSocialSignIn("google", idToken);
+                } catch (error) {
+                  toast.error(
+                    "Google Sign-In",
+                    error instanceof Error
+                      ? error.message
+                      : "Google sign-in failed",
+                  );
                 }
               }}
               disabled={googleAuth.isLoading || loading}

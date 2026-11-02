@@ -72,11 +72,24 @@
         }
       ],
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notify-sm.png",
+          "largeIcon": "./assets/images/notify.png",
+          "color": "#ffffff",
+          "defaultChannel": "default",
+          "enableRemoteNotifications": true,
+          "enableBackgroundRemoteNotifications": false
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
           "image": "./assets/images/android-icon-foreground.png",
-          "imageWidth": 75
+          "imageWidth": 225,
+          "imageContentMode": "scaleAspectFit",
+          "applyToTopInset": false
         }
       ],
       "expo-image",

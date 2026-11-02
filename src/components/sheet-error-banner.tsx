@@ -1,6 +1,7 @@
 import { useToastContext } from "@/lib/toast-context";
 import { Colors, type ColorPalette } from "@/constants/theme";
 import { Lucide } from "@react-native-vector-icons/lucide";
+import { useEffect } from "react";
 import { Pressable, StyleSheet, Text, useColorScheme, View } from "react-native";
 
 /**
@@ -27,6 +28,16 @@ export default function SheetErrorBanner() {
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
 
   const latest = [...toasts].reverse().find((toast) => toast.type === "error");
+
+  useEffect(() => {
+    if (!latest?.timeout || latest.timeout <= 0) return;
+    const timer = setTimeout(
+      () => dismissToast(latest.id),
+      latest.timeout,
+    );
+    return () => clearTimeout(timer);
+  }, [dismissToast, latest?.id, latest?.timeout]);
+
   if (!latest) return null;
 
   return (

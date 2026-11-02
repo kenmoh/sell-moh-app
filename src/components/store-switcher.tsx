@@ -1,4 +1,5 @@
 import AppBottomSheet from "@/components/bottom-sheet";
+import StorePicker from "@/components/store-picker";
 import { ColorPalette, Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
@@ -11,6 +12,7 @@ import {
 } from "react-native";
 
 type StoreSwitcherProps = {
+  presentation?: "sheet" | "picker";
   /**
    * "store" — store-bound screens (POS, inventory): always operate on a
    * concrete store, falling back to the first store while the global
@@ -20,7 +22,10 @@ type StoreSwitcherProps = {
   mode?: "store" | "all";
 };
 
-export default function StoreSwitcher({ mode = "store" }: StoreSwitcherProps) {
+export default function StoreSwitcher({
+  mode = "store",
+  presentation = "sheet",
+}: StoreSwitcherProps) {
   const scheme = useColorScheme();
   const isDark = scheme === "dark";
   const colors: ColorPalette = Colors[isDark ? "dark" : "light"];
@@ -46,8 +51,25 @@ export default function StoreSwitcher({ mode = "store" }: StoreSwitcherProps) {
 
   return (
     <>
-      {isOwner ? (
-        <Pressable onPress={() => setSheetVisible(true)} style={styles.storeSelector}>
+      {isOwner && presentation === "picker" ? (
+        stores.length > 0 ? (
+          <StorePicker
+            stores={stores}
+            selectedStoreId={resolvedStoreId}
+            colors={colors}
+            colorScheme={scheme}
+            onSelect={setStore}
+          />
+        ) : (
+          <Text style={[styles.label, { color: colors.textSecondary }]}>
+            {label}
+          </Text>
+        )
+      ) : isOwner ? (
+        <Pressable
+          onPress={() => setSheetVisible(true)}
+          style={styles.storeSelector}
+        >
           <Text style={[styles.label, { color: colors.buttonPrimary }]}>
             {label}
           </Text>
@@ -59,7 +81,7 @@ export default function StoreSwitcher({ mode = "store" }: StoreSwitcherProps) {
         </Text>
       )}
 
-      {isOwner && (
+      {isOwner && presentation === "sheet" && (
         <AppBottomSheet
           visible={sheetVisible}
           onVisibleChange={setSheetVisible}
@@ -69,7 +91,9 @@ export default function StoreSwitcher({ mode = "store" }: StoreSwitcherProps) {
             <Text style={[styles.sheetTitle, { color: colors.text }]}>
               Select Store
             </Text>
-            <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.sheetSubtitle, { color: colors.textSecondary }]}
+            >
               {mode === "all"
                 ? "Filter by a store or view all stores"
                 : "Choose a store to continue"}
@@ -83,7 +107,9 @@ export default function StoreSwitcher({ mode = "store" }: StoreSwitcherProps) {
                     styles.pill,
                     {
                       backgroundColor:
-                        activeStoreId === null ? "#3b82f6" : colors.backgroundElement,
+                        activeStoreId === null
+                          ? "#3b82f6"
+                          : colors.backgroundElement,
                     },
                   ]}
                   onPress={() => selectStore(null)}

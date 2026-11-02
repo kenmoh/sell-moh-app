@@ -10,7 +10,7 @@ import { useGoogleAuth } from "@/lib/google-auth";
 import { LoginResponseData } from "@/types/auth";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -58,7 +58,7 @@ const SignIn = () => {
   });
   const appleAuth = useAppleAuth();
 
-  const handleSocialSignIn = async (
+  const handleSocialSignIn = useCallback(async (
     provider: "google" | "apple",
     idToken: string,
   ) => {
@@ -74,7 +74,8 @@ const SignIn = () => {
     } catch (err: any) {
       Alert.alert("Sign In Failed", err.message || "Social sign-in failed");
     }
-  };
+  }, [signIn]);
+
   const handleSignIn = async () => {
     const result = signInSchema.safeParse({ email, password });
     if (!result.success) {
@@ -231,12 +232,16 @@ const SignIn = () => {
             <TouchableOpacity
               activeOpacity={0.7}
               onPress={async () => {
-                await googleAuth.promptAsync();
-                if (googleAuth.idToken) {
-                  handleSocialSignIn("google", googleAuth.idToken);
-                }
-                if (googleAuth.error) {
-                  Alert.alert("Google Sign-In", googleAuth.error);
+                try {
+                  const idToken = await googleAuth.promptAsync();
+                  if (idToken) await handleSocialSignIn("google", idToken);
+                } catch (error) {
+                  Alert.alert(
+                    "Google Sign-In",
+                    error instanceof Error
+                      ? error.message
+                      : "Google sign-in failed",
+                  );
                 }
               }}
               disabled={googleAuth.isLoading}

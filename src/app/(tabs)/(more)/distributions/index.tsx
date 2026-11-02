@@ -161,11 +161,24 @@ type DistributionLineDraft = {
   conditionDispatched: "GOOD" | "FAIR" | "DAMAGED";
 };
 
+type ReceiveLineDraft = {
+  id: string;
+  item_id: string;
+  item_name: string;
+  qty_dispatched: number;
+  qty_received: string;
+  qty_damaged: string;
+  condition_received: string;
+  receive_notes: string;
+};
+
 const DISPATCH_CONDITIONS: DistributionLineDraft["conditionDispatched"][] = [
   "GOOD",
   "FAIR",
   "DAMAGED",
 ];
+
+const RECEIVE_CONDITIONS = ["GOOD", "FAIR", "DAMAGED"] as const;
 
 const Distributions = () => {
   const insets = useSafeAreaInsets();
@@ -442,6 +455,68 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     paddingHorizontal: 10,
   },
+  receiveContent: { paddingTop: 8, paddingBottom: 8 },
+  receiveHeader: { gap: 6, marginBottom: 20 },
+  receiveTitle: { fontSize: 20, fontWeight: "700" },
+  receiveSubtitle: { fontSize: 14, lineHeight: 20 },
+  receiveSection: { gap: 10, marginBottom: 20 },
+  receiveLabel: {
+    fontSize: 12,
+    fontWeight: "700",
+    letterSpacing: 0.6,
+    textTransform: "uppercase",
+  },
+  receiveSource: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 14,
+    padding: 14,
+  },
+  receiveSourceName: { fontSize: 15, fontWeight: "600" },
+  receiveItemsHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  receiveItemCount: { fontSize: 12 },
+  receiveItems: { gap: 12 },
+  receiveItemCard: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: 16,
+    padding: 14,
+    gap: 14,
+  },
+  receiveItemHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  receiveItemName: { flex: 1, fontSize: 15, fontWeight: "700" },
+  receiveDispatched: {
+    overflow: "hidden",
+    borderRadius: 100,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  receiveQuantityRow: { flexDirection: "row", gap: 10 },
+  receiveField: { flex: 1 },
+  receiveFieldGroup: { gap: 8 },
+  receiveFieldLabel: { fontSize: 12, fontWeight: "600" },
+  receiveConditions: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  receivePinSection: { gap: 8, marginBottom: 16 },
+  receivePinHint: { fontSize: 12, lineHeight: 18, paddingHorizontal: 4 },
+  receiveFooter: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  receiveFooterButton: { flex: 1 },
   sheetFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -975,6 +1050,7 @@ function ReceiveDistributionSheet({
   const toast = useToast();
   const { user } = useSession();
   const isOwner = isOwnerRole(user);
+  const queryClient = useQueryClient();
   const { mutate, isPending } = useMutation({
     mutationFn: ({
       distributionId,
@@ -984,7 +1060,10 @@ function ReceiveDistributionSheet({
       payload: DistributeReceivePayload;
     }) => receiveDistribution(distributionId, payload),
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["distributions"] });
       toast.success("Received");
+      setLines([]);
+      setPin("");
       onVisibleChange(false);
     },
     onError: (error) =>
@@ -995,22 +1074,10 @@ function ReceiveDistributionSheet({
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
 
   const [pin, setPin] = useState("");
-  const [lines, setLines] = useState<
-    {
-      id: string;
-      item_id: string;
-      item_name: string;
-      qty_dispatched: number;
-      qty_received: string;
-      qty_damaged: string;
-      condition_received: string;
-      receive_notes: string;
-    }[]
-  >([]);
+  const [lines, setLines] = useState<ReceiveLineDraft[]>([]);
 
   React.useEffect(() => {
     if (!visible || !distribution) return;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLines(
       (distribution.items ?? []).map((item) => ({
         id: item.id,
@@ -1026,6 +1093,14 @@ function ReceiveDistributionSheet({
   }, [visible, distribution]);
 
   const anyDamage = lines.some((l) => Number(l.qty_damaged) > 0);
+
+  const updateLine = (lineId: string, patch: Partial<ReceiveLineDraft>) => {
+    setLines((current) =>
+      current.map((line) =>
+        line.id === lineId ? { ...line, ...patch } : line,
+      ),
+    );
+  };
 
   const handleSubmit = () => {
     if (!distribution) return;
@@ -1045,7 +1120,10 @@ function ReceiveDistributionSheet({
   };
 
   const handleVisibleChange = (next: boolean) => {
-    if (!next) setLines([]);
+    if (!next) {
+      setLines([]);
+      setPin("");
+    }
     onVisibleChange(next);
   };
 
@@ -1058,116 +1136,188 @@ function ReceiveDistributionSheet({
       <ScrollView
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.receiveContent}
       >
-        <View style={styles.sheetHeader}>
-          <Text style={[styles.sheetTitle, { color: colors.text }]}>
+        <View style={styles.receiveHeader}>
+          <Text style={[styles.receiveTitle, { color: colors.text }]}>
             Receive distribution
           </Text>
-          <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
-            Confirm what arrived and its condition
+          <Text
+            style={[styles.receiveSubtitle, { color: colors.textSecondary }]}
+          >
+            Confirm what arrived and its condition. Damaged units are logged
+            separately and never added to stock.
           </Text>
         </View>
 
-        <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+        <View style={styles.receiveSection}>
+          <Text style={[styles.receiveLabel, { color: colors.textSecondary }]}>
             From
           </Text>
-          <Text style={styles.fromText}>
-            {distribution?.from_store_name ?? "—"}
-          </Text>
+          <View
+            style={[
+              styles.receiveSource,
+              {
+                backgroundColor: colors.card,
+                borderColor: colors.backgroundElement,
+              },
+            ]}
+          >
+            <Lucide name="warehouse" size={18} color={colors.textSecondary} />
+            <Text style={[styles.receiveSourceName, { color: colors.text }]}>
+              {distribution?.from_store_name ?? "—"}
+            </Text>
+          </View>
         </View>
 
-        <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
-            Items
-          </Text>
-          <View style={styles.linesBox}>
+        <View style={styles.receiveSection}>
+          <View style={styles.receiveItemsHeader}>
+            <Text style={[styles.receiveLabel, { color: colors.textSecondary }]}>
+              Items
+            </Text>
+            <Text
+              style={[
+                styles.receiveItemCount,
+                { color: colors.textSecondary },
+              ]}
+            >
+              {lines.length} {lines.length === 1 ? "item" : "items"}
+            </Text>
+          </View>
+          <View style={styles.receiveItems}>
             {lines.map((line) => (
-              <View key={line.id} style={styles.lineRow}>
-                <View style={styles.lineName}>
-                  <Text style={[styles.lineItemName, { color: colors.text }]}>
+              <View
+                key={line.id}
+                style={[
+                  styles.receiveItemCard,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: colors.backgroundElement,
+                  },
+                ]}
+              >
+                <View style={styles.receiveItemHeader}>
+                  <Text
+                    style={[styles.receiveItemName, { color: colors.text }]}
+                  >
                     {line.item_name}
                   </Text>
                   <Text
-                    style={[styles.lineMeta, { color: colors.textSecondary }]}
+                    style={[
+                      styles.receiveDispatched,
+                      {
+                        color: colors.textSecondary,
+                        backgroundColor: colors.backgroundElement,
+                      },
+                    ]}
                   >
-                    dispatched {line.qty_dispatched}
+                    Sent {line.qty_dispatched}
                   </Text>
                 </View>
-                <View style={{ flex: 1 }}>
+
+                <View style={styles.receiveQuantityRow}>
+                  <View style={styles.receiveField}>
+                    <AppTextInput
+                      label="Received"
+                      value={line.qty_received}
+                      onChangeText={(value) =>
+                        updateLine(line.id, {
+                          qty_received: value.replace(/[^0-9]/g, ""),
+                        })
+                      }
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                  <View style={styles.receiveField}>
+                    <AppTextInput
+                      label="Damaged"
+                      value={line.qty_damaged}
+                      onChangeText={(value) =>
+                        updateLine(line.id, {
+                          qty_damaged: value.replace(/[^0-9]/g, ""),
+                        })
+                      }
+                      keyboardType="number-pad"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.receiveFieldGroup}>
                   <Text
-                    style={[styles.sheetLabel, { color: colors.textSecondary }]}
+                    style={[
+                      styles.receiveFieldLabel,
+                      { color: colors.textSecondary },
+                    ]}
                   >
-                    Received
+                    Condition received
                   </Text>
-                  <AppTextInput
-                    value={line.qty_received}
-                    onChangeText={(v) => {
-                      const nl = lines.map((l) =>
-                        l.id === line.id ? { ...l, qty_received: v } : l,
-                      );
-                      setLines(nl);
-                    }}
-                    keyboardType="numeric"
-                    style={styles.qtyInput}
-                  />
+                  <View style={styles.receiveConditions}>
+                    {RECEIVE_CONDITIONS.map((condition) => (
+                      <Pill
+                        key={condition}
+                        label={
+                          condition.charAt(0) +
+                          condition.slice(1).toLowerCase()
+                        }
+                        size="sm"
+                        active={line.condition_received === condition}
+                        onPress={() =>
+                          updateLine(line.id, {
+                            condition_received: condition,
+                          })
+                        }
+                      />
+                    ))}
+                  </View>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text
-                    style={[styles.sheetLabel, { color: colors.textSecondary }]}
-                  >
-                    Damaged
-                  </Text>
-                  <AppTextInput
-                    value={line.qty_damaged}
-                    onChangeText={(v) => {
-                      const nl = lines.map((l) =>
-                        l.id === line.id ? { ...l, qty_damaged: v } : l,
-                      );
-                      setLines(nl);
-                    }}
-                    keyboardType="numeric"
-                    style={styles.qtyInput}
-                  />
-                </View>
+
+                <AppTextInput
+                  label="Notes (optional)"
+                  placeholder="Add a note about this item"
+                  value={line.receive_notes}
+                  onChangeText={(value) =>
+                    updateLine(line.id, { receive_notes: value })
+                  }
+                />
               </View>
             ))}
           </View>
         </View>
 
-        {anyDamage && !isOwner && (
-          <View style={styles.sheetSection}>
-            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
-              Supervisor PIN
-            </Text>
+        {!isOwner && (
+          <View style={styles.receivePinSection}>
             <AppTextInput
+              label="Supervisor PIN"
               value={pin}
               onChangeText={setPin}
-              placeholder="Required to record damage"
-              keyboardType="numeric"
-              style={styles.pinInput}
+              placeholder="Required if any damage is recorded"
+              keyboardType="number-pad"
+              secureTextEntry
+              autoComplete="off"
+              textContentType="none"
             />
+            <Text
+              style={[styles.receivePinHint, { color: colors.textSecondary }]}
+            >
+              Needed only when damaged units are recorded.
+            </Text>
           </View>
         )}
 
-        <View style={styles.sheetFooter}>
-          <Pressable
+        <View style={styles.receiveFooter}>
+          <Button
+            variant="outline"
+            style={styles.receiveFooterButton}
             onPress={() => onVisibleChange(false)}
-            style={styles.cancelPress}
-          >
-            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
-              Cancel
-            </Text>
-          </Pressable>
-          <Pressable
+            title="Cancel"
+          />
+          <Button
+            style={styles.receiveFooterButton}
             onPress={handleSubmit}
-            disabled={isPending}
-            style={[styles.submitPress, {}]}
-          >
-            <Text style={[styles.submitText, { color: colors.buttonPrimary }]}>
-              {isPending ? "Receiving…" : "Confirm receipt"}
-            </Text>
-          </Pressable>
+            loading={isPending}
+            loadingTitle="Receiving..."
+            title="Confirm receipt"
+          />
         </View>
       </ScrollView>
     </AppBottomSheet>
@@ -1498,7 +1648,6 @@ function DistributionDetail({
                     size="sm"
                   />
                 )}
-                )
               </View>
             ))}
           </View>

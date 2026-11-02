@@ -20,6 +20,10 @@ export const useToast = () => {
     return show({ title, message, type: "error", timeout });
   };
 
+  const sheetError = (title: string, message?: string, timeout = 6000) => {
+    return show({ title, message, type: "error", timeout, sheetOnly: true });
+  };
+
   const info = (title: string, message?: string, timeout = 5000) => {
     return show({ title, message, type: "info", timeout });
   };
@@ -42,6 +46,7 @@ export const useToast = () => {
     dismiss,
     success,
     error,
+    sheetError,
     info,
     warning,
     action,
