@@ -3,6 +3,7 @@ import {
   createDistribution,
   fetchDistribution,
   fetchDistributions,
+  fetchProducts,
   receiveDistribution,
 } from "@/api/inventory";
 import AppBottomSheet from "@/components/bottom-sheet";
@@ -22,11 +23,13 @@ import type {
   Distribution,
   DistributionListItem,
   DistributionStatus,
+  ProductResponse,
 } from "@/types/product";
 import Add from "@expo/material-symbols/add.xml";
+import { Checkbox, Host } from "@expo/ui";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -152,6 +155,17 @@ const DistributionCard: React.FC<{
 };
 
 type StorePick = { id: string; name: string; is_warehouse: boolean };
+type DistributionLineDraft = {
+  product: ProductResponse;
+  qtyDispatched: string;
+  conditionDispatched: "GOOD" | "FAIR" | "DAMAGED";
+};
+
+const DISPATCH_CONDITIONS: DistributionLineDraft["conditionDispatched"][] = [
+  "GOOD",
+  "FAIR",
+  "DAMAGED",
+];
 
 const Distributions = () => {
   const insets = useSafeAreaInsets();
@@ -167,7 +181,6 @@ const Distributions = () => {
   const [status, setStatus] = useState<DistributionStatus | "all">("all");
   const [selected, setSelected] = useState<DistributionListItem | null>(null);
   const [detail, setDetail] = useState<Distribution | null>(null);
-  const [createSheetVisible, setCreateSheetVisible] = useState(false);
   const [receiveSheetVisible, setReceiveSheetVisible] = useState(false);
   const [cancelSheetVisible, setCancelSheetVisible] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
@@ -206,18 +219,6 @@ const Distributions = () => {
     setDetail(res);
     setDetailOpen(true);
   };
-
-  const { mutate: createMutate, isPending: createPending } = useMutation({
-    mutationFn: (payload: DistributeCreatePayload) =>
-      createDistribution(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["distributions"] });
-      toast.success("Distribution created");
-      setCreateSheetVisible(false);
-    },
-    onError: (error) =>
-      toast.error("Could not create distribution", error.message),
-  });
 
   const { mutate: receiveMutate, isPending: receivePending } = useMutation({
     mutationFn: ({
@@ -261,7 +262,9 @@ const Distributions = () => {
         <Stack.Toolbar placement="right">
           <Stack.Toolbar.Button
             icon={process.env.EXPO_OS === "ios" ? "plus" : Add}
-            onPress={() => setCreateSheetVisible(true)}
+            onPress={() =>
+              router.push("/(tabs)/(more)/distributions/new-distribution")
+            }
           />
         </Stack.Toolbar>
       )}
@@ -325,13 +328,6 @@ const Distributions = () => {
         />
       )}
 
-      <CreateDistributionSheet
-        visible={createSheetVisible}
-        onVisibleChange={setCreateSheetVisible}
-        warehouseStores={warehouseStores}
-        destinationStores={destinationStores}
-        disabled={!canCreate || warehouseStores.length === 0}
-      />
       <ReceiveDistributionSheet
         visible={receiveSheetVisible}
         onVisibleChange={setReceiveSheetVisible}
@@ -478,21 +474,61 @@ const styles = StyleSheet.create({
   },
   alertStatValue: { fontSize: 20, fontWeight: "800" },
   alertStatLabel: { fontSize: 12, fontWeight: "600", marginTop: 2 },
+  createContent: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 16 },
+  createHeader: { gap: 4, marginBottom: 20 },
+  createSubtitle: { fontSize: 14, lineHeight: 20 },
+  createSection: { gap: 10, marginBottom: 20 },
+  createSectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  createLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
+  },
+  createHelper: { fontSize: 12, lineHeight: 18 },
+  createPillRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  createSelectionList: { gap: 8 },
+  createSelectionCard: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  createCheckboxHost: { width: "100%", minHeight: 40 },
+  createProductCard: {
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    padding: 12,
+    gap: 8,
+  },
+  createLineDetails: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    paddingTop: 10,
+    gap: 12,
+  },
+  createQtyField: { gap: 6 },
+  createConditionField: { gap: 8 },
+  createFieldLabel: { fontSize: 12, fontWeight: "600" },
+  createConditionRow: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  createLoading: { paddingVertical: 18 },
+  createMessage: { gap: 8 },
+  createError: { color: "#dc2626", fontSize: 12 },
+  createRetry: { fontSize: 13, fontWeight: "700" },
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Create distribution sheet (warehouse)
 // ─────────────────────────────────────────────────────────────────────────────
 
-function CreateDistributionSheet({
-  visible,
-  onVisibleChange,
+export function CreateDistributionScreen({
   warehouseStores,
   destinationStores,
   disabled,
 }: {
-  visible: boolean;
-  onVisibleChange: (visible: boolean) => void;
   warehouseStores: StorePick[];
   destinationStores: StorePick[];
   disabled: boolean;
@@ -500,12 +536,58 @@ function CreateDistributionSheet({
   const toast = useToast();
   const { user } = useSession();
   const isOwner = isOwnerRole(user);
+  const queryClient = useQueryClient();
   const { mutate, isPending } = useMutation({
-    mutationFn: (payload: DistributeCreatePayload) =>
-      createDistribution(payload),
-    onSuccess: () => {
-      toast.success("Distribution created");
-      onVisibleChange(false);
+    mutationFn: async (payloads: DistributeCreatePayload[]) => {
+      const createdStoreIds: string[] = [];
+      const failures: { storeId: string; message: string }[] = [];
+
+      for (const payload of payloads) {
+        try {
+          await createDistribution(payload);
+          createdStoreIds.push(payload.to_store_id);
+        } catch (error) {
+          failures.push({
+            storeId: payload.to_store_id,
+            message:
+              error instanceof Error
+                ? error.message
+                : "An unexpected error occurred.",
+          });
+        }
+      }
+
+      return { createdStoreIds, failures };
+    },
+    onSuccess: ({ createdStoreIds, failures }) => {
+      if (createdStoreIds.length > 0) {
+        void queryClient.invalidateQueries({ queryKey: ["distributions"] });
+      }
+
+      if (failures.length > 0) {
+        setToStoreIds(failures.map((failure) => failure.storeId));
+        toast.error(
+          createdStoreIds.length > 0
+            ? "Some distributions could not be created"
+            : "Could not create distribution",
+          failures
+            .map((failure) => {
+              const storeName = destinationStores.find(
+                (store) => store.id === failure.storeId,
+              )?.name;
+              return `${storeName ?? failure.storeId}: ${failure.message}`;
+            })
+            .join("; "),
+        );
+        return;
+      }
+
+      toast.success(
+        `Created distribution${createdStoreIds.length === 1 ? "" : "s"} to ${
+          createdStoreIds.length
+        } store${createdStoreIds.length === 1 ? "" : "s"}`,
+      );
+      router.back();
     },
     onError: (error) =>
       toast.error("Could not create distribution", error.message),
@@ -513,150 +595,321 @@ function CreateDistributionSheet({
 
   const scheme = useColorScheme();
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
-  const isDark = scheme === "dark";
-
+  const insets = useSafeAreaInsets();
   const [fromStoreId, setFromStoreId] = useState(warehouseStores[0]?.id ?? "");
-  const [toStoreId, setToStoreId] = useState("");
+  const [toStoreIds, setToStoreIds] = useState<string[]>([]);
+  const [productSearch, setProductSearch] = useState("");
   const [notes, setNotes] = useState("");
   const [pin, setPin] = useState("");
-  const [lines, setLines] = useState<
-    {
-      id: string;
-      product_id: string;
-      item_name: string;
-      qty_dispatched: string;
-      condition_dispatched: string;
-    }[]
-  >([]);
+  const [lines, setLines] = useState<DistributionLineDraft[]>([]);
 
-  const addLine = () =>
-    setLines([
-      ...lines,
-      {
-        id: String(Date.now()),
-        product_id: "",
-        item_name: "",
-        qty_dispatched: "",
-        condition_dispatched: "GOOD",
-      },
-    ]);
-  const removeLine = (id: string) => setLines(lines.filter((l) => l.id !== id));
+  const selectedFromStoreId = warehouseStores.some(
+    (store) => store.id === fromStoreId,
+  )
+    ? fromStoreId
+    : (warehouseStores[0]?.id ?? "");
+  const {
+    data: productsData,
+    isLoading: productsLoading,
+    isError: productsError,
+    error: productError,
+    refetch: refetchProducts,
+  } = useQuery({
+    queryKey: ["distribution-products", selectedFromStoreId],
+    queryFn: () => fetchProducts(selectedFromStoreId, { page_size: 100 }),
+    enabled: !!selectedFromStoreId,
+  });
+  const products = useMemo(() => productsData?.data ?? [], [productsData]);
+  const filteredProducts = useMemo(() => {
+    const search = productSearch.trim().toLowerCase();
+    if (!search) return products;
+    return products.filter(
+      (product) =>
+        product.name.toLowerCase().includes(search) ||
+        product.sku?.toLowerCase().includes(search),
+    );
+  }, [productSearch, products]);
 
-  const valid =
-    lines.length > 0 &&
-    lines.every(
-      (l) => l.product_id && l.item_name && Number(l.qty_dispatched) > 0,
-    ) &&
-    !!toStoreId &&
-    (isOwner || pin.trim().length > 0);
-
-  const handleVisibleChange = (next: boolean) => {
-    if (!next) {
-      setFromStoreId(warehouseStores[0]?.id ?? "");
-      setToStoreId("");
-      setNotes("");
-      setPin("");
-      setLines([]);
-    }
-    onVisibleChange(next);
+  const setProductSelected = (product: ProductResponse, selected: boolean) => {
+    setLines((current) => {
+      const alreadySelected = current.some(
+        (line) => line.product.id === product.id,
+      );
+      if (selected && !alreadySelected) {
+        return [
+          ...current,
+          {
+            product,
+            qtyDispatched: "1",
+            conditionDispatched: "GOOD",
+          },
+        ];
+      }
+      if (!selected && alreadySelected) {
+        return current.filter((line) => line.product.id !== product.id);
+      }
+      return current;
+    });
   };
 
+  const valid =
+    !!selectedFromStoreId &&
+    toStoreIds.length > 0 &&
+    lines.length > 0 &&
+    lines.every((line) => {
+      const quantity = Number(line.qtyDispatched);
+      return Number.isInteger(quantity) && quantity > 0;
+    }) &&
+    (isOwner || pin.trim().length > 0);
+
   return (
-    <AppBottomSheet
-      snapPoints={["85%"]}
-      visible={visible}
-      onVisibleChange={handleVisibleChange}
-    >
+    <View style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={[
+          styles.createContent,
+          { paddingBottom: insets.bottom + 24 },
+        ]}
       >
-        <View style={styles.sheetHeader}>
-          <Text style={[styles.sheetTitle, { color: colors.text }]}>
-            Create distribution
-          </Text>
-          <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
-            Send stock from the warehouse to a store
+        <View style={styles.createHeader}>
+          <Text
+            style={[styles.createSubtitle, { color: colors.textSecondary }]}
+          >
+            Send warehouse stock to one or more stores
           </Text>
         </View>
 
-        <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
-            From (warehouse)
+        <View style={styles.createSection}>
+          <Text style={[styles.createLabel, { color: colors.textSecondary }]}>
+            From warehouse
           </Text>
-          <AppTextInput
-            value={fromStoreId}
-            onChangeText={setFromStoreId}
-            placeholder="Choose a warehouse"
-            editable={false}
-          />
-        </View>
-
-        <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
-            To (store)
-          </Text>
-          <AppTextInput
-            value={toStoreId}
-            onChangeText={setToStoreId}
-            placeholder="Choose a store"
-            editable={false}
-          />
-        </View>
-
-        <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
-            Items
-          </Text>
-          <View style={styles.linesBox}>
-            {lines.map((line) => (
-              <View key={line.id} style={styles.lineRow}>
-                <AppTextInput
-                  value={line.item_name}
-                  onChangeText={(v) => {
-                    const nl = lines.map((l) =>
-                      l.id === line.id ? { ...l, item_name: v } : l,
-                    );
-                    setLines(nl);
+          {warehouseStores.length > 0 ? (
+            <View style={styles.createPillRow}>
+              {warehouseStores.map((store) => (
+                <Pill
+                  key={store.id}
+                  label={store.name}
+                  icon="store"
+                  active={selectedFromStoreId === store.id}
+                  onPress={() => {
+                    if (selectedFromStoreId === store.id) return;
+                    setFromStoreId(store.id);
+                    setLines([]);
                   }}
-                  placeholder="Product"
-                  style={styles.lineInput}
                 />
-                <AppTextInput
-                  value={line.qty_dispatched}
-                  onChangeText={(v) => {
-                    const nl = lines.map((l) =>
-                      l.id === line.id ? { ...l, qty_dispatched: v } : l,
-                    );
-                    setLines(nl);
-                  }}
-                  placeholder="Qty"
-                  keyboardType="numeric"
-                  style={styles.qtyInput}
-                />
-                <Pressable
-                  onPress={() => removeLine(line.id)}
-                  style={styles.removeLine}
-                >
-                  <Text style={{ color: "#dc2626", fontWeight: "700" }}>×</Text>
-                </Pressable>
-              </View>
+              ))}
+            </View>
+          ) : (
+            <Text
+              style={[styles.createHelper, { color: colors.textSecondary }]}
+            >
+              No warehouse is available.
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.createSection}>
+          <View style={styles.createSectionHeader}>
+            <Text style={[styles.createLabel, { color: colors.textSecondary }]}>
+              To stores
+            </Text>
+            <Text
+              style={[styles.createHelper, { color: colors.textSecondary }]}
+            >
+              {toStoreIds.length} selected
+            </Text>
+          </View>
+          <View style={styles.createPillRow}>
+            {destinationStores.map((store) => (
+              <Pill
+                key={store.id}
+                label={store.name}
+                size="sm"
+                active={toStoreIds.includes(store.id)}
+                disabled={disabled}
+                onPress={() =>
+                  setToStoreIds((current) =>
+                    current.includes(store.id)
+                      ? current.filter((id) => id !== store.id)
+                      : [...current, store.id],
+                  )
+                }
+              />
             ))}
-            {lines.length === 0 && (
-              <Text style={[styles.empty, { color: colors.textSecondary }]}>
-                No items yet.
+            {destinationStores.length === 0 && (
+              <Text
+                style={[styles.createHelper, { color: colors.textSecondary }]}
+              >
+                No destination stores are available.
               </Text>
             )}
-            <Pressable onPress={addLine} style={styles.addLine}>
-              <Text style={{ color: colors.buttonPrimary, fontWeight: "700" }}>
-                + Add item
-              </Text>
-            </Pressable>
           </View>
         </View>
 
-        <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+        <View style={styles.createSection}>
+          <View style={styles.createSectionHeader}>
+            <Text style={[styles.createLabel, { color: colors.textSecondary }]}>
+              Items
+            </Text>
+            <Text
+              style={[styles.createHelper, { color: colors.textSecondary }]}
+            >
+              {lines.length} selected
+            </Text>
+          </View>
+          <AppTextInput
+            placeholder="Search warehouse items..."
+            value={productSearch}
+            onChangeText={setProductSearch}
+            leftIcon="search"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          {productsLoading ? (
+            <ActivityIndicator
+              color={colors.buttonPrimary}
+              style={styles.createLoading}
+            />
+          ) : productsError ? (
+            <View style={styles.createMessage}>
+              <Text style={[styles.createError, { color: "#dc2626" }]}>
+                Could not load warehouse items:{" "}
+                {productError instanceof Error
+                  ? productError.message
+                  : "Please try again."}
+              </Text>
+              <Pressable onPress={() => void refetchProducts()}>
+                <Text
+                  style={[styles.createRetry, { color: colors.buttonPrimary }]}
+                >
+                  Try again
+                </Text>
+              </Pressable>
+            </View>
+          ) : filteredProducts.length > 0 ? (
+            <View style={styles.createSelectionList}>
+              {filteredProducts.map((product) => {
+                const line = lines.find(
+                  (item) => item.product.id === product.id,
+                );
+                const isSelected = !!line;
+
+                return (
+                  <View
+                    key={product.id}
+                    style={[
+                      styles.createProductCard,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: colors.backgroundElement,
+                      },
+                    ]}
+                  >
+                    <Host matchContents style={styles.createCheckboxHost}>
+                      <Checkbox
+                        label={product.name}
+                        value={isSelected}
+                        onValueChange={(selected) =>
+                          setProductSelected(product, selected)
+                        }
+                      />
+                    </Host>
+                    {line && (
+                      <View
+                        style={[
+                          styles.createLineDetails,
+                          {
+                            borderTopColor:
+                              scheme === "dark" ? "#22252a" : "#f0f2f5",
+                          },
+                        ]}
+                      >
+                        <View style={styles.createQtyField}>
+                          <Text
+                            style={[
+                              styles.createFieldLabel,
+                              { color: colors.textSecondary },
+                            ]}
+                          >
+                            Quantity
+                          </Text>
+                          <AppTextInput
+                            value={line.qtyDispatched}
+                            onChangeText={(value) =>
+                              setLines((current) =>
+                                current.map((item) =>
+                                  item.product.id === product.id
+                                    ? {
+                                        ...item,
+                                        qtyDispatched: value.replace(
+                                          /[^0-9]/g,
+                                          "",
+                                        ),
+                                      }
+                                    : item,
+                                ),
+                              )
+                            }
+                            placeholder="1"
+                            keyboardType="number-pad"
+                          />
+                        </View>
+                        <View style={styles.createConditionField}>
+                          <Text
+                            style={[
+                              styles.createFieldLabel,
+                              { color: colors.textSecondary },
+                            ]}
+                          >
+                            Condition
+                          </Text>
+                          <View style={styles.createConditionRow}>
+                            {DISPATCH_CONDITIONS.map((condition) => (
+                              <Pill
+                                key={condition}
+                                label={
+                                  condition.charAt(0) +
+                                  condition.slice(1).toLowerCase()
+                                }
+                                size="sm"
+                                active={line.conditionDispatched === condition}
+                                onPress={() =>
+                                  setLines((current) =>
+                                    current.map((item) =>
+                                      item.product.id === product.id
+                                        ? {
+                                            ...item,
+                                            conditionDispatched: condition,
+                                          }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                              />
+                            ))}
+                          </View>
+                        </View>
+                      </View>
+                    )}
+                  </View>
+                );
+              })}
+            </View>
+          ) : (
+            <Text
+              style={[styles.createHelper, { color: colors.textSecondary }]}
+            >
+              {products.length === 0
+                ? "No items in this warehouse."
+                : "No items match your search."}
+            </Text>
+          )}
+        </View>
+
+        <View style={styles.createSection}>
+          <Text style={[styles.createLabel, { color: colors.textSecondary }]}>
             Notes (optional)
           </Text>
           <AppTextInput
@@ -664,14 +917,12 @@ function CreateDistributionSheet({
             onChangeText={setNotes}
             placeholder="e.g. Weekend restock"
             multiline
-            numberOfLines={3}
-            style={styles.notesInput}
           />
         </View>
 
         {!isOwner && (
-          <View style={styles.sheetSection}>
-            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+          <View style={styles.createSection}>
+            <Text style={[styles.createLabel, { color: colors.textSecondary }]}>
               Supervisor PIN
             </Text>
             <AppTextInput
@@ -679,48 +930,36 @@ function CreateDistributionSheet({
               onChangeText={setPin}
               placeholder="Required to create a distribution"
               keyboardType="numeric"
-              style={styles.pinInput}
+              secureTextEntry
             />
           </View>
         )}
 
-        <View style={styles.sheetFooter}>
-          <Pressable
-            onPress={() => onVisibleChange(false)}
-            style={styles.cancelPress}
-          >
-            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
-              Cancel
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => {
-              mutate({
-                from_store_id: fromStoreId,
-                to_store_id: toStoreId,
-                lines: lines.map((l) => ({
-                  product_id: l.product_id,
-                  item_name: l.item_name,
-                  qty_dispatched: Number(l.qty_dispatched),
-                  condition_dispatched: l.condition_dispatched || undefined,
-                })),
-                notes: notes || null,
-                supervisor_pin: isOwner ? undefined : pin || undefined,
-              });
-            }}
-            disabled={disabled || !valid || isPending}
-            style={[
-              styles.submitPress,
-              disabled || !valid ? styles.submitDisabled : {},
-            ]}
-          >
-            <Text style={[styles.submitText, { color: colors.buttonPrimary }]}>
-              {isPending ? "Creating…" : "Create distribution"}
-            </Text>
-          </Pressable>
-        </View>
+        <Button
+          disabled={disabled || !valid || isPending}
+          fullWidth
+          leftIcon={(color) => <Lucide name="truck" size={18} color={color} />}
+          loading={isPending}
+          loadingTitle="Creating..."
+          onPress={() => {
+            const payloads = toStoreIds.map((toStoreId) => ({
+              from_store_id: selectedFromStoreId,
+              to_store_id: toStoreId,
+              lines: lines.map((line) => ({
+                product_id: line.product.id,
+                item_name: line.product.name,
+                qty_dispatched: Number(line.qtyDispatched),
+                condition_dispatched: line.conditionDispatched,
+              })),
+              notes: notes || undefined,
+              supervisor_pin: isOwner ? undefined : pin.trim(),
+            }));
+            mutate(payloads);
+          }}
+          title="Create distribution"
+        />
       </ScrollView>
-    </AppBottomSheet>
+    </View>
   );
 }
 

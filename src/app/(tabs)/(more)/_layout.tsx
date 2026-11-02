@@ -39,18 +39,13 @@ const MoreLayout = () => {
           name="tenant-activity-logs"
           options={{ title: "Activity Logs" }}
         />
-        <Stack.Screen
-          name="settlement"
-          options={{ title: "Settlements" }}
-        />
+        <Stack.Screen name="settlement" options={{ title: "Settlements" }} />
         <Stack.Screen
           name="change-password"
           options={{ title: "Change Password" }}
         />
-        <Stack.Screen
-          name="sessions"
-          options={{ title: "Active Sessions" }}
-        />
+        <Stack.Screen name="sessions" options={{ title: "Active Sessions" }} />
+        <Stack.Screen name="distributions" options={{ headerShown: false }} />
       </Stack>
     </AView>
   );
