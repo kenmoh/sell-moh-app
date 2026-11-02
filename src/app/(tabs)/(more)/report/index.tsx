@@ -16,7 +16,7 @@ import { Colors } from "@/constants/theme";
 import { useActiveStore } from "@/lib/store-context";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
@@ -188,10 +188,16 @@ const ReportsScreen = () => {
   }
 
   return (
-    <SafeAreaView
+    <View
       style={[styles.container, { backgroundColor: colors.background }]}
-      edges={["top", "left", "right"]}
+      // edges={["top", "left", "right"]}
     >
+      <Stack.Screen
+        options={{
+          headerShown: true,
+          title: "Report",
+        }}
+      />
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: 24 }}
@@ -771,7 +777,7 @@ const ReportsScreen = () => {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 

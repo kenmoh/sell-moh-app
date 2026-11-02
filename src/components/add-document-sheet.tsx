@@ -3,18 +3,20 @@ import { fetchProducts } from "@/api/inventory";
 import { fetchTaxTypes } from "@/api/taxes";
 import AppBottomSheet from "@/components/bottom-sheet";
 import { Button } from "@/components/button";
+import DocumentItemPicker from "@/components/document-item-picker";
 import Pill from "@/components/pill";
 import PillRow from "@/components/pill-row";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { useToast } from "@/hooks/use-toast";
 import { useActiveStore } from "@/lib/store-context";
 import { Customer } from "@/types/customer";
-import type { ProductResponse } from "@/types/product";
 import {
   DocumentCreateRequest,
   DocumentItemLine,
   DocumentType,
 } from "@/types/document-types";
+import type { ProductResponse } from "@/types/product";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
@@ -49,9 +51,15 @@ const emptyItem = (): DocumentItemLine => ({
   tax_ids: [],
 });
 
+const formatDateForApi = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+    date.getDate(),
+  ).padStart(2, "0")}`;
+
 const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === "dark" ? "dark" : "light"];
+  const toast = useToast();
   const { isOwner, stores, resolvedStoreId, resolvedStoreName } =
     useActiveStore();
 
@@ -74,8 +82,9 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
     queryFn: () => fetchTaxTypes(true),
   });
   const activeTaxes = taxTypes.filter((t) => t.is_active);
-  const activeStoreId = isOwner ? (storeId ?? resolvedStoreId) : resolvedStoreId;
-  const [openDropdown, setOpenDropdown] = useState<number | null>(null);
+  const activeStoreId = isOwner
+    ? (storeId ?? resolvedStoreId)
+    : resolvedStoreId;
   const { data: productsData } = useQuery({
     queryKey: ["document-products", activeStoreId],
     queryFn: () => fetchProducts(activeStoreId, { page_size: 100 }),
@@ -89,7 +98,6 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
       description: product.name,
       unit_price: product.selling_price || 0,
     });
-    setOpenDropdown(null);
   };
 
   const { data: customerResults, isPending: isSearchingCustomers } = useQuery({
@@ -142,13 +150,18 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
         customer_name: customerName || undefined,
         customer_phone: customerPhone || undefined,
         customer_address: customerAddress || undefined,
-        due_date: dueDate ? dueDate.toISOString() : undefined,
+        due_date: dueDate ? formatDateForApi(dueDate) : undefined,
         notes: notes || undefined,
         store_id: isOwner ? (storeId ?? resolvedStoreId) : undefined,
         items: items.filter((i) => i.description.trim() !== ""),
       });
       onVisibleChange(false);
       reset();
+    } catch (error) {
+      toast.error(
+        "Couldn't create document",
+        error instanceof Error ? error.message : "Please try again.",
+      );
     } finally {
       setIsCreating(false);
     }
@@ -387,50 +400,22 @@ const AddDocumentSheet = ({ visible, onVisibleChange, onCreate }: Props) => {
                 { backgroundColor: colors.backgroundElement },
               ]}
             >
-              <Pressable
-                onPress={() =>
-                  setOpenDropdown(openDropdown === index ? null : index)
+              <DocumentItemPicker
+                selectedProductId={item.product_id}
+                selectedLabel={
+                  item.product_id
+                    ? (products.find((product) => product.id === item.product_id)
+                        ?.name ?? item.description)
+                    : item.description || "Select item"
                 }
-                style={styles.itemSelect}
-              >
-                <Text
-                  style={[
-                    styles.itemSelectText,
-                    { color: colors.text },
-                  ]}
-                >
-                  {item.product_id
-                    ? products.find((p) => p.id === item.product_id)?.name ??
-                      item.description
-                    : item.description || "Select item"}
-                </Text>
-                <Lucide name="chevron-down" size={14} color={colors.textSecondary} />
-              </Pressable>
-              {openDropdown === index && (
-                <View style={styles.itemDropdown}>
-                  {products.map((p) => (
-                    <Pressable
-                      key={p.id}
-                      onPress={() => pickItem(index, p)}
-                      style={styles.dropdownOption}
-                    >
-                      <Text style={[styles.dropdownOptionText, { color: colors.text }]}>
-                        {p.name}
-                      </Text>
-                    </Pressable>
-                  ))}
-                  {products.length === 0 && (
-                    <Text
-                      style={[
-                        styles.dropdownOptionText,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      No items in this store
-                    </Text>
-                  )}
-                </View>
-              )}
+                products={products}
+                colors={colors}
+                colorScheme={scheme}
+                onSelect={(productId) => {
+                  const product = products.find((p) => p.id === productId);
+                  if (product) pickItem(index, product);
+                }}
+              />
               <View style={styles.itemMeta}>
                 <View style={styles.itemField}>
                   <Text
@@ -685,40 +670,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.4,
-  },
-  itemSelect: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 12,
-  },
-  itemSelectText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  itemDropdown: {
-    borderTopWidth: 1,
-    borderColor: "#e2e8f0",
-    backgroundColor: "#fff",
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-    maxHeight: 220,
-  },
-  dropdownOption: {
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: "#f1f5f9",
-  },
-  dropdownOptionText: {
-    fontSize: 14,
-    fontWeight: "600",
   },
   lineTaxes: {
     flexDirection: "row",

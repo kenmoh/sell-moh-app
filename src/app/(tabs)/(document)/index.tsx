@@ -6,6 +6,7 @@ import PillRow from "@/components/pill-row";
 import SearchInput from "@/components/search-input";
 import { Colors } from "@/constants/theme";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
+import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/lib/ctx";
 import { useActiveStore } from "@/lib/store-context";
 import {
@@ -23,7 +24,6 @@ import { router, Stack } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   FlatList,
   Pressable,
   StyleSheet,
@@ -82,6 +82,7 @@ const DocumentListScreen = () => {
   const [activeType, setActiveType] = useState<DocumentType | "all">("all");
   const [showAddSheet, setShowAddSheet] = useState(false);
   const queryClient = useQueryClient();
+  const toast = useToast();
   const { user } = useSession();
   const { activeStoreId } = useActiveStore();
 
@@ -125,15 +126,12 @@ const DocumentListScreen = () => {
     mutationFn: (payload: DocumentCreateRequest) => createDocument(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["documents"] });
-      Alert.alert("Success", "Document created successfully");
-    },
-    onError: (error: Error) => {
-      Alert.alert("Error", error.message || "Failed to create document");
+      toast.success("Document created", "Document created successfully");
     },
   });
 
   const handleCreate = async (payload: DocumentCreateRequest) => {
-    createMutation.mutateAsync({
+    await createMutation.mutateAsync({
       ...payload,
       tenant_id: user?.business_id ?? "",
       actor_id: user?.user_id ?? "",
