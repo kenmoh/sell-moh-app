@@ -1,23 +1,30 @@
-import { fetchDistributions, fetchDistribution, createDistribution, receiveDistribution, cancelDistribution } from "@/api/inventory";
+import {
+  cancelDistribution,
+  createDistribution,
+  fetchDistribution,
+  fetchDistributions,
+  receiveDistribution,
+} from "@/api/inventory";
+import AppBottomSheet from "@/components/bottom-sheet";
 import { Button } from "@/components/button";
 import Pill from "@/components/pill";
-import AppBottomSheet from "@/components/bottom-sheet";
-import AppTextInput from "@/components/text-input";
 import StoreSwitcher from "@/components/store-switcher";
-import { Colors, ColorPalette } from "@/constants/theme";
-import { useActiveStore } from "@/lib/store-context";
-import { isOwnerRole } from "@/lib/roles";
-import { useSession } from "@/lib/ctx";
+import AppTextInput from "@/components/text-input";
+import { ColorPalette, Colors } from "@/constants/theme";
 import { useToast } from "@/hooks/use-toast";
+import { useSession } from "@/lib/ctx";
+import { isOwnerRole } from "@/lib/roles";
+import { useActiveStore } from "@/lib/store-context";
 import type {
+  DistributeCancelPayload,
+  DistributeCreatePayload,
+  DistributeReceivePayload,
   Distribution,
   DistributionDirection,
   DistributionListItem,
   DistributionStatus,
-  DistributeCancelPayload,
-  DistributeCreatePayload,
-  DistributeReceivePayload,
 } from "@/types/product";
+import Add from "@expo/material-symbols/add.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Stack } from "expo-router";
@@ -144,9 +151,7 @@ const DistributionCard: React.FC<{
           <Button
             variant="outline"
             fullWidth
-            leftIcon={(color) => (
-              <Lucide name="x" size={18} color={color} />
-            )}
+            leftIcon={(color) => <Lucide name="x" size={18} color={color} />}
             onPress={() => onPress(distribution)}
             title="Cancel"
           />
@@ -164,12 +169,15 @@ const Distributions = () => {
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
   const { resolvedStoreId, stores } = useActiveStore();
   const { user } = useSession();
-  const canCreate = user?.permissions?.includes("inventory:distribution_create") ?? false;
+  const canCreate =
+    user?.permissions?.includes("inventory:distribution_create") ?? false;
   const queryClient = useQueryClient();
   const toast = useToast();
 
   const [status, setStatus] = useState<DistributionStatus | "all">("all");
-  const [direction, setDirection] = useState<DistributionDirection | "all">("all");
+  const [direction, setDirection] = useState<DistributionDirection | "all">(
+    "all",
+  );
   const [selected, setSelected] = useState<DistributionListItem | null>(null);
   const [detail, setDetail] = useState<Distribution | null>(null);
   const [createSheetVisible, setCreateSheetVisible] = useState(false);
@@ -186,7 +194,8 @@ const Distributions = () => {
     [stores],
   );
   const isWarehouse = useMemo(
-    () => (stores ?? []).some((s) => s.id === resolvedStoreId && s.is_warehouse),
+    () =>
+      (stores ?? []).some((s) => s.id === resolvedStoreId && s.is_warehouse),
     [stores, resolvedStoreId],
   );
 
@@ -220,50 +229,71 @@ const Distributions = () => {
       toast.success("Distribution created");
       setCreateSheetVisible(false);
     },
-    onError: (error) => toast.error("Could not create distribution", error.message),
+    onError: (error) =>
+      toast.error("Could not create distribution", error.message),
   });
 
   const { mutate: receiveMutate, isPending: receivePending } = useMutation({
-    mutationFn: ({ distributionId, payload }: { distributionId: string; payload: DistributeReceivePayload }) =>
-      receiveDistribution(distributionId, payload),
+    mutationFn: ({
+      distributionId,
+      payload,
+    }: {
+      distributionId: string;
+      payload: DistributeReceivePayload;
+    }) => receiveDistribution(distributionId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["distributions"] });
       toast.success("Received");
       setReceiveSheetVisible(false);
     },
-    onError: (error) => toast.error("Could not receive distribution", error.message),
+    onError: (error) =>
+      toast.error("Could not receive distribution", error.message),
   });
 
   const { mutate: cancelMutate, isPending: cancelPending } = useMutation({
-    mutationFn: ({ distributionId, payload }: { distributionId: string; payload: DistributeCancelPayload }) =>
-      cancelDistribution(distributionId, payload),
+    mutationFn: ({
+      distributionId,
+      payload,
+    }: {
+      distributionId: string;
+      payload: DistributeCancelPayload;
+    }) => cancelDistribution(distributionId, payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["distributions"] });
       toast.success("Cancelled");
       setCancelSheetVisible(false);
     },
-    onError: (error) => toast.error("Could not cancel distribution", error.message),
+    onError: (error) =>
+      toast.error("Could not cancel distribution", error.message),
   });
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: "Distributions", headerShown: true }} />
 
+      {isWarehouse && canCreate && warehouseStores.length > 0 && (
+        <Stack.Toolbar placement="right">
+          <Stack.Toolbar.Button
+            icon={process.env.EXPO_OS === "ios" ? "plus" : Add}
+            onPress={() => setCreateSheetVisible(true)}
+          />
+        </Stack.Toolbar>
+      )}
+
+      {/* <Stack.Toolbar placement="right">
+        {isWarehouse && canCreate && warehouseStores.length > 0 && (
+          <Stack.Toolbar.Button
+            icon="plus"
+            onPress={() => setCreateSheetVisible(true)}
+            accessibilityLabel="Create distribution"
+          />
+        )}
+      </Stack.Toolbar> */}
+
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
           <StoreSwitcher mode="store" />
         </View>
-        {isWarehouse && canCreate && warehouseStores.length > 0 && (
-          <Pressable
-            onPress={() => setCreateSheetVisible(true)}
-            style={[
-              styles.headerIconButton,
-              { backgroundColor: colors.backgroundElement },
-            ]}
-          >
-            <Lucide name="plus" size={16} color={colors.text} />
-          </Pressable>
-        )}
       </View>
 
       <View style={styles.filters}>
@@ -303,7 +333,10 @@ const Distributions = () => {
             gap: 12,
           }}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => void refetch()}
+            />
           }
           renderItem={({ item }) => (
             <DistributionCard
@@ -347,7 +380,18 @@ const Distributions = () => {
       <DistributionDetail
         open={detailOpen}
         distribution={detail}
+        resolvedStoreId={resolvedStoreId}
         onClose={() => setDetailOpen(false)}
+        onReceive={() => {
+          setDetailOpen(false);
+          setReceiveSheetVisible(true);
+          setSelected({ id: detail!.id } as DistributionListItem);
+        }}
+        onCancel={() => {
+          setDetailOpen(false);
+          setCancelSheetVisible(true);
+          setSelected({ id: detail!.id } as DistributionListItem);
+        }}
       />
     </View>
   );
@@ -362,13 +406,6 @@ const styles = StyleSheet.create({
     gap: 10,
     paddingHorizontal: 15,
     paddingBottom: 10,
-  },
-  headerIconButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
   },
   filters: {
     flexDirection: "row",
@@ -393,6 +430,47 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 24,
   },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    paddingHorizontal: 16,
+    marginBottom: 8,
+  },
+  statCard: {
+    flex: 1,
+    minWidth: "48%",
+    backgroundColor: "#f2f2f2",
+    borderWidth: 1,
+    borderColor: "#e5e5e5",
+    borderRadius: 10,
+    padding: 10,
+    alignItems: "center",
+  },
+  statCardLabel: {
+    fontSize: 10,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    marginBottom: 4,
+  },
+  statCardValue: {
+    fontSize: 18,
+    fontWeight: "800",
+  },
+  headerTitleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  closePress: {
+    padding: 4,
+  },
+  actionsSection: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    gap: 10,
+  },
   emptyTitle: { fontSize: 16, fontWeight: "700" },
   emptyText: { fontSize: 13, textAlign: "center", lineHeight: 19 },
 
@@ -409,15 +487,38 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 8,
   },
-  lineInput: { flex: 1, height: 40, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10 },
-  qtyInput: { width: 70, height: 40, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10 },
+  lineInput: {
+    flex: 1,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  qtyInput: {
+    width: 70,
+    height: 40,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
   lineName: { flex: 1 },
   lineItemName: { fontSize: 14, fontWeight: "600" },
   lineMeta: { fontSize: 12, color: "#666", marginTop: 2 },
   removeLine: { padding: 4 },
   addLine: { marginTop: 8, alignSelf: "flex-start" },
-  notesInput: { height: 80, borderWidth: 1, borderRadius: 8, padding: 10, textAlignVertical: "top" },
-  pinInput: { height: 44, borderWidth: 1, borderRadius: 8, paddingHorizontal: 10 },
+  notesInput: {
+    height: 80,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 10,
+    textAlignVertical: "top",
+  },
+  pinInput: {
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
   sheetFooter: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -454,12 +555,14 @@ function CreateDistributionSheet({
   const { user } = useSession();
   const isOwner = isOwnerRole(user);
   const { mutate, isPending } = useMutation({
-    mutationFn: (payload: DistributeCreatePayload) => createDistribution(payload),
+    mutationFn: (payload: DistributeCreatePayload) =>
+      createDistribution(payload),
     onSuccess: () => {
       toast.success("Distribution created");
       onVisibleChange(false);
     },
-    onError: (error) => toast.error("Could not create distribution", error.message),
+    onError: (error) =>
+      toast.error("Could not create distribution", error.message),
   });
 
   const scheme = useColorScheme();
@@ -469,13 +572,15 @@ function CreateDistributionSheet({
   const [toStoreId, setToStoreId] = useState("");
   const [notes, setNotes] = useState("");
   const [pin, setPin] = useState("");
-  const [lines, setLines] = useState<{
-    id: string;
-    product_id: string;
-    item_name: string;
-    qty_dispatched: string;
-    condition_dispatched: string;
-  }[]>([]);
+  const [lines, setLines] = useState<
+    {
+      id: string;
+      product_id: string;
+      item_name: string;
+      qty_dispatched: string;
+      condition_dispatched: string;
+    }[]
+  >([]);
 
   const addLine = () =>
     setLines([
@@ -492,7 +597,9 @@ function CreateDistributionSheet({
 
   const valid =
     lines.length > 0 &&
-    lines.every((l) => l.product_id && l.item_name && Number(l.qty_dispatched) > 0) &&
+    lines.every(
+      (l) => l.product_id && l.item_name && Number(l.qty_dispatched) > 0,
+    ) &&
     !!toStoreId &&
     (isOwner || pin.trim().length > 0);
 
@@ -508,8 +615,15 @@ function CreateDistributionSheet({
   };
 
   return (
-    <AppBottomSheet snapPoints={["85%"]} visible={visible} onVisibleChange={handleVisibleChange}>
-      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <AppBottomSheet
+      snapPoints={["85%"]}
+      visible={visible}
+      onVisibleChange={handleVisibleChange}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.sheetHeader}>
           <Text style={[styles.sheetTitle, { color: colors.text }]}>
             Create distribution
@@ -520,7 +634,9 @@ function CreateDistributionSheet({
         </View>
 
         <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>From (warehouse)</Text>
+          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+            From (warehouse)
+          </Text>
           <AppTextInput
             value={fromStoreId}
             onChangeText={setFromStoreId}
@@ -530,7 +646,9 @@ function CreateDistributionSheet({
         </View>
 
         <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>To (store)</Text>
+          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+            To (store)
+          </Text>
           <AppTextInput
             value={toStoreId}
             onChangeText={setToStoreId}
@@ -540,14 +658,18 @@ function CreateDistributionSheet({
         </View>
 
         <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Items</Text>
+          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+            Items
+          </Text>
           <View style={styles.linesBox}>
             {lines.map((line) => (
               <View key={line.id} style={styles.lineRow}>
                 <AppTextInput
                   value={line.item_name}
                   onChangeText={(v) => {
-                    const nl = lines.map((l) => (l.id === line.id ? { ...l, item_name: v } : l));
+                    const nl = lines.map((l) =>
+                      l.id === line.id ? { ...l, item_name: v } : l,
+                    );
                     setLines(nl);
                   }}
                   placeholder="Product"
@@ -556,29 +678,40 @@ function CreateDistributionSheet({
                 <AppTextInput
                   value={line.qty_dispatched}
                   onChangeText={(v) => {
-                    const nl = lines.map((l) => (l.id === line.id ? { ...l, qty_dispatched: v } : l));
+                    const nl = lines.map((l) =>
+                      l.id === line.id ? { ...l, qty_dispatched: v } : l,
+                    );
                     setLines(nl);
                   }}
                   placeholder="Qty"
                   keyboardType="numeric"
                   style={styles.qtyInput}
                 />
-                <Pressable onPress={() => removeLine(line.id)} style={styles.removeLine}>
+                <Pressable
+                  onPress={() => removeLine(line.id)}
+                  style={styles.removeLine}
+                >
                   <Text style={{ color: "#dc2626", fontWeight: "700" }}>×</Text>
                 </Pressable>
               </View>
             ))}
             {lines.length === 0 && (
-              <Text style={[styles.empty, { color: colors.textSecondary }]}>No items yet.</Text>
+              <Text style={[styles.empty, { color: colors.textSecondary }]}>
+                No items yet.
+              </Text>
             )}
             <Pressable onPress={addLine} style={styles.addLine}>
-              <Text style={{ color: colors.buttonPrimary, fontWeight: "700" }}>+ Add item</Text>
+              <Text style={{ color: colors.buttonPrimary, fontWeight: "700" }}>
+                + Add item
+              </Text>
             </Pressable>
           </View>
         </View>
 
         <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Notes (optional)</Text>
+          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+            Notes (optional)
+          </Text>
           <AppTextInput
             value={notes}
             onChangeText={setNotes}
@@ -591,7 +724,9 @@ function CreateDistributionSheet({
 
         {!isOwner && (
           <View style={styles.sheetSection}>
-            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Supervisor PIN</Text>
+            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+              Supervisor PIN
+            </Text>
             <AppTextInput
               value={pin}
               onChangeText={setPin}
@@ -603,8 +738,13 @@ function CreateDistributionSheet({
         )}
 
         <View style={styles.sheetFooter}>
-          <Pressable onPress={() => onVisibleChange(false)} style={styles.cancelPress}>
-            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
+          <Pressable
+            onPress={() => onVisibleChange(false)}
+            style={styles.cancelPress}
+          >
+            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
+              Cancel
+            </Text>
           </Pressable>
           <Pressable
             onPress={() => {
@@ -622,7 +762,10 @@ function CreateDistributionSheet({
               });
             }}
             disabled={disabled || !valid || isPending}
-            style={[styles.submitPress, disabled || !valid ? styles.submitDisabled : {}]}
+            style={[
+              styles.submitPress,
+              disabled || !valid ? styles.submitDisabled : {},
+            ]}
           >
             <Text style={[styles.submitText, { color: colors.buttonPrimary }]}>
               {isPending ? "Creating…" : "Create distribution"}
@@ -651,29 +794,37 @@ function ReceiveDistributionSheet({
   const { user } = useSession();
   const isOwner = isOwnerRole(user);
   const { mutate, isPending } = useMutation({
-    mutationFn: ({ distributionId, payload }: { distributionId: string; payload: DistributeReceivePayload }) =>
-      receiveDistribution(distributionId, payload),
+    mutationFn: ({
+      distributionId,
+      payload,
+    }: {
+      distributionId: string;
+      payload: DistributeReceivePayload;
+    }) => receiveDistribution(distributionId, payload),
     onSuccess: () => {
       toast.success("Received");
       onVisibleChange(false);
     },
-    onError: (error) => toast.error("Could not receive distribution", error.message),
+    onError: (error) =>
+      toast.error("Could not receive distribution", error.message),
   });
 
   const scheme = useColorScheme();
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
 
   const [pin, setPin] = useState("");
-  const [lines, setLines] = useState<{
-    id: string;
-    item_id: string;
-    item_name: string;
-    qty_dispatched: number;
-    qty_received: string;
-    qty_damaged: string;
-    condition_received: string;
-    receive_notes: string;
-  }[]>([]);
+  const [lines, setLines] = useState<
+    {
+      id: string;
+      item_id: string;
+      item_name: string;
+      qty_dispatched: number;
+      qty_received: string;
+      qty_damaged: string;
+      condition_received: string;
+      receive_notes: string;
+    }[]
+  >([]);
 
   React.useEffect(() => {
     if (!visible || !distribution) return;
@@ -717,8 +868,15 @@ function ReceiveDistributionSheet({
   };
 
   return (
-    <AppBottomSheet snapPoints={["85%"]} visible={visible} onVisibleChange={handleVisibleChange}>
-      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <AppBottomSheet
+      snapPoints={["85%"]}
+      visible={visible}
+      onVisibleChange={handleVisibleChange}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.sheetHeader}>
           <Text style={[styles.sheetTitle, { color: colors.text }]}>
             Receive distribution
@@ -729,29 +887,43 @@ function ReceiveDistributionSheet({
         </View>
 
         <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>From</Text>
-          <Text style={styles.fromText}>{distribution?.from_store_name ?? "—"}</Text>
+          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+            From
+          </Text>
+          <Text style={styles.fromText}>
+            {distribution?.from_store_name ?? "—"}
+          </Text>
         </View>
 
         <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Items</Text>
+          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+            Items
+          </Text>
           <View style={styles.linesBox}>
             {lines.map((line) => (
               <View key={line.id} style={styles.lineRow}>
                 <View style={styles.lineName}>
-                  <Text style={[styles.lineItemName, { color: colors.text }]}>{line.item_name}</Text>
-                  <Text style={[styles.lineMeta, { color: colors.textSecondary }]}>
+                  <Text style={[styles.lineItemName, { color: colors.text }]}>
+                    {line.item_name}
+                  </Text>
+                  <Text
+                    style={[styles.lineMeta, { color: colors.textSecondary }]}
+                  >
                     dispatched {line.qty_dispatched}
                   </Text>
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[styles.sheetLabel, { color: colors.textSecondary }]}
+                  >
                     Received
                   </Text>
                   <AppTextInput
                     value={line.qty_received}
                     onChangeText={(v) => {
-                      const nl = lines.map((l) => (l.id === line.id ? { ...l, qty_received: v } : l));
+                      const nl = lines.map((l) =>
+                        l.id === line.id ? { ...l, qty_received: v } : l,
+                      );
                       setLines(nl);
                     }}
                     keyboardType="numeric"
@@ -759,13 +931,17 @@ function ReceiveDistributionSheet({
                   />
                 </View>
                 <View style={{ flex: 1 }}>
-                  <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[styles.sheetLabel, { color: colors.textSecondary }]}
+                  >
                     Damaged
                   </Text>
                   <AppTextInput
                     value={line.qty_damaged}
                     onChangeText={(v) => {
-                      const nl = lines.map((l) => (l.id === line.id ? { ...l, qty_damaged: v } : l));
+                      const nl = lines.map((l) =>
+                        l.id === line.id ? { ...l, qty_damaged: v } : l,
+                      );
                       setLines(nl);
                     }}
                     keyboardType="numeric"
@@ -779,7 +955,9 @@ function ReceiveDistributionSheet({
 
         {anyDamage && !isOwner && (
           <View style={styles.sheetSection}>
-            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Supervisor PIN</Text>
+            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+              Supervisor PIN
+            </Text>
             <AppTextInput
               value={pin}
               onChangeText={setPin}
@@ -791,8 +969,13 @@ function ReceiveDistributionSheet({
         )}
 
         <View style={styles.sheetFooter}>
-          <Pressable onPress={() => onVisibleChange(false)} style={styles.cancelPress}>
-            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
+          <Pressable
+            onPress={() => onVisibleChange(false)}
+            style={styles.cancelPress}
+          >
+            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
+              Cancel
+            </Text>
           </Pressable>
           <Pressable
             onPress={handleSubmit}
@@ -826,13 +1009,19 @@ function CancelDistributionSheet({
   const { user } = useSession();
   const isOwner = isOwnerRole(user);
   const { mutate, isPending } = useMutation({
-    mutationFn: ({ distributionId, payload }: { distributionId: string; payload: DistributeCancelPayload }) =>
-      cancelDistribution(distributionId, payload),
+    mutationFn: ({
+      distributionId,
+      payload,
+    }: {
+      distributionId: string;
+      payload: DistributeCancelPayload;
+    }) => cancelDistribution(distributionId, payload),
     onSuccess: () => {
       toast.success("Cancelled");
       onVisibleChange(false);
     },
-    onError: (error) => toast.error("Could not cancel distribution", error.message),
+    onError: (error) =>
+      toast.error("Could not cancel distribution", error.message),
   });
 
   const scheme = useColorScheme();
@@ -850,8 +1039,15 @@ function CancelDistributionSheet({
   };
 
   return (
-    <AppBottomSheet snapPoints={["60%"]} visible={visible} onVisibleChange={handleVisibleChange}>
-      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <AppBottomSheet
+      snapPoints={["60%"]}
+      visible={visible}
+      onVisibleChange={handleVisibleChange}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.sheetHeader}>
           <Text style={[styles.sheetTitle, { color: colors.text }]}>
             Cancel distribution
@@ -862,7 +1058,9 @@ function CancelDistributionSheet({
         </View>
 
         <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Reason (optional)</Text>
+          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+            Reason (optional)
+          </Text>
           <AppTextInput
             value={reason}
             onChangeText={setReason}
@@ -875,7 +1073,9 @@ function CancelDistributionSheet({
 
         {!isOwner && (
           <View style={styles.sheetSection}>
-            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Supervisor PIN</Text>
+            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+              Supervisor PIN
+            </Text>
             <AppTextInput
               value={pin}
               onChangeText={setPin}
@@ -887,8 +1087,13 @@ function CancelDistributionSheet({
         )}
 
         <View style={styles.sheetFooter}>
-          <Pressable onPress={() => onVisibleChange(false)} style={styles.cancelPress}>
-            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
+          <Pressable
+            onPress={() => onVisibleChange(false)}
+            style={styles.cancelPress}
+          >
+            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>
+              Cancel
+            </Text>
           </Pressable>
           <Pressable
             onPress={() => {
@@ -904,7 +1109,12 @@ function CancelDistributionSheet({
             disabled={isPending || !distribution}
             style={[styles.submitPress, {}]}
           >
-            <Text style={[styles.submitText, { color: "#dc2626", fontWeight: "700" }]}>
+            <Text
+              style={[
+                styles.submitText,
+                { color: "#dc2626", fontWeight: "700" },
+              ]}
+            >
               {isPending ? "Cancelling…" : "Cancel distribution"}
             </Text>
           </Pressable>
@@ -918,14 +1128,37 @@ function CancelDistributionSheet({
 // Distribution detail
 // ─────────────────────────────────────────────────────────────────────────────
 
+function StatCard({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number | string;
+  color: string;
+}) {
+  return (
+    <View style={styles.statCard}>
+      <Text style={[styles.statCardLabel, { color: color }]}>{label}</Text>
+      <Text style={[styles.statCardValue, { color }]}>{value}</Text>
+    </View>
+  );
+}
+
 function DistributionDetail({
   open,
   distribution,
+  resolvedStoreId,
   onClose,
+  onReceive,
+  onCancel,
 }: {
   open: boolean;
   distribution: Distribution | null;
+  resolvedStoreId: string | null;
   onClose: () => void;
+  onReceive?: () => void;
+  onCancel?: () => void;
 }) {
   const scheme = useColorScheme();
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
@@ -933,16 +1166,36 @@ function DistributionDetail({
   if (!open || !distribution) return null;
 
   const statusColor = STATUS_COLORS[distribution.status];
+  const isIncoming = distribution.to_store_id === resolvedStoreId;
+  const canReceive = isIncoming && distribution.status === "in_transit";
+  const canCancel = !isIncoming && distribution.status === "in_transit";
 
   return (
-    <AppBottomSheet snapPoints={["70%"]} visible={open} onVisibleChange={onClose}>
-      <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+    <AppBottomSheet
+      snapPoints={["90%"]}
+      visible={open}
+      onVisibleChange={onClose}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.sheetHeader}>
-          <Text style={[styles.sheetTitle, { color: colors.text }]}>
-            {distribution.distribution_number ?? "Distribution"}
-          </Text>
+          <View style={styles.headerTitleRow}>
+            <Text style={[styles.sheetTitle, { color: colors.text }]}>
+              {distribution.distribution_number ?? "Distribution"}
+            </Text>
+            <Pressable onPress={onClose} style={styles.closePress}>
+              <Text
+                style={[styles.cancelText, { color: colors.textSecondary }]}
+              >
+                Close
+              </Text>
+            </Pressable>
+          </View>
           <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
-            {distribution.from_store_name ?? "?"} → {distribution.to_store_name ?? "?"}
+            {distribution.from_store_name ?? "?"} →{" "}
+            {distribution.to_store_name ?? "?"}
           </Text>
         </View>
 
@@ -955,38 +1208,56 @@ function DistributionDetail({
           />
         </View>
 
-        <View style={styles.sheetSection}>
-          <View style={styles.metaRow}>
-            <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>Dispatched</Text>
-            <Text style={[styles.meta, { color: colors.text }]}>{distribution.qty_dispatched}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>Received</Text>
-            <Text style={[styles.meta, { color: colors.text }]}>{distribution.qty_received}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>Damaged</Text>
-            <Text style={[styles.meta, { color: colors.text }]}>{distribution.qty_damaged}</Text>
-          </View>
-          <View style={styles.metaRow}>
-            <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>Shortage</Text>
-            <Text style={[styles.meta, { color: colors.textSecondary }]}>{distribution.shortage}</Text>
-          </View>
+        <View style={styles.statsGrid}>
+          <StatCard
+            label="Dispatched"
+            value={distribution.qty_dispatched}
+            color={colors.textSecondary}
+          />
+          <StatCard
+            label="Received"
+            value={distribution.qty_received}
+            color="#059669"
+          />
+          <StatCard
+            label="Damaged"
+            value={distribution.qty_damaged}
+            color={
+              distribution.qty_damaged > 0 ? "#dc2626" : colors.textSecondary
+            }
+          />
+          <StatCard
+            label="Shortage"
+            value={distribution.shortage}
+            color={distribution.shortage > 0 ? "#d97706" : colors.textSecondary}
+          />
         </View>
 
         <View style={styles.sheetSection}>
-          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Items</Text>
+          <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+            Items
+          </Text>
           <View style={styles.linesBox}>
             {distribution.items.map((item) => (
               <View key={item.id} style={styles.lineRow}>
                 <View style={styles.lineName}>
-                  <Text style={[styles.lineItemName, { color: colors.text }]}>{item.item_name}</Text>
-                  <Text style={[styles.lineMeta, { color: colors.textSecondary }]}>
-                    {item.qty_dispatched} → {item.qty_received} received, {item.qty_damaged} damaged
+                  <Text style={[styles.lineItemName, { color: colors.text }]}>
+                    {item.item_name}
+                  </Text>
+                  <Text
+                    style={[styles.lineMeta, { color: colors.textSecondary }]}
+                  >
+                    {item.qty_dispatched} → {item.qty_received} received,{" "}
+                    {item.qty_damaged} damaged
                   </Text>
                 </View>
                 {item.shortage > 0 && (
-                  <Text style={[styles.lineMeta, { color: colors.textSecondary }]}>Shortage {item.shortage}</Text>
+                  <Pill
+                    label={`Short ${item.shortage}`}
+                    active
+                    color="#d97706"
+                    size="sm"
+                  />
                 )}
               </View>
             ))}
@@ -995,15 +1266,90 @@ function DistributionDetail({
 
         {distribution.notes && (
           <View style={styles.sheetSection}>
-            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>Notes</Text>
-            <Text style={[styles.meta, { color: colors.text }]}>{distribution.notes}</Text>
+            <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+              Notes
+            </Text>
+            <Text style={[styles.meta, { color: colors.text }]}>
+              {distribution.notes}
+            </Text>
           </View>
         )}
 
-        <View style={styles.sheetFooter}>
-          <Pressable onPress={onClose} style={styles.cancelPress}>
-            <Text style={[styles.cancelText, { color: colors.textSecondary }]}>Close</Text>
-          </Pressable>
+        <View style={styles.sheetSection}>
+          <View style={styles.metaRow}>
+            <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>
+              Dispatched by
+            </Text>
+            <Text style={[styles.meta, { color: colors.text }]}>
+              {distribution.dispatched_by_name ?? "—"}
+            </Text>
+          </View>
+          <View style={styles.metaRow}>
+            <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>
+              Received by
+            </Text>
+            <Text style={[styles.meta, { color: colors.text }]}>
+              {distribution.received_by_name ?? "—"}
+            </Text>
+          </View>
+          {distribution.pin_verified_by_name && (
+            <View style={styles.metaRow}>
+              <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>
+                PIN authorised by
+              </Text>
+              <Text style={[styles.meta, { color: colors.text }]}>
+                {distribution.pin_verified_by_name}
+              </Text>
+            </View>
+          )}
+          <View style={styles.metaRow}>
+            <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>
+              Created on
+            </Text>
+            <Text style={[styles.meta, { color: colors.text }]}>
+              {distribution.created_at
+                ? new Date(distribution.created_at).toLocaleDateString(
+                    undefined,
+                    {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    },
+                  )
+                : "—"}
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.actionsSection}>
+          {canReceive && (
+            <Button
+              fullWidth
+              leftIcon={(color) => (
+                <Lucide name="truck" size={18} color={color} />
+              )}
+              onPress={onReceive}
+              title="Receive"
+            />
+          )}
+          {canCancel && (
+            <Button
+              variant="outline"
+              fullWidth
+              leftIcon={(color) => <Lucide name="x" size={18} color={color} />}
+              onPress={onCancel}
+              title="Cancel distribution"
+            />
+          )}
+          {!canReceive && !canCancel && (
+            <Pressable onPress={onClose} style={styles.cancelPress}>
+              <Text
+                style={[styles.cancelText, { color: colors.textSecondary }]}
+              >
+                Close
+              </Text>
+            </Pressable>
+          )}
         </View>
       </ScrollView>
     </AppBottomSheet>

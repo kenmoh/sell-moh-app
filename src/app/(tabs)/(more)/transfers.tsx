@@ -1,7 +1,6 @@
 import { fetchTransferRequests } from "@/api/inventory";
 import { Button } from "@/components/button";
 import Pill from "@/components/pill";
-import StoreSwitcher from "@/components/store-switcher";
 import TransferDecisionSheet, {
   type DecisionMode,
 } from "@/components/transfer-decision-sheet";
@@ -13,6 +12,7 @@ import type {
   TransferRequest,
   TransferRequestStatus,
 } from "@/types/product";
+import Add from "@expo/material-symbols/add.xml";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useQuery } from "@tanstack/react-query";
 import { Stack } from "expo-router";
@@ -20,7 +20,6 @@ import React, { useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -43,14 +42,16 @@ const STATUS_COLORS: Record<TransferRequestStatus, string> = {
   rejected: "#dc2626",
 };
 
-const STATUS_FILTERS: { value: TransferRequestStatus | "all"; label: string }[] =
-  [
-    { value: "pending", label: "Awaiting" },
-    { value: "approved", label: "Approved" },
-    { value: "fulfilled", label: "Sent" },
-    { value: "rejected", label: "Rejected" },
-    { value: "all", label: "All" },
-  ];
+const STATUS_FILTERS: {
+  value: TransferRequestStatus | "all";
+  label: string;
+}[] = [
+  { value: "pending", label: "Awaiting" },
+  { value: "approved", label: "Approved" },
+  { value: "fulfilled", label: "Sent" },
+  { value: "rejected", label: "Rejected" },
+  { value: "all", label: "All" },
+];
 
 const DIRECTION_FILTERS: {
   value: TransferDirection | "all";
@@ -194,20 +195,12 @@ const Transfers = () => {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <Stack.Screen options={{ title: "Transfers", headerShown: true }} />
 
-      <View style={styles.headerRow}>
-        <View style={{ flex: 1 }}>
-          <StoreSwitcher mode="store" />
-        </View>
-        <Pressable
+      <Stack.Toolbar placement="right">
+        <Stack.Toolbar.Button
+          icon={process.env.EXPO_OS === "ios" ? "plus" : Add}
           onPress={() => setRequestSheetVisible(true)}
-          style={[
-            styles.headerIconButton,
-            { backgroundColor: colors.backgroundElement },
-          ]}
-        >
-          <Lucide name="plus" size={16} color={colors.text} />
-        </Pressable>
-      </View>
+        />
+      </Stack.Toolbar>
 
       <View style={styles.filters}>
         {DIRECTION_FILTERS.map((filter) => (
@@ -246,7 +239,10 @@ const Transfers = () => {
             gap: 12,
           }}
           refreshControl={
-            <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} />
+            <RefreshControl
+              refreshing={isRefetching}
+              onRefresh={() => void refetch()}
+            />
           }
           renderItem={({ item }) => (
             <TransferCard
@@ -320,7 +316,12 @@ const styles = StyleSheet.create({
   cardTop: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
   item: { fontSize: 16, fontWeight: "700" },
   route: { fontSize: 13, marginTop: 2 },
-  status: { borderWidth: 1, borderRadius: 8, paddingHorizontal: 8, paddingVertical: 3 },
+  status: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
   statusText: { fontSize: 11, fontWeight: "700" },
   metaRow: { flexDirection: "row", justifyContent: "space-between", gap: 10 },
   meta: { fontSize: 12 },

@@ -1070,8 +1070,7 @@ const AccountingScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* The statement screens live behind the native header menu, matching
-          the notifications screen. */}
+      
       <Stack.Toolbar placement="right" backgroundColor={colors.background}>
         <Stack.Toolbar.Menu
           icon={process.env.EXPO_OS === "ios" ? "ellipsis.circle" : MoreVert}
