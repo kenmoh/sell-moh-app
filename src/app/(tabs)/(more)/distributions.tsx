@@ -383,14 +383,16 @@ const Distributions = () => {
         resolvedStoreId={resolvedStoreId}
         onClose={() => setDetailOpen(false)}
         onReceive={() => {
+          if (!detail) return;
           setDetailOpen(false);
           setReceiveSheetVisible(true);
-          setSelected({ id: detail!.id } as DistributionListItem);
+          setSelected({ id: detail.id } as DistributionListItem);
         }}
         onCancel={() => {
+          if (!detail) return;
           setDetailOpen(false);
           setCancelSheetVisible(true);
-          setSelected({ id: detail!.id } as DistributionListItem);
+          setSelected({ id: detail.id } as DistributionListItem);
         }}
       />
     </View>
