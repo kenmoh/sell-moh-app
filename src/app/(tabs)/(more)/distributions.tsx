@@ -280,16 +280,6 @@ const Distributions = () => {
         </Stack.Toolbar>
       )}
 
-      {/* <Stack.Toolbar placement="right">
-        {isWarehouse && canCreate && warehouseStores.length > 0 && (
-          <Stack.Toolbar.Button
-            icon="plus"
-            onPress={() => setCreateSheetVisible(true)}
-            accessibilityLabel="Create distribution"
-          />
-        )}
-      </Stack.Toolbar> */}
-
       <View style={styles.headerRow}>
         <View style={{ flex: 1 }}>
           <StoreSwitcher mode="store" />
@@ -432,33 +422,6 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 24,
   },
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    paddingHorizontal: 16,
-    marginBottom: 8,
-  },
-  statCard: {
-    flex: 1,
-    minWidth: "48%",
-    backgroundColor: "#f2f2f2",
-    borderWidth: 1,
-    borderColor: "#e5e5e5",
-    borderRadius: 10,
-    padding: 10,
-    alignItems: "center",
-  },
-  statCardLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    textTransform: "uppercase",
-    marginBottom: 4,
-  },
-  statCardValue: {
-    fontSize: 18,
-    fontWeight: "800",
-  },
   headerTitleRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -534,6 +497,20 @@ const styles = StyleSheet.create({
   submitDisabled: { opacity: 0.5 },
   submitText: { fontSize: 14, fontWeight: "700" },
   fromText: { fontSize: 14 },
+  alertsRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 10,
+  },
+  alertStat: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 14,
+    alignItems: "center",
+    borderWidth: StyleSheet.hairlineWidth,
+  },
+  alertStatValue: { fontSize: 20, fontWeight: "800" },
+  alertStatLabel: { fontSize: 12, fontWeight: "600", marginTop: 2 },
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -569,6 +546,7 @@ function CreateDistributionSheet({
 
   const scheme = useColorScheme();
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
+  const isDark = scheme === "dark";
 
   const [fromStoreId, setFromStoreId] = useState(warehouseStores[0]?.id ?? "");
   const [toStoreId, setToStoreId] = useState("");
@@ -1130,23 +1108,6 @@ function CancelDistributionSheet({
 // Distribution detail
 // ─────────────────────────────────────────────────────────────────────────────
 
-function StatCard({
-  label,
-  value,
-  color,
-}: {
-  label: string;
-  value: number | string;
-  color: string;
-}) {
-  return (
-    <View style={styles.statCard}>
-      <Text style={[styles.statCardLabel, { color: color }]}>{label}</Text>
-      <Text style={[styles.statCardValue, { color }]}>{value}</Text>
-    </View>
-  );
-}
-
 function DistributionDetail({
   open,
   distribution,
@@ -1163,6 +1124,7 @@ function DistributionDetail({
   onCancel?: () => void;
 }) {
   const scheme = useColorScheme();
+  const isDark = scheme === "dark";
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
 
   if (!open || !distribution) return null;
@@ -1210,29 +1172,101 @@ function DistributionDetail({
           />
         </View>
 
-        <View style={styles.statsGrid}>
-          <StatCard
-            label="Dispatched"
-            value={distribution.qty_dispatched}
-            color={colors.textSecondary}
-          />
-          <StatCard
-            label="Received"
-            value={distribution.qty_received}
-            color="#059669"
-          />
-          <StatCard
-            label="Damaged"
-            value={distribution.qty_damaged}
-            color={
-              distribution.qty_damaged > 0 ? "#dc2626" : colors.textSecondary
-            }
-          />
-          <StatCard
-            label="Shortage"
-            value={distribution.shortage}
-            color={distribution.shortage > 0 ? "#d97706" : colors.textSecondary}
-          />
+        <View style={styles.alertsRow}>
+          <View
+            style={[
+              styles.alertStat,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? "#282b32" : "#eef0f4",
+              },
+            ]}
+          >
+            <Text
+              style={[styles.alertStatValue, { color: colors.textSecondary }]}
+            >
+              {distribution.qty_dispatched}
+            </Text>
+            <Text
+              style={[styles.alertStatLabel, { color: colors.textSecondary }]}
+            >
+              Dispatched
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.alertStat,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? "#282b32" : "#eef0f4",
+              },
+            ]}
+          >
+            <Text style={[styles.alertStatValue, { color: "#059669" }]}>
+              {distribution.qty_received}
+            </Text>
+            <Text
+              style={[styles.alertStatLabel, { color: colors.textSecondary }]}
+            >
+              Received
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.alertStat,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? "#282b32" : "#eef0f4",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.alertStatValue,
+                {
+                  color:
+                    distribution.qty_damaged > 0
+                      ? "#dc2626"
+                      : colors.textSecondary,
+                },
+              ]}
+            >
+              {distribution.qty_damaged}
+            </Text>
+            <Text
+              style={[styles.alertStatLabel, { color: colors.textSecondary }]}
+            >
+              Damaged
+            </Text>
+          </View>
+          <View
+            style={[
+              styles.alertStat,
+              {
+                backgroundColor: colors.card,
+                borderColor: isDark ? "#282b32" : "#eef0f4",
+              },
+            ]}
+          >
+            <Text
+              style={[
+                styles.alertStatValue,
+                {
+                  color:
+                    distribution.shortage > 0
+                      ? "#d97706"
+                      : colors.textSecondary,
+                },
+              ]}
+            >
+              {distribution.shortage}
+            </Text>
+            <Text
+              style={[styles.alertStatLabel, { color: colors.textSecondary }]}
+            >
+              Shortage
+            </Text>
+          </View>
         </View>
 
         <View style={styles.sheetSection}>
