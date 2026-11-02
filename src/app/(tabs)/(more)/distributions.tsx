@@ -20,7 +20,6 @@ import type {
   DistributeCreatePayload,
   DistributeReceivePayload,
   Distribution,
-  DistributionDirection,
   DistributionListItem,
   DistributionStatus,
 } from "@/types/product";
@@ -55,19 +54,9 @@ const STATUS_COLORS: Record<DistributionStatus, string> = {
 };
 
 const STATUS_FILTERS: { value: DistributionStatus | "all"; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "in_transit", label: "In transit" },
+  { value: "in_transit", label: "Dispatched" },
   { value: "received", label: "Received" },
   { value: "cancelled", label: "Cancelled" },
-];
-
-const DIRECTION_FILTERS: {
-  value: DistributionDirection | "all";
-  label: string;
-}[] = [
-  { value: "all", label: "All" },
-  { value: "incoming", label: "We receive" },
-  { value: "outgoing", label: "We send" },
 ];
 
 function formatDate(value: string | null) {
@@ -174,9 +163,8 @@ const Distributions = () => {
   const queryClient = useQueryClient();
   const toast = useToast();
 
-  const [status, setStatus] = useState<DistributionStatus | "all">("all");
-  const [direction, setDirection] = useState<DistributionDirection | "all">(
-    "all",
+  const [status, setStatus] = useState<DistributionStatus | "all">(
+    "in_transit",
   );
   const [selected, setSelected] = useState<DistributionListItem | null>(null);
   const [detail, setDetail] = useState<Distribution | null>(null);
@@ -200,11 +188,10 @@ const Distributions = () => {
   );
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
-    queryKey: ["distributions", resolvedStoreId, status, direction],
+    queryKey: ["distributions", resolvedStoreId, status],
     queryFn: () =>
       fetchDistributions({
         storeId: resolvedStoreId || undefined,
-        direction: direction === "all" ? undefined : direction,
         status: status === "all" ? undefined : status,
         page: 1,
         page_size: 50,
@@ -286,17 +273,6 @@ const Distributions = () => {
         </View>
       </View>
 
-      <View style={styles.filters}>
-        {DIRECTION_FILTERS.map((filter) => (
-          <Pill
-            key={filter.value}
-            label={filter.label}
-            size="sm"
-            active={direction === filter.value}
-            onPress={() => setDirection(filter.value)}
-          />
-        ))}
-      </View>
       <View style={styles.filters}>
         {STATUS_FILTERS.map((filter) => (
           <Pill
@@ -422,15 +398,6 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 24,
   },
-  headerTitleRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 4,
-  },
-  closePress: {
-    padding: 4,
-  },
   actionsSection: {
     paddingHorizontal: 16,
     paddingBottom: 16,
@@ -441,7 +408,7 @@ const styles = StyleSheet.create({
 
   // sheet styles
   sheetHeader: { gap: 4 },
-  sheetSection: { marginHorizontal: 16, marginBottom: 12 },
+  sheetSection: { marginHorizontal: 16, marginBottom: 12, gap: 8 },
   sheetTitle: { fontSize: 18, fontWeight: "700" },
   sheetSubtitle: { fontSize: 13, color: "#666", marginBottom: 8 },
   sheetLabel: { fontSize: 12, fontWeight: "600", marginBottom: 6 },
@@ -499,11 +466,12 @@ const styles = StyleSheet.create({
   fromText: { fontSize: 14 },
   alertsRow: {
     flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
     marginBottom: 10,
   },
   alertStat: {
-    flex: 1,
+    width: "48%",
     borderRadius: 12,
     padding: 14,
     alignItems: "center",
@@ -1145,31 +1113,28 @@ function DistributionDetail({
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.sheetHeader}>
-          <View style={styles.headerTitleRow}>
+          <View
+            style={{
+              flexDirection: "row",
+              alignItems: "baseline",
+              justifyContent: "space-between",
+            }}
+          >
             <Text style={[styles.sheetTitle, { color: colors.text }]}>
               {distribution.distribution_number ?? "Distribution"}
             </Text>
-            <Pressable onPress={onClose} style={styles.closePress}>
-              <Text
-                style={[styles.cancelText, { color: colors.textSecondary }]}
-              >
-                Close
-              </Text>
-            </Pressable>
+
+            <Pill
+              label={STATUS_LABELS[distribution.status]}
+              active
+              color={statusColor}
+              size="sm"
+            />
           </View>
           <Text style={[styles.sheetSubtitle, { color: colors.textSecondary }]}>
             {distribution.from_store_name ?? "?"} →{" "}
             {distribution.to_store_name ?? "?"}
           </Text>
-        </View>
-
-        <View style={styles.sheetSection}>
-          <Pill
-            label={STATUS_LABELS[distribution.status]}
-            active
-            color={statusColor}
-            size="sm"
-          />
         </View>
 
         <View style={styles.alertsRow}>
@@ -1188,6 +1153,7 @@ function DistributionDetail({
               {distribution.qty_dispatched}
             </Text>
             <Text
+              numberOfLines={1}
               style={[styles.alertStatLabel, { color: colors.textSecondary }]}
             >
               Dispatched
@@ -1206,6 +1172,7 @@ function DistributionDetail({
               {distribution.qty_received}
             </Text>
             <Text
+              numberOfLines={1}
               style={[styles.alertStatLabel, { color: colors.textSecondary }]}
             >
               Received
@@ -1234,6 +1201,7 @@ function DistributionDetail({
               {distribution.qty_damaged}
             </Text>
             <Text
+              numberOfLines={1}
               style={[styles.alertStatLabel, { color: colors.textSecondary }]}
             >
               Damaged
@@ -1262,6 +1230,7 @@ function DistributionDetail({
               {distribution.shortage}
             </Text>
             <Text
+              numberOfLines={1}
               style={[styles.alertStatLabel, { color: colors.textSecondary }]}
             >
               Shortage
@@ -1295,6 +1264,7 @@ function DistributionDetail({
                     size="sm"
                   />
                 )}
+                )
               </View>
             ))}
           </View>
@@ -1376,15 +1346,6 @@ function DistributionDetail({
               onPress={onCancel}
               title="Cancel distribution"
             />
-          )}
-          {!canReceive && !canCancel && (
-            <Pressable onPress={onClose} style={styles.cancelPress}>
-              <Text
-                style={[styles.cancelText, { color: colors.textSecondary }]}
-              >
-                Close
-              </Text>
-            </Pressable>
           )}
         </View>
       </ScrollView>
