@@ -54,6 +54,7 @@ const STATUS_COLORS: Record<DistributionStatus, string> = {
 };
 
 const STATUS_FILTERS: { value: DistributionStatus | "all"; label: string }[] = [
+  { value: "all", label: "All" },
   { value: "in_transit", label: "Dispatched" },
   { value: "received", label: "Received" },
   { value: "cancelled", label: "Cancelled" },
@@ -163,9 +164,7 @@ const Distributions = () => {
   const queryClient = useQueryClient();
   const toast = useToast();
 
-  const [status, setStatus] = useState<DistributionStatus | "all">(
-    "in_transit",
-  );
+  const [status, setStatus] = useState<DistributionStatus | "all">("all");
   const [selected, setSelected] = useState<DistributionListItem | null>(null);
   const [detail, setDetail] = useState<Distribution | null>(null);
   const [createSheetVisible, setCreateSheetVisible] = useState(false);
