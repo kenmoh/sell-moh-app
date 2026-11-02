@@ -768,26 +768,34 @@ function ReceiveDistributionSheet({
                     dispatched {line.qty_dispatched}
                   </Text>
                 </View>
-                <AppTextInput
-                  value={line.qty_received}
-                  onChangeText={(v) => {
-                    const nl = lines.map((l) => (l.id === line.id ? { ...l, qty_received: v } : l));
-                    setLines(nl);
-                  }}
-                  placeholder="Received"
-                  keyboardType="numeric"
-                  style={styles.qtyInput}
-                />
-                <AppTextInput
-                  value={line.qty_damaged}
-                  onChangeText={(v) => {
-                    const nl = lines.map((l) => (l.id === line.id ? { ...l, qty_damaged: v } : l));
-                    setLines(nl);
-                  }}
-                  placeholder="Damaged"
-                  keyboardType="numeric"
-                  style={styles.qtyInput}
-                />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+                    Received
+                  </Text>
+                  <AppTextInput
+                    value={line.qty_received}
+                    onChangeText={(v) => {
+                      const nl = lines.map((l) => (l.id === line.id ? { ...l, qty_received: v } : l));
+                      setLines(nl);
+                    }}
+                    keyboardType="numeric"
+                    style={styles.qtyInput}
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.sheetLabel, { color: colors.textSecondary }]}>
+                    Damaged
+                  </Text>
+                  <AppTextInput
+                    value={line.qty_damaged}
+                    onChangeText={(v) => {
+                      const nl = lines.map((l) => (l.id === line.id ? { ...l, qty_damaged: v } : l));
+                      setLines(nl);
+                    }}
+                    keyboardType="numeric"
+                    style={styles.qtyInput}
+                  />
+                </View>
               </View>
             ))}
           </View>
@@ -983,7 +991,7 @@ function DistributionDetail({
             <Text style={[styles.meta, { color: colors.text }]}>{distribution.qty_damaged}</Text>
           </View>
           <View style={styles.metaRow}>
-            <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>Short</Text>
+            <Text style={[styles.metaLabel, { color: colors.textSecondary }]}>Shortage</Text>
             <Text style={[styles.meta, { color: colors.textSecondary }]}>{distribution.shortage}</Text>
           </View>
         </View>
@@ -1000,7 +1008,7 @@ function DistributionDetail({
                   </Text>
                 </View>
                 {item.shortage > 0 && (
-                  <Text style={[styles.lineMeta, { color: colors.textSecondary }]}>Short {item.shortage}</Text>
+                  <Text style={[styles.lineMeta, { color: colors.textSecondary }]}>Shortage {item.shortage}</Text>
                 )}
               </View>
             ))}
