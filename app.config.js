@@ -21,5 +21,6 @@ module.exports = ({ config }) => {
   return {
     ...config,
     scheme: [...new Set([...existingSchemes, ...googleSchemes])],
+    plugins: [...(config.plugins || []), "expo-sqlite"],
   };
 };
