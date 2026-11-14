@@ -62,7 +62,7 @@ export const initiateCardPayment = async (
 
 // ── Transfer Payment ───────────────────────────────────────────────────────
 
-export const initiateTransferPayment = async (
+export const recordTransferPayment = async (
   data: TransferPaymentRequest,
 ): Promise<TransferPaymentResult> => {
   const res = await apiClient.post<{ data: TransferPaymentResult }>(

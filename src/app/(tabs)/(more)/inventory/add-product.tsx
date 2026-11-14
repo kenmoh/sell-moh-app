@@ -71,6 +71,7 @@ const AddProduct = () => {
     expiry_date?: string;
     expiry_warning_days?: string;
     block_sale_after_expiry?: string;
+    auto_calc_tax?: string;
   }>();
   const isEditing = Boolean(params.id);
 
@@ -90,6 +91,9 @@ const AddProduct = () => {
   );
   const [blockSaleAfterExpiry, setBlockSaleAfterExpiry] = useState(
     params.block_sale_after_expiry === "true",
+  );
+  const [autoCalcTax, setAutoCalcTax] = useState(
+    params.auto_calc_tax === "true",
   );
   // A product can carry more than one tax, and every one of them applies when
   // it is sold -- so this is a set, not a single choice. It starts from the
@@ -219,6 +223,7 @@ const AddProduct = () => {
       expiry_warning_days:
         expiryIso && warningDays ? parseInt(warningDays, 10) : null,
       block_sale_after_expiry: expiryIso ? blockSaleAfterExpiry : false,
+      auto_calc_tax: autoCalcTax,
     };
 
     if (isEditing) {
@@ -399,6 +404,22 @@ const AddProduct = () => {
               ? "All of these are charged when the product sells. Tap one to remove it."
               : "Nothing selected, so the product sells untaxed."}
           </Text>
+          {selectedTaxIds.length > 0 ? (
+            <View style={styles.switchRow}>
+              <View style={styles.switchCopy}>
+                <Text style={[styles.switchLabel, { color: colors.text }]}>
+                  Include tax in selling price
+                </Text>
+                <Text style={[styles.switchHint, { color: colors.textSecondary }]}>
+                  Customer pays exactly the selling price; tax is deducted
+                  from it at sale.
+                </Text>
+              </View>
+              <Host matchContents>
+                <Switch value={autoCalcTax} onValueChange={setAutoCalcTax} />
+              </Host>
+            </View>
+          ) : null}
           <Text
             style={[styles.sectionLabel, { color: colors.textSecondary }]}
           >

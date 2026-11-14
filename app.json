@@ -24,6 +24,10 @@
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.INTERNET"
       ],
+      "blockedPermissions": [
+        "android.permission.READ_MEDIA_IMAGES",
+        "android.permission.READ_MEDIA_VIDEO"
+      ],
       "package": "com.kenmoh.sellmoh",
       "googleServicesFile": "./google-services.json"
     },
@@ -86,10 +90,8 @@
         "expo-splash-screen",
         {
           "backgroundColor": "#208AEF",
-          "image": "./assets/images/android-icon-foreground.png",
-          "imageWidth": 225,
-          "imageContentMode": "scaleAspectFit",
-          "applyToTopInset": false
+          "image": "./assets/images/icon-iphone.png",
+          "imageWidth": 210
         }
       ],
       "expo-image",

@@ -345,6 +345,7 @@ const ProductDetails = () => {
                   block_sale_after_expiry: String(
                     product.block_sale_after_expiry ?? false,
                   ),
+                  auto_calc_tax: String(product.auto_calc_tax ?? false),
                 },
               })
             }

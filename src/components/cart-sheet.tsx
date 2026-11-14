@@ -1321,7 +1321,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
         coupon_code: activeCart?.couponCode || undefined,
       });
 
-      if (method === "cash") {
+      // Cash and manual transfer are recorded immediately against the sale —
+      // confirm the intent to create the sale and book the payment.
+      if (method === "cash" || method === "transfer") {
         const saleResult = await confirmPayment({
           intent_id: intentResult.intent_id,
         });
@@ -1419,21 +1421,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
           };
         }
 
-        if (numTransfer > 0) {
-          const trfIntent = await initiatePayment({
-            cart_id: activeCartId,
-            method: "transfer",
-            customer_email: customerEmail,
-            customer_name: activeCart?.customerName || undefined,
-          });
-          return {
-            type: "transfer" as const,
-            intentId: trfIntent.intent_id,
-            amount: numTransfer,
-            receipt: saleResult.receipt,
-          };
-        }
-
+        // Transfer is recorded manually by the cashier against the tenant's
+        // own account — the backend already recorded it in recordSplitPayment.
+        // No gateway intent, no awaiting screen.
         return { type: "cash" as const, receipt: saleResult.receipt };
       },
       onSuccess: (result) => {

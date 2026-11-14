@@ -62,6 +62,8 @@ export interface ProductResponse {
   expiry_warning_days?: number | null;
   /** When true, sale paths refuse this product after its expiry day. */
   block_sale_after_expiry?: boolean;
+  /** When true, tax is deducted from the selling price at sale time so the customer pays exactly selling_price. */
+  auto_calc_tax?: boolean;
   taxes: TaxEntry[];
   history: StockHistoryItem[];
 }
@@ -98,6 +100,8 @@ export interface CreateProduct {
   expiry_date?: string | null;
   expiry_warning_days?: number | null;
   block_sale_after_expiry?: boolean;
+  /** When true, selling_price is tax-inclusive: tax is deducted from it at sale time. */
+  auto_calc_tax?: boolean;
 }
 
 /** Fields the catalog lets a store change after creation. */
@@ -113,6 +117,8 @@ export interface UpdateProduct {
   expiry_date?: string | null;
   expiry_warning_days?: number | null;
   block_sale_after_expiry?: boolean;
+  /** When true, selling_price is tax-inclusive: tax is deducted from it at sale time. */
+  auto_calc_tax?: boolean;
 }
 
 export interface AdjustProduct {

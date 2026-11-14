@@ -15,7 +15,7 @@ export interface CardPaymentRequest {
 export interface TransferPaymentRequest {
   sale_id: string;
   amount: number;
-  customer_email: string;
+  customer_email?: string;
   customer_name?: string;
 }
 
@@ -202,6 +202,8 @@ export interface TaxBreakdownLine {
   name: string;
   rate: number;
   amount: number;
+  /** When true, this tax was deducted from the selling price (tax-inclusive product). */
+  tax_inclusive?: boolean;
 }
 
 export interface ReceiptData {

@@ -300,7 +300,7 @@ export default function ReceiptScreen() {
                       { color: colors.textSecondary },
                     ]}
                   >
-                    {t.name} ({t.rate}%)
+                    {t.name} ({t.rate}%${t.tax_inclusive ? " incl." : ""})
                   </Text>
                   <Text style={[styles.receiptValue, { color: colors.text }]}>
                     ₦{t.amount.toLocaleString()}

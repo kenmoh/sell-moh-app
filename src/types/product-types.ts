@@ -22,6 +22,8 @@ export interface Product {
   block_sale_after_expiry?: boolean;
   /** What this product is taxed by, resolved by the server. */
   taxes?: TaxEntry[];
+  /** When true, selling_price includes tax; tax is deducted at sale time. */
+  auto_calc_tax?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
