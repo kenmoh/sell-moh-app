@@ -1,4 +1,5 @@
 import { AnimatedSplashOverlay } from "@/components/animated-icon";
+import { SyncStatusBar } from "@/components/SyncStatusBar";
 import { ToastContainer } from "@/components/toast-container";
 import { SessionProvider, useSession } from "@/lib/ctx";
 import { OnboardingProvider, useOnboarding } from "@/lib/onboarding-context";
@@ -11,6 +12,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { useColorScheme } from "@/hooks/use-color-scheme.web";
+import { useSync } from "@/hooks/useSyncStatus";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect } from "react";
 
@@ -47,6 +49,7 @@ function RootNavigator() {
   const dark = useColorScheme() === "dark";
   const { session } = useSession();
   const { seen } = useOnboarding();
+  const { doInitialSync } = useSync();
 
   // useEffect(() => {
   //   void NavigationBar.setButtonStyleAsync(dark ? "light" : "dark");
@@ -55,11 +58,14 @@ function RootNavigator() {
   useEffect(() => {
     if (session) {
       registerForPushNotifications();
+      // Run initial sync when the user logs in
+      doInitialSync();
     }
-  }, [session]);
+  }, [session, doInitialSync]);
 
   return (
     <ThemeProvider value={dark ? DarkTheme : DefaultTheme}>
+      <SyncStatusBar />
       <AnimatedSplashOverlay />
       <ToastContainer />
       {/* <View style={{ flex: 1, backgroundColor: dark ? "#1c1d22" : "#fff" }}> */}
