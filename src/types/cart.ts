@@ -5,6 +5,7 @@ export interface CartItemResponse {
   name: string;
   unit_price: number;
   qty: number;
+  extra?: number;
 }
 
 export interface CartCreatedResponse {
@@ -60,6 +61,7 @@ export interface CheckoutRequest {
     product_public_id: string;
     qty: number;
     store_id?: string;
+    extra?: number;
   }>;
   customer_name?: string;
   customer_phone?: string;
@@ -76,4 +78,5 @@ export interface VoidItemRequest {
 export interface AddToCartRequest {
   product_id: string;
   qty?: number;
+  extra?: number;
 }

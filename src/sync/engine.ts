@@ -1,8 +1,9 @@
 import NetInfo from '@react-native-community/netinfo';
 import { apiClient, BASE_URL } from '../api/client';
+import { getDb } from '../database';
 import { entityRepo } from '../database/repositories/entity.repo';
 import { syncQueueRepo, syncMetadataRepo } from '../database/repositories/sync.repo';
-import type { SyncEvent, SyncSnapshotResult, FullSyncResult } from '../database/types';
+import type { EntityType, SyncEvent, SyncSnapshotResult, FullSyncResult } from '../database/types';
 
 const DEVICE_ID_KEY = 'device_id';
 const LAST_CURSOR_KEY = 'last_cursor';
@@ -12,6 +13,7 @@ const IS_INITIAL_SYNCED_KEY = 'is_initial_synced';
 let _deviceId: string | null = null;
 let _isSyncing = false;
 let _isOnline = true;
+let _netInfoSub: (() => void) | null = null;
 const _listeners: Set<() => void> = new Set();
 
 async function getDeviceId(): Promise<string> {
@@ -52,18 +54,20 @@ export async function hasInitialSync(): Promise<boolean> {
 }
 
 /** Download the full data snapshot from the server and replace local data. */
-export async function initialSync(): Promise<void> {
+export async function initialSync(force = false): Promise<void> {
+  if (!force && (await hasInitialSync())) return;
   _isSyncing = true;
   notifyListeners();
   try {
     const response = await apiClient.get<SyncSnapshotResult>('/sync/snapshot');
     if (!response.ok) throw new Error('Snapshot failed');
-    const { entities } = response.data || { entities: [] };
-    await entityRepo.bulkUpsert(entities);
+    const { entities, cursor } = response.data || { entities: [], cursor: '' };
+    await entityRepo.bulkUpsert(entities as any);
     await syncMetadataRepo.set(IS_INITIAL_SYNCED_KEY, 'true');
     const now = new Date().toISOString();
     await syncMetadataRepo.set(LAST_SYNC_KEY, now);
-    await syncMetadataRepo.set(LAST_CURSOR_KEY, now);
+    if (cursor) await syncMetadataRepo.set(LAST_CURSOR_KEY, cursor);
+    else await syncMetadataRepo.set(LAST_CURSOR_KEY, now);
   } finally {
     _isSyncing = false;
     notifyListeners();
@@ -108,16 +112,28 @@ export async function incrementalSync(): Promise<void> {
     const result = response.data;
 
     // Mark successfully processed events as synced
-    if (result?.processed && result.processed > 0) {
-      const syncedIds = clientIds.slice(0, result.processed);
-      await syncQueueRepo.markSynced(syncedIds);
+    if (result?.applied && result.applied.length > 0) {
+      await syncQueueRepo.markSynced(
+        result.applied
+          .map((item) => item.client_id)
+          .filter(Boolean) as string[],
+      );
+    }
+
+    // Duplicates already applied earlier are safe to mark synced.
+    if (result?.duplicates && result.duplicates.length > 0) {
+      await syncQueueRepo.markSynced(
+        result.duplicates
+          .map((dup) => dup.client_id)
+          .filter(Boolean) as string[],
+      );
     }
 
     // Mark failed events
     if (result?.errors && result.errors.length > 0) {
-      for (const err of result.errors) {
-        const clientId = err.client_id;
-        if (clientId) await syncQueueRepo.markFailed(clientId, String(err));
+      for (const fail of result.errors) {
+        const clientId = fail.client_id;
+        if (clientId) await syncQueueRepo.markFailed(clientId, String(fail.error));
       }
     }
 
@@ -158,6 +174,45 @@ export async function incrementalSync(): Promise<void> {
   }
 }
 
+/** Apply a locally captured offline sale to the entity store and stock. */
+async function applySaleCreatedLocally(payload: Record<string, any>): Promise<void> {
+  const saleId = payload.offline_sale_id || payload.id || payload.client_id;
+  if (!saleId) return;
+
+  await entityRepo.upsert({
+    id: String(saleId),
+    entity_type: 'sales' as EntityType,
+    data: {
+      ...payload,
+      status: 'completed',
+      amount_paid: payload.total ?? 0,
+      payment_methods: { cash: payload.total ?? 0 },
+    },
+    deleted: false,
+  });
+
+  const storeId = payload.store_id;
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  const db = await getDb();
+  const rows = await db.getAllAsync<any>(
+    'SELECT * FROM entities WHERE entity_type = ? AND deleted = 0',
+    ['stock_balances']
+  );
+  for (const row of rows) {
+    const data = row.data ?? {};
+    if (data.product_id === null || data.store_id === null) continue;
+    const item = items.find((i: any) => String(i.product_id) === String(data.product_id));
+    if (!item || !storeId || String(data.store_id) !== String(storeId)) continue;
+    const newQty = Number(data.qty ?? 0) - Number(item.qty ?? 0);
+    await entityRepo.upsert({
+      id: row.id,
+      entity_type: 'stock_balances' as EntityType,
+      data: { ...data, qty: newQty },
+      deleted: false,
+    });
+  }
+}
+
 /** Apply a server event to the local entity store. */
 async function applyServerEvent(event: { event_type: string; payload: Record<string, any> }): Promise<void> {
   const parts = event.event_type.split('.');
@@ -167,6 +222,11 @@ async function applyServerEvent(event: { event_type: string; payload: Record<str
   const action = parts[1];
   const id = event.payload.id;
   if (!id) return;
+
+  if (entityType === 'sales' && (action === 'created' || action === 'updated')) {
+    await applySaleCreatedLocally(event.payload);
+    return;
+  }
 
   if (action === 'created' || action === 'updated') {
     await entityRepo.upsert({
@@ -194,19 +254,24 @@ export async function queueEvent(eventType: string, payload: Record<string, any>
   });
 
   // Apply locally immediately
-  await applyServerEvent({ event_type: eventType, payload });
+  if (eventType === 'sale.created') {
+    await applySaleCreatedLocally(payload);
+  } else {
+    await applyServerEvent({ event_type: eventType, payload });
+  }
   notifyListeners();
 }
 
 /** Start background sync — checks connectivity and syncs periodically. */
 export async function startBackgroundSync(intervalMs: number = 30000): Promise<void> {
   // Check connectivity changes
-  await NetInfo.addEventListener(state => {
+  const sub = await NetInfo.addEventListener(state => {
     _isOnline = state.isConnected ?? false;
     if (_isOnline) {
       incrementalSync();
     }
   });
+  _netInfoSub = sub;
 
   // Periodic sync
   const interval = setInterval(async () => {
@@ -216,11 +281,15 @@ export async function startBackgroundSync(intervalMs: number = 30000): Promise<v
     }
   }, intervalMs);
 
-  // Store interval ID for cleanup
+  // Store interval ID and listener for cleanup
   (globalThis as any).__syncInterval = interval;
 }
 
 export function stopBackgroundSync(): void {
   const iv = (globalThis as any).__syncInterval;
   if (iv) clearInterval(iv);
+  if (_netInfoSub) {
+    _netInfoSub();
+    _netInfoSub = null;
+  }
 }

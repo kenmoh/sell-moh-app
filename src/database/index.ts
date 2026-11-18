@@ -47,6 +47,33 @@ export async function ensureSchema(db: SQLite.SQLiteDatabase): Promise<void> {
       value TEXT NOT NULL,
       updated_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS local_carts (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      store_id TEXT,
+      customer_name TEXT,
+      customer_phone TEXT,
+      coupon_code TEXT,
+      discount_amount REAL DEFAULT 0,
+      status TEXT DEFAULT 'open',
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS local_cart_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cart_id TEXT NOT NULL,
+      product_id TEXT NOT NULL,
+      product_name TEXT NOT NULL,
+      price REAL NOT NULL,
+      qty REAL NOT NULL DEFAULT 1,
+      extra REAL NOT NULL DEFAULT 0,
+      item_id TEXT,
+      updated_at TEXT NOT NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_local_cart_items_cart ON local_cart_items(cart_id);
   `);
 }
 

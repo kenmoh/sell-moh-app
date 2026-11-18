@@ -6,9 +6,11 @@ import {
 import { Button } from "@/components/button";
 import AppTextInput from "@/components/text-input";
 import { Colors } from "@/constants/theme";
+import { Host, Switch } from "@expo/ui";
 import { useApiErrorToast } from "@/hooks/use-api-error-toast";
 import { useToast } from "@/hooks/use-toast";
 import { useSession } from "@/lib/ctx";
+import { isOwnerRole } from "@/lib/roles";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
@@ -34,11 +36,13 @@ const OrganizationScreen = () => {
   const toast = useToast();
   const queryClient = useQueryClient();
   const canManage = user?.permissions?.includes("sync:manage") ?? false;
+  const isOwner = isOwnerRole(user);
 
   const [draft, setDraft] = useState<{
     name?: string;
     phone?: string;
     address?: string;
+    allow_price_override?: boolean;
   }>({});
 
   const {
@@ -57,6 +61,8 @@ const OrganizationScreen = () => {
   const name = draft.name ?? business?.name ?? "";
   const phone = draft.phone ?? business?.phone ?? "";
   const address = draft.address ?? business?.address ?? "";
+  const allowOverride =
+    draft.allow_price_override ?? business?.allow_price_override ?? false;
 
   const trimmedName = name.trim();
   const trimmedPhone = phone.trim();
@@ -66,7 +72,8 @@ const OrganizationScreen = () => {
     !!business &&
     (trimmedName !== (business.name ?? "") ||
       trimmedPhone !== (business.phone ?? "") ||
-      trimmedAddress !== (business.address ?? ""));
+      trimmedAddress !== (business.address ?? "") ||
+      allowOverride !== (business?.allow_price_override ?? false));
   const canSave = canManage && hasChanges && !nameInvalid;
 
   const saveMutation = useMutation({
@@ -75,6 +82,7 @@ const OrganizationScreen = () => {
         name: trimmedName,
         phone: trimmedPhone,
         address: trimmedAddress,
+        allow_price_override: isOwner ? allowOverride : undefined,
       }),
     onSuccess: (updated) => {
       setDraft({});
@@ -275,6 +283,35 @@ const OrganizationScreen = () => {
                   placeholder="Business address"
                 />
               </View>
+
+              {isOwner && (
+                <View style={styles.fieldStack}>
+                  <Text
+                    style={[
+                      styles.sectionLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Allow price overrides
+                  </Text>
+                  <Host matchContents>
+                    <Switch
+                      value={allowOverride}
+                      onValueChange={(value) =>
+                        setDraft((prev) => ({
+                          ...prev,
+                          allow_price_override: value,
+                        }))
+                      }
+                      disabled={saveMutation.isPending}
+                    />
+                  </Host>
+                  <Text style={[styles.noticeText, { color: colors.textSecondary }]}>
+                    Owner-only. When enabled, cashiers can set per-line price
+                    overrides in the POS.
+                  </Text>
+                </View>
+              )}
             </View>
 
             {canManage && (

@@ -10,6 +10,8 @@ import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore, { CartItem } from "@/hooks/use-cart-store";
 import { CartTaxLine, computeCartTax } from "@/lib/cart-tax";
 import { useSession } from "@/lib/ctx";
+import { useActiveStore } from "@/lib/store-context";
+import { incrementalSync, isOnline, queueEvent } from "@/sync/engine";
 import Lucide from "@react-native-vector-icons/lucide";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "expo-router";
@@ -299,6 +301,7 @@ interface CartItemRowProps {
   colors: ColorPalette;
   onQuantityChange: (newQty: number) => void;
   onRemove: () => void;
+  onPriceOverride: (extra: number) => void;
 }
 
 export const CartItemRow = ({
@@ -306,7 +309,9 @@ export const CartItemRow = ({
   colors,
   onQuantityChange,
   onRemove,
+  onPriceOverride,
 }: CartItemRowProps) => {
+  const [overrideInput, setOverrideInput] = useState<string>((item.extra ?? 0).toString());
   return (
     <View
       style={[
@@ -341,7 +346,7 @@ export const CartItemRow = ({
         </TouchableOpacity>
       </View>
 
-      <View style={styles.itemBottomRow}>
+        <View style={styles.itemBottomRow}>
         <View style={styles.stepperContainer}>
           <TouchableOpacity
             activeOpacity={0.7}
@@ -373,8 +378,31 @@ export const CartItemRow = ({
           </TouchableOpacity>
         </View>
 
+        <View style={{ alignItems: "flex-end", gap: 2 }}>
+          <Text style={[styles.itemCategory, { fontSize: 11 }]}>
+            Extra
+          </Text>
+          <TextInput
+            style={{
+              borderWidth: 1,
+              borderColor: colors.backgroundElement,
+              color: colors.text,
+              paddingHorizontal: 4,
+              paddingVertical: 2,
+              fontSize: 12,
+              width: 70,
+            }}
+            value={overrideInput}
+            onChangeText={(text) => {
+              setOverrideInput(text);
+              onPriceOverride(parseFloat(text) || 0);
+            }}
+            keyboardType="numeric"
+          />
+        </View>
+
         <Text style={[styles.itemTotalPrice, { color: colors.text }]}>
-          ₦{(item.product.price * item.quantity).toLocaleString()}
+          ₦{((item.product.price + (item.extra ?? 0)) * item.quantity).toLocaleString()}
         </Text>
       </View>
     </View>
@@ -387,6 +415,7 @@ interface CartItemsListProps {
   colors: ColorPalette;
   onUpdateQuantity: (cartId: string, productId: string, qty: number) => void;
   onRemoveItem: (cartId: string, productId: string) => void;
+  onPriceOverride: (cartId: string, productId: string, extra: number) => void;
 }
 
 export const CartItemsList = ({
@@ -395,6 +424,7 @@ export const CartItemsList = ({
   colors,
   onUpdateQuantity,
   onRemoveItem,
+  onPriceOverride,
 }: CartItemsListProps) => {
   return (
     <View style={styles.itemsList}>
@@ -407,6 +437,9 @@ export const CartItemsList = ({
             onUpdateQuantity(activeCartId, item.product.id, qty)
           }
           onRemove={() => onRemoveItem(activeCartId, item.product.id)}
+          onPriceOverride={(extra) =>
+            onPriceOverride(activeCartId, item.product.id, extra)
+          }
         />
       ))}
     </View>
@@ -1105,6 +1138,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const scheme = useColorScheme();
   const colors: ColorPalette = Colors[scheme === "dark" ? "dark" : "light"];
   const { user } = useSession();
+  const { resolvedStoreId: activeStoreId } = useActiveStore();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -1114,6 +1148,9 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const removeItemFromCart = useCartStore((s) => s.removeItemFromCart);
   const clearCartById = useCartStore((s) => s.clearCartById);
   const removeCart = useCartStore((s) => s.removeCart);
+  const createLocalCart = useCartStore((s) => s.createLocalCart);
+  const deleteLocalCart = useCartStore((s) => s.deleteLocalCart);
+  const updateItemExtra = useCartStore((s) => s.updateItemExtra);
   const setCartCoupon = useCartStore((s) => s.setCartCoupon);
   const clearCartCoupon = useCartStore((s) => s.clearCartCoupon);
 
@@ -1124,7 +1161,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const discountAmount = activeCart?.discountAmount ?? 0;
 
   const totalPrice = items.reduce(
-    (sum, i) => sum + i.product.price * i.quantity,
+    (sum, i) => sum + (i.product.price + (i.extra ?? 0)) * i.quantity,
     0,
   );
   const totalItemsCount = items.reduce((sum, i) => sum + i.quantity, 0);
@@ -1132,7 +1169,14 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   // Tax follows the products in the cart, and comes off a discounted base, so
   // the figure the cashier validates against is the one the server will book.
   const taxResult = useMemo(
-    () => computeCartTax(items, discountAmount),
+    () =>
+      computeCartTax(
+        items.map((i) => ({
+          product: { ...i.product, extra: i.extra },
+          quantity: i.quantity,
+        })),
+        discountAmount,
+      ),
     [items, discountAmount],
   );
   const finalTotal =
@@ -1148,7 +1192,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const [splitPaidTransfer, setSplitPaidTransfer] = useState<boolean>(false);
   const [splitPaidCard, setSplitPaidCard] = useState<boolean>(false);
   const [splitPaidAmount, setSplitPaidAmount] = useState<{
-    method: "cash" | "transfer" | "card";
+    method: PaymentMethod;
     amount: number;
   } | null>(null);
 
@@ -1308,9 +1352,79 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   const isPaidValid = finalTotal > 0 && Math.abs(totalPaid - finalTotal) < 0.01;
   const remainingNeeded = Math.max(0, finalTotal - totalPaid);
 
-  const { mutate: checkoutMutation, isPending: isCheckingOut } = useMutation({
-    mutationFn: async (method: "cash" | "transfer" | "card") => {
+    const handleOfflineCheckout = async (method: PaymentMethod) => {
+      if (!items.length) throw new Error("Cart is empty");
+      const storeId = activeCart?.storeId || activeStoreId || user?.store_id || "";
+      if (!storeId) throw new Error("No store selected");
+      if (method === "card") throw new Error("Card payments are unavailable offline");
+      const cashierId = user?.user_id || "";
+      const total = finalTotal;
+
+      const saleItems = items.map((i) => ({
+        product_id: i.product.id,
+        product_name: i.product.name,
+        qty: i.quantity,
+        unit_price: i.product.price,
+        extra: i.extra ?? 0,
+        taxes: [],
+      }));
+
+      let payments: Array<{ method: "cash" | "transfer"; amount: number }> = [];
+      if (method === "split") {
+        if (numCash > 0) payments.push({ method: "cash", amount: numCash });
+        if (numTransfer > 0) payments.push({ method: "transfer", amount: numTransfer });
+        const paid = payments.reduce((sum, p) => sum + p.amount, 0);
+        if (Math.abs(paid - total) > 0.01) {
+          throw new Error("Cash and transfer totals must equal the sale total");
+        }
+      } else {
+        payments = [{ method, amount: total }];
+      }
+
+      const saleId = `sale-${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      await queueEvent("sale.created", {
+        offline_sale_id: saleId,
+        sale_number: `OFF-${saleId.slice(-8)}`,
+        store_id: storeId,
+        cashier_id: cashierId,
+        customer_name: activeCart?.customerName ?? null,
+        customer_phone: activeCart?.customerPhone ?? null,
+        items: saleItems,
+        discount: discountAmount,
+        notes: "",
+        total,
+        payments,
+      });
+
+      await deleteLocalCart(activeCartId);
+
+      const receipt: PaymentReceipt = {
+        cash: method === "cash" || method === "split" ? (method === "split" ? numCash : total) : 0,
+        transfer: method === "transfer" || method === "split" ? (method === "split" ? numTransfer : total) : 0,
+        card: 0,
+        total,
+        method: method === "split" ? "split" : ("cash" as const),
+      };
+      setLastPayment({ ...receipt, method: receipt.method as PaymentMethod });
+      setIsSuccess(true);
+      return { type: "cash", receipt };
+    };
+
+    const { mutate: checkoutMutation, isPending: isCheckingOut } = useMutation({
+    mutationFn: async (method: "cash" | "transfer" | "card" | "split") => {
       const customerEmail = user?.email || "";
+      const offline = !(await isOnline());
+
+      if (offline) {
+        if (method === "card") {
+          throw new Error("Card payments are unavailable offline");
+        }
+        return handleOfflineCheckout(method);
+      }
+
+      if (method === "split") {
+        throw new Error("Use the split payment action for split totals");
+      }
 
       const intentResult = await initiatePayment({
         cart_id: activeCartId,
@@ -1344,13 +1458,15 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     },
     onSuccess: (result) => {
       if (result.type === "cash") {
+        const receipt = result.receipt as ReceiptData | PaymentReceipt;
+        const receiptData = "receipt_number" in receipt ? receipt : undefined;
         setLastPayment({
           cash: finalTotal,
           transfer: 0,
           card: 0,
           total: finalTotal,
           method: "cash",
-          receiptData: result.receipt,
+          receiptData,
         });
         setIsSuccess(true);
         return;
@@ -1358,18 +1474,29 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
       onVisibleChange(false);
 
+      const cardResult = result as {
+        intentId: string;
+        amount: number;
+        txRef?: string;
+        paymentUrl?: string;
+        qrCode?: string;
+        accountNumber?: string;
+        bankName?: string;
+        expiryDate?: string;
+      };
+
       router.push({
         pathname: "/(tabs)/(pos)/payment-awaiting/[saleId]",
         params: {
-          saleId: result.intentId,
-          paymentId: result.intentId,
+          saleId: cardResult.intentId,
+          paymentId: cardResult.intentId,
           method: result.type,
-          amount: String(result.amount),
-          qrCode: result.qrCode || "",
-          txRef: result.txRef || "",
-          accountNumber: result.accountNumber || "",
-          bankName: result.bankName || "",
-          expiryDate: result.expiryDate || "",
+          amount: String(cardResult.amount),
+          qrCode: cardResult.qrCode || "",
+          txRef: cardResult.txRef || "",
+          accountNumber: cardResult.accountNumber || "",
+          bankName: cardResult.bankName || "",
+          expiryDate: cardResult.expiryDate || "",
         },
       });
     },
@@ -1457,7 +1584,7 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
       },
     });
 
-  const handleCheckout = (method?: "cash" | "transfer" | "card") => {
+  const handleCheckout = async (method?: "cash" | "transfer" | "card" | "split") => {
     if (!isPaidValid) {
       Alert.alert(
         "Invalid Payment",
@@ -1467,6 +1594,16 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     }
 
     const resolvedMethod = method ?? paymentMethod;
+    const offline = await isOnline();
+
+    if (offline) {
+      if (resolvedMethod === "card") {
+        Alert.alert("Card payments are unavailable offline");
+        return;
+      }
+      await handleOfflineCheckout(resolvedMethod);
+      return;
+    }
 
     if (paymentMethod === "split" && method) {
       if (method === "cash" && !splitPaidCash) {
@@ -1521,27 +1658,32 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
 
     if (storeId) {
       try {
-        const res = await createCart({
-          store_id: storeId,
-          customer_name: "",
-          customer_phone: "",
-        });
-        useCartStore.setState((state) => ({
-          carts: [
-            ...state.carts,
-            {
-              id: res.id,
-              name: "New Sale",
-              sessionId: res.session_id,
-              storeId,
-              customerName: "",
-              customerPhone: "",
-              items: [],
-            },
-          ],
-          activeCartId: res.id,
-          storeCartIds: { ...state.storeCartIds, [storeId]: res.id },
-        }));
+        const offline = await isOnline() === false;
+        if (offline) {
+          createLocalCart("Offline Sale", storeId);
+        } else {
+          const res = await createCart({
+            store_id: storeId,
+            customer_name: "",
+            customer_phone: "",
+          });
+          useCartStore.setState((state) => ({
+            carts: [
+              ...state.carts,
+              {
+                id: res.id,
+                name: "New Sale",
+                sessionId: res.session_id,
+                storeId,
+                customerName: "",
+                customerPhone: "",
+                items: [],
+              },
+            ],
+            activeCartId: res.id,
+            storeCartIds: { ...state.storeCartIds, [storeId]: res.id },
+          }));
+        }
       } catch {}
     }
 
@@ -1558,6 +1700,14 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
     setVoidQty("");
     setVoidPinVisible(true);
   };
+
+  const handlePriceOverride = useCallback(
+    (cartId: string, productId: string, extra: number) => {
+      updateItemExtra(cartId, productId, extra);
+      void useCartStore.getState().saveLocalCart(cartId);
+    },
+    [updateItemExtra],
+  );
 
   const handleQuantityChange = (
     cartId: string,
@@ -1676,13 +1826,14 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
               {items.length === 0 ? (
                 <CartEmptyState colors={colors} />
               ) : (
-                <CartItemsList
-                  items={items}
-                  activeCartId={activeCartId}
-                  colors={colors}
-                  onUpdateQuantity={handleQuantityChange}
-                  onRemoveItem={handleRemoveItem}
-                />
+              <CartItemsList
+                items={items}
+                activeCartId={activeCartId}
+                colors={colors}
+                onUpdateQuantity={handleQuantityChange}
+                onRemoveItem={handleRemoveItem}
+                onPriceOverride={handlePriceOverride}
+              />
               )}
 
               {items.length > 0 && (

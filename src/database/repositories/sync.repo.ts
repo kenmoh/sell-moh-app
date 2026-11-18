@@ -6,7 +6,8 @@ export class SyncQueueRepository {
     const db = await getDb();
     const rows = await db.getAllAsync<any>(
       'SELECT * FROM sync_queue WHERE status IN (?, ?) ORDER BY created_at ASC LIMIT ?',
-      ['pending', 'failed'],
+      'pending',
+      'failed',
       limit
     );
     return rows.map(r => ({ ...r, payload: JSON.parse(r.payload) }));
@@ -23,7 +24,7 @@ export class SyncQueueRepository {
          retry_count = 0`,
       [item.client_id, item.event_type, JSON.stringify(item.payload), item.client_ts, item.status, item.retry_count, now]
     );
-    return { ...item, id: result.insertId, created_at: now };
+    return { ...item, id: Number(result.lastInsertRowId), created_at: now };
   }
 
   async enqueueBatch(items: Omit<SyncQueueItem, 'id' | 'created_at'>[]): Promise<number> {

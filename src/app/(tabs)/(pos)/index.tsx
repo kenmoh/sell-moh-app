@@ -13,7 +13,9 @@ import { ColorPalette, Colors } from "@/constants/theme";
 import useCartStore from "@/hooks/use-cart-store";
 import { usePendingPayments } from "@/hooks/usePendingPayments";
 import { useToast } from "@/hooks/use-toast";
+import { useSession } from "@/lib/ctx";
 import { useActiveStore } from "@/lib/store-context";
+import { isOnline } from "@/sync/engine";
 import { Product } from "@/types/product-types";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useInfiniteQuery, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -43,6 +45,7 @@ const POSScreen = () => {
   const queryClient = useQueryClient();
 
   const { resolvedStoreId: activeStoreId } = useActiveStore();
+  const { user } = useSession();
 
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -217,6 +220,20 @@ const POSScreen = () => {
                 >
                   <Lucide name="scan-qr-code" size={20} color="#3b82f6" />
                 </Pressable>
+                {(user?.permissions ?? []).includes("tips:read") && (
+                  <Pressable
+                    onPress={() => router.push("/(tabs)/(pos)/tips")}
+                    style={[
+                      styles.scanIconButton,
+                      {
+                        backgroundColor: colors.card,
+                        borderColor: isDark ? "#282b32" : "#eef0f4",
+                      },
+                    ]}
+                  >
+                    <Lucide name="gift" size={20} color="#3b82f6" />
+                  </Pressable>
+                )}
               </View>
             </View>
 
@@ -271,27 +288,25 @@ const POSScreen = () => {
           <Card
             product={item}
             cartQuantity={cartQuantities[item.id] ?? 0}
-            onPress={() => {
-              const state = useCartStore.getState();
-              const cartId = state.activeCartId;
-              if (!cartId || cartId.startsWith("cart-")) {
-                toast.action(
-                  "No Cart Active",
-                  "Create a cart first before adding products.",
-                  [
-                    { label: "Create Cart", onPress: () => setNewCartSheetVisible(true) },
-                    { label: "Dismiss", onPress: () => {} },
-                  ],
-                  "warning",
-                );
-                return;
-              }
-              addToCart(cartId, { product_id: item.id })
-                .then((res) => {
-                  state.addItem(item, 1, res.id);
-                })
-                .catch(() => {});
-            }}
+              onPress={async () => {
+                const state = useCartStore.getState();
+                let cartId = state.activeCartId;
+                if (!cartId) {
+                  cartId = state.createLocalCart("Offline Sale", activeStoreId || undefined);
+                }
+                const offline = await isOnline();
+                if (cartId.startsWith("cart-") || offline) {
+                  state.addItem(item, 1, undefined, 0);
+                  void state.saveLocalCart(cartId);
+                  return;
+                }
+                addToCart(cartId, { product_id: item.id })
+                  .then((res) => {
+                    state.addItem(item, 1, res.id);
+                    void state.saveLocalCart(cartId);
+                  })
+                  .catch(() => {});
+              }}
           />
         )}
         ListFooterComponent={

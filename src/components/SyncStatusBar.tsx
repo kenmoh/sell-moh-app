@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useSyncStatus } from '../hooks/useSyncStatus';
 
-export function SyncStatusBar(): React.JSX.Element {
+export function SyncStatusBar(): React.JSX.Element | null {
   const { isOnline, isSyncing, pendingCount } = useSyncStatus();
 
   if (isOnline && !isSyncing && pendingCount === 0) {

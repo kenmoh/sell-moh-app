@@ -34,7 +34,7 @@ export interface CartTaxResult {
 
 export interface CartTaxableItem {
   quantity: number;
-  product: { price: number; taxes?: CartTaxEntry[] | null };
+  product: { price: number; extra?: number; taxes?: CartTaxEntry[] | null };
 }
 
 const round2 = (value: number) => Math.round((value + Number.EPSILON) * 100) / 100;
@@ -49,7 +49,9 @@ export function computeCartTax(
 ): CartTaxResult {
   if (items.length === 0) return { breakdown: [], totalTax: 0 };
 
-  const grosses = items.map((item) => item.product.price * item.quantity);
+  const grosses = items.map(
+    (item) => (item.product.price + (item.product.extra ?? 0)) * item.quantity,
+  );
   const subtotal = grosses.reduce((sum, gross) => sum + gross, 0);
   const discount = Math.max(discountAmount, 0);
 

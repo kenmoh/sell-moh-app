@@ -60,8 +60,19 @@ export interface SyncSnapshotResult {
 
 export interface FullSyncResult {
   processed: number;
-  failed: number;
   errors: Array<Record<string, any>>;
+  applied?: Array<{
+    client_id?: string;
+    event_id?: string;
+    event_type?: string;
+    applied?: Record<string, any>;
+  }>;
+  duplicates?: Array<{
+    client_id?: string;
+    event_id?: string;
+    status?: string;
+    error?: any;
+  }>;
   server_events: Array<{
     event_type: string;
     payload: Record<string, any>;
