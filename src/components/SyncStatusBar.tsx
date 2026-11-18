@@ -30,7 +30,7 @@ export function SyncStatusBar(): React.JSX.Element | null {
 const styles = StyleSheet.create({
   bar: {
     height: 24,
-    backgroundColor: '#2196F3',
+    backgroundColor: '#22c55e',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
