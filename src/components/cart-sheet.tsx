@@ -301,7 +301,7 @@ interface CartItemRowProps {
   colors: ColorPalette;
   onQuantityChange: (newQty: number) => void;
   onRemove: () => void;
-  onPriceOverride: (extra: number) => void;
+  onPriceOverride: (effectivePrice: number) => void;
 }
 
 export const CartItemRow = ({
@@ -311,7 +311,7 @@ export const CartItemRow = ({
   onRemove,
   onPriceOverride,
 }: CartItemRowProps) => {
-  const [overrideInput, setOverrideInput] = useState<string>((item.extra ?? 0).toString());
+  const effectivePrice = item.product.price + (item.extra ?? 0);
   return (
     <View
       style={[
@@ -380,7 +380,7 @@ export const CartItemRow = ({
 
         <View style={{ alignItems: "flex-end", gap: 2 }}>
           <Text style={[styles.itemCategory, { fontSize: 11 }]}>
-            Extra
+            Override
           </Text>
           <TextInput
             style={{
@@ -392,17 +392,21 @@ export const CartItemRow = ({
               fontSize: 12,
               width: 70,
             }}
-            value={overrideInput}
+            value={effectivePrice.toString()}
             onChangeText={(text) => {
-              setOverrideInput(text);
-              onPriceOverride(parseFloat(text) || 0);
+              const v = text.trim();
+              const parsed = v === "" ? undefined : parseFloat(v);
+              const newEffective = parsed ?? item.product.price;
+              onPriceOverride(newEffective);
             }}
             keyboardType="numeric"
           />
         </View>
 
         <Text style={[styles.itemTotalPrice, { color: colors.text }]}>
-          ₦{((item.product.price + (item.extra ?? 0)) * item.quantity).toLocaleString()}
+          ₦{effectivePrice.toLocaleString()}{" "}
+          {item.quantity > 1 && `× ${item.quantity}`}{" "}
+          = ₦{(effectivePrice * item.quantity).toLocaleString()}
         </Text>
       </View>
     </View>
@@ -415,7 +419,7 @@ interface CartItemsListProps {
   colors: ColorPalette;
   onUpdateQuantity: (cartId: string, productId: string, qty: number) => void;
   onRemoveItem: (cartId: string, productId: string) => void;
-  onPriceOverride: (cartId: string, productId: string, extra: number) => void;
+  onPriceOverride: (cartId: string, productId: string, effectivePrice: number) => void;
 }
 
 export const CartItemsList = ({
@@ -1702,11 +1706,13 @@ const CartSheet = ({ visible, onVisibleChange }: CartSheetProps) => {
   };
 
   const handlePriceOverride = useCallback(
-    (cartId: string, productId: string, extra: number) => {
+    (cartId: string, productId: string, effectivePrice: number) => {
+      const item = items.find((i) => i.product.id === productId);
+      const extra = effectivePrice - (item?.product.price ?? 0);
       updateItemExtra(cartId, productId, extra);
       void useCartStore.getState().saveLocalCart(cartId);
     },
-    [updateItemExtra],
+    [items, updateItemExtra],
   );
 
   const handleQuantityChange = (
