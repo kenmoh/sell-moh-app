@@ -1,12 +1,13 @@
 import {
   changePlan,
   createBillingSettleLink,
+  createWalletFundingLink,
   fetchBillableTransactions,
   fetchInvoices,
+  fetchPublicPlans,
   fetchSubscription,
   fetchWallet,
   fetchWalletTransactions,
-  fundWallet,
   formatCurrency,
   type BillingInvoice,
 } from "@/api/billing";
@@ -16,7 +17,9 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { router, Stack } from "expo-router";
 import {
   ActivityIndicator,
+  Alert,
   FlatList,
+  Linking,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -40,6 +43,14 @@ const BillingScreen = () => {
   } = useQuery({
     queryKey: ["billing-subscription"],
     queryFn: fetchSubscription,
+  });
+
+  const {
+    data: publicPlans,
+    isError: plansError,
+  } = useQuery({
+    queryKey: ["billing-public-plans"],
+    queryFn: fetchPublicPlans,
   });
 
   const {
@@ -85,12 +96,10 @@ const BillingScreen = () => {
   });
 
   const fundMutation = useMutation({
-    mutationFn: (amount: number) => fundWallet({ amount }),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["billing-wallet"] });
-      void queryClient.invalidateQueries({
-        queryKey: ["billing-wallet-transactions"],
-      });
+    mutationFn: (amount: number) => createWalletFundingLink({ amount }),
+    onSuccess: (result) => {
+      // Open Flutterwave checkout link
+      void Linking.openURL(result.link);
     },
   });
 
@@ -113,6 +122,27 @@ const BillingScreen = () => {
   const invList = invoices ?? [];
   const walletList = walletTxns ?? [];
   const billableList = billables ?? [];
+
+  const tierBreakdown = billableList.reduce(
+    (acc: { label: string; count: number; amount: number; fee: number }[], b) => {
+      const label = b.fee_label_snapshot ?? "Standard";
+      const existing = acc.find((t) => t.label === label);
+      if (existing) {
+        existing.count += 1;
+        existing.amount += b.transaction_amount;
+        existing.fee += b.transaction_fee;
+      } else {
+        acc.push({
+          label,
+          count: 1,
+          amount: b.transaction_amount,
+          fee: b.transaction_fee,
+        });
+      }
+      return acc;
+    },
+    []
+  );
 
   const handleFund = () => {
     const amount = Number(fundAmount);
@@ -173,7 +203,11 @@ const BillingScreen = () => {
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <Text style={styles.label}>Subscription</Text>
           <Text style={styles.value}>{sub.status}</Text>
-          <Text style={styles.meta}>Plan: {sub.plan_id}</Text>
+          <Text style={styles.meta}>
+            Plan:{" "}
+            {publicPlans?.find((p) => p.id === sub?.plan_id)?.name ??
+              sub?.plan_id}
+          </Text>
           <Text style={styles.meta}>
             Next billing:{" "}
             {new Date(sub.next_billing_date).toLocaleDateString("en-NG", {
@@ -319,6 +353,42 @@ const BillingScreen = () => {
 
       {/* Transaction Fees */}
       <View style={styles.section}>
+        {/* Tier breakdown summary */}
+        {(billableList.length > 0 && (
+          <View style={styles.breakdownCard}>
+            <Text style={[styles.sectionTitle, { fontSize: 13, marginBottom: 10 }]}>
+              Fee Breakdown by Tier
+            </Text>
+            {tierBreakdown.map((t) => (
+              <View key={t.label} style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>{t.label}</Text>
+                <View style={styles.breakdownValues}>
+                  <Text style={styles.breakdownValue}>
+                    {t.count} sale(s)
+                  </Text>
+                  <Text style={styles.breakdownFee}>
+                    {formatCurrency(t.fee)}
+                  </Text>
+                </View>
+              </View>
+            ))}
+            <View style={styles.breakdownRow}>
+              <Text style={[styles.breakdownLabel, { fontWeight: "700" }]}>
+                Total
+              </Text>
+              <View style={styles.breakdownValues}>
+                <Text style={[styles.breakdownValue, { fontWeight: "700" }]}>
+                  {billableList.length} sale(s)
+                </Text>
+                <Text style={[styles.breakdownFee, { fontWeight: "700" }]}>
+                  {formatCurrency(
+                    billableList.reduce((s, b) => s + b.transaction_fee, 0)
+                  )}
+                </Text>
+              </View>
+            </View>
+          </View>
+        ))}
         <Text style={styles.sectionTitle}>Transaction Fees</Text>
         <FlatList
           data={billableList}
@@ -454,6 +524,42 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: "#6b7280",
     marginBottom: 10,
+  },
+
+  /* Tier Breakdown */
+  breakdownCard: {
+    borderRadius: 10,
+    padding: 12,
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+  },
+  breakdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingVertical: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: "#e2e8f0",
+  },
+  breakdownLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#374151",
+  },
+  breakdownValues: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  breakdownValue: {
+    fontSize: 13,
+    fontWeight: "500",
+    color: "#6b7280",
+  },
+  breakdownFee: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#059669",
   },
   input: {
     borderWidth: 1,

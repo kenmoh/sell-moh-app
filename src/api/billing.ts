@@ -11,6 +11,7 @@ export interface Plan {
   sort_order: number;
   created_at: string;
   updated_at: string;
+  annual_discount_pct: number;
 }
 
 export interface MerchantSubscription {
@@ -102,10 +103,22 @@ export interface WalletFundRequest {
   description?: string | null;
 }
 
+export interface WalletFundLinkRequest {
+  amount: number;
+}
+
+export interface WalletFundLinkResponse {
+  link: string;
+  amount: number;
+  intent_id: string;
+  tx_ref: string;
+}
+
 export const formatCurrency = (n: number) =>
   `₦${n.toLocaleString("en-NG", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 const URL = "/billing";
+const PRICING_URL = "/pricing";
 
 export async function fetchSubscription() {
   const res = await apiClient.get<{ data: MerchantSubscription }>(
@@ -121,6 +134,12 @@ export async function changePlan(data: PlanChangeRequest) {
     data,
   );
   if (!res.ok) throw new Error("Failed to change plan");
+  return res.data?.data!;
+}
+
+export async function fetchPublicPlans() {
+  const res = await apiClient.get<{ data: Plan[] }>(`${PRICING_URL}/plans`);
+  if (!res.ok) throw new Error("Failed to load plans");
   return res.data?.data!;
 }
 
@@ -152,6 +171,15 @@ export async function fundWallet(data: WalletFundRequest) {
     data,
   );
   if (!res.ok) throw new Error("Failed to fund wallet");
+  return res.data?.data!;
+}
+
+export async function createWalletFundingLink(data: WalletFundLinkRequest) {
+  const res = await apiClient.post<{ data: WalletFundLinkResponse }>(
+    `${URL}/wallet/funding-link`,
+    data,
+  );
+  if (!res.ok) throw new Error("Failed to create funding link");
   return res.data?.data!;
 }
 
