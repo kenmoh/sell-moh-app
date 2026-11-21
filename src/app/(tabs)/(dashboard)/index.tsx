@@ -2,7 +2,7 @@ import { Colors } from "@/constants/theme";
 import DateTimePicker from "@expo/ui/community/datetime-picker";
 import { Lucide } from "@react-native-vector-icons/lucide";
 import { useRouter } from "expo-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Pressable,
   ScrollView,
@@ -12,6 +12,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+import { fetchWallet, formatCurrency } from "@/api/billing";
 
 const stats = [
   {
@@ -147,6 +149,23 @@ const Dashboard = () => {
   const [showPicker, setShowPicker] = useState(false);
   const [addExpenseVisible, setAddExpenseVisible] = useState(false);
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [walletLoading, setWalletLoading] = useState(true);
+
+  const loadWallet = async () => {
+    try {
+      const w = await fetchWallet();
+      setWalletBalance(w.balance);
+    } catch {
+      setWalletBalance(0);
+    } finally {
+      setWalletLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadWallet();
+  }, []);
 
   const formatDate = (d: Date) => {
     const today = new Date();
@@ -245,6 +264,48 @@ const Dashboard = () => {
               onDismiss={() => setShowPicker(false)}
             />
           )}
+        </View>
+
+        {/* ─── Wallet Card ─── */}
+        <View
+          style={[
+            styles.walletCard,
+            {
+              backgroundColor: colors.card,
+              borderColor: isDark ? "#262930" : "#eef0f4",
+            },
+          ]}
+        >
+          <View style={styles.walletCardHeader}>
+            <View style={styles.walletIconBadge}>
+              <Lucide name="credit-card" size={16} color="#2563eb" />
+            </View>
+            <Pressable
+              onPress={() => router.push("/(tabs)/(more)/billing")}
+              style={({ pressed }) => [
+                styles.walletOpenBtn,
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <Text style={styles.walletOpenText}>Open Wallet</Text>
+            </Pressable>
+          </View>
+          <View style={styles.walletBody}>
+            <Text style={styles.walletLabel}>Wallet Balance</Text>
+            {walletLoading ? (
+              <View style={styles.walletSkeleton}>
+                <View style={styles.walletSkeletonLine} />
+                <View style={styles.walletSkeletonLineShort} />
+              </View>
+            ) : (
+              <Text style={styles.walletAmount}>
+                {formatCurrency(walletBalance)}
+              </Text>
+            )}
+            <Text style={styles.walletHint}>
+              Tap to fund, view transactions, or clear debt
+            </Text>
+          </View>
         </View>
 
         {/* ─── Main Revenue Card ─── */}
@@ -598,7 +659,76 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
 
-  /* ─── Main Revenue Card ─── */
+  /* ─── Wallet Card ─── */
+  walletCard: {
+    marginHorizontal: 12.5,
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    marginBottom: 16,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  walletCardHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  walletIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: "rgba(37, 99, 235, 0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  walletOpenBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  walletOpenText: {
+    color: "#2563eb",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  walletBody: {
+    gap: 4,
+  },
+  walletLabel: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#6b7280",
+  },
+  walletAmount: {
+    fontSize: 32,
+    fontWeight: "800",
+    letterSpacing: -1,
+  },
+  walletHint: {
+    fontSize: 11,
+    color: "#6b7280",
+  },
+  walletSkeleton: {
+    gap: 6,
+  },
+  walletSkeletonLine: {
+    height: 40,
+    width: "60%",
+    borderRadius: 6,
+    backgroundColor: "#f3f4f6",
+  },
+  walletSkeletonLineShort: {
+    height: 18,
+    width: "35%",
+    borderRadius: 6,
+    backgroundColor: "#f3f4f6",
+  },
+
   revenueCard: {
     marginHorizontal: 12.5,
     borderRadius: 20,
